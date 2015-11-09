@@ -7,9 +7,9 @@ operations on the data.  The code is documented fairly well, and there
 are IPython notebooks in the distribution.  They can be viewed here:
 
  * GDAL (ESRI format) grids : https://github.com/mhearne-usgs/grid/blob/master/notebooks/GDALGrid.ipynb
- * GMT format grids: https://github.com/mhearne-usgs/grid/blob/master/notebooks/GMTGrid.ipynb
- * ShakeMap format grids: https://github.com/mhearne-usgs/grid/blob/master/notebooks/ShakeMap.ipynb
- * The Grid2D class (superclass of GDAL and GMT grids): https://github.com/mhearne-usgs/grid/blob/master/notebooks/Grid2D.ipynb
+ * GMT format grids: https://github.com/usgs/MapIO/blob/master/notebooks/GMTGrid.ipynb
+ * ShakeMap format grids: https://github.com/MapIO/mapio/blob/master/notebooks/ShakeMap.ipynb
+ * The Grid2D class (superclass of GDAL and GMT grids): https://github.com/usgs/MapIO/blob/master/notebooks/Grid2D.ipynb
 
 Dependencies and Installation
 -----------------------------
@@ -30,7 +30,7 @@ pip install git+git://github.com/gem/oq-hazardlib.git
 
 To install this package:
 
-pip install git+git://github.com/mhearne-usgs/grid.git
+pip install git+git://github.com/usgs/MapIO.git
 
 Uninstalling and Updating
 -------------------------
@@ -41,7 +41,7 @@ pip uninstall grid
 
 To update:
 
-pip install -U git+git://github.com/mhearne-usgs/grid.git
+pip install -U git+git://github.com/usgs/MapIO.git
 
 Interoperability
 -----------------
