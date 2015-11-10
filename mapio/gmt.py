@@ -652,6 +652,7 @@ class GMTGrid(Grid2D):
             y[:] = np.linspace(self._geodict['ymin'],self._geodict['ymax'],self._geodict['nrows'])
             z = f.createVariable('z',self._data.dtype,('y','x'))
             z[:] = np.flipud(self._data)
+            z.actual_range = np.array((np.nanmin(self._data),np.nanmax(self._data)))
             f.close()
         elif format == 'hdf':
             #Create the file and the top-level attributes GMT wants to see
