@@ -128,9 +128,8 @@ class Grid2D(Grid):
     def copyFromGrid(cls,grid):
         if not isinstance(grid,Grid2D):
             raise DataSetException('Input to copyFromGrid must be an instance of a Grid2D object (inc. subclasses)')
-        cls(grid.getData(),grid.getGeoDict())
+        return cls(grid.getData(),grid.getGeoDict())
 
-    
     #This should be a @classmethod in subclasses
     @abc.abstractmethod
     def save(self,filename): #would we ever want to save a subset of the data?
@@ -245,8 +244,8 @@ class Grid2D(Grid):
             xdim = self._geodict['xdim']
             ydim = self._geodict['ydim']
             indict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'xdim':xdim,'ydim':ydim}
-            ncols = len(np.arange(xmin,xmax+xdim,xdim))
-            nrows = len(np.arange(ymin,ymax+ydim,ydim))
+            ncols = len(np.arange(xmin,xmax+(xdim*0.1),xdim))
+            nrows = len(np.arange(ymin,ymax+(ydim*0.1),ydim))
             indict['nrows'] = nrows
             indict['ncols'] = ncols
             self.interpolateToGrid(indict,method=method)
@@ -362,7 +361,8 @@ class Grid2D(Grid):
             xmin1 += 360
 
         xi = (gxi - xmin1)/xdim1
-        yi = (gyi - ymin1)/ydim1
+        #yi = (gyi - ymin1)/ydim1
+        yi = np.array(sorted(((ymax1 - gyi)/ydim1)))
 
         return (xi,yi)
     
@@ -383,7 +383,10 @@ class Grid2D(Grid):
         """
         if method not in ['linear', 'cubic','nearest']:
             raise DataSetException('Resampling method must be one of "linear", "cubic","nearest"')
-        geodict = super(Grid2D,self).fillGeoDict(geodict)
+        bounds = (geodict['xmin'],geodict['xmax'],geodict['ymin'],geodict['ymax'])
+        xdim,ydim = (geodict['xdim'],geodict['ydim'])
+        nrows,ncols = (geodict['nrows'],geodict['ncols'])
+        geodict = super(Grid2D,self).fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve='dims')
         xi,yi = self._getInterpCoords(geodict)
 
         #now using scipy interpolate functions
@@ -518,8 +521,8 @@ class Grid2D(Grid):
         xmin,xmax,ymin,ymax = (samplegeodict['xmin'],samplegeodict['xmax'],samplegeodict['ymin'],samplegeodict['ymax'])
         xdim,ydim = (samplegeodict['xdim'],samplegeodict['ydim'])
 
-        xvar = np.arange(xmin,xmax+xdim,xdim)
-        yvar = np.arange(ymin,ymax+ydim,ydim)
+        xvar = np.arange(xmin,xmax+(xdim*0.1),xdim)
+        yvar = np.arange(ymin,ymax+(ydim*0.1),ydim)
         ncols = len(xvar)
         nrows = len(yvar)
         
@@ -586,20 +589,28 @@ def _test_resample():
     print 'Passed data trimming with resampling...'
 
 def _test_interpolate():
-    geodict = {'xmin':0.5,'xmax':4.5,'ymin':0.5,'ymax':4.5,'xdim':1.0,'ydim':1.0,'nrows':5,'ncols':5}
-    data = np.arange(0,25).reshape(5,5)
+    geodict = {'xmin':0.5,'xmax':6.5,'ymin':1.5,'ymax':6.5,'xdim':1.0,'ydim':1.0,'nrows':6,'ncols':7}
+    data = np.arange(14,56).reshape(6,7)
+
+    # grid = Grid2D(data,geodict)
+    # sampledict = Grid2D.fixGeoDict((3.0,4.0,3.0,4.0),1.0,1.0,-1,-1)
+    # grid.interpolateToGrid(sampledict,method='linear')
+
+    # output = np.array([[34.,35.],[41.,42.]])
+    # np.testing.assert_almost_equal(grid._data,output)
     
     for method in ['nearest','linear','cubic']:
         print 'Testing interpolate with method "%s"...' % method
         grid = Grid2D(data,geodict)
-        sampledict = {'xmin':2.0,'xmax':3.0,'ymin':2.0,'ymax':3.0,'xdim':1.0,'ydim':1.0}
+        #sampledict = {'xmin':2.0,'xmax':3.0,'ymin':2.0,'ymax':3.0,'xdim':1.0,'ydim':1.0}
+        sampledict = Grid2D.fixGeoDict((3.0,4.0,3.0,4.0),1.0,1.0,-1,-1)
         grid.interpolateToGrid(sampledict,method=method)
         if method == 'nearest':
-            output = np.array([[6.0,7.0],[11.0,17.0]])
+            output = np.array([[30.0,31.0],[37.0,38.0]])
         elif method == 'linear':
-            output = np.array([[9.0,10.0],[14.0,15.0]])
+            output = np.array([[34.,35.],[41.,42.]])
         elif method == 'cubic':
-            output = np.array([[9.0,10.0],[14.0,15.0]])
+            output = np.array([[34.,35.],[41.,42.]])
         else:
             pass
         np.testing.assert_almost_equal(grid.getData(),output)
@@ -643,12 +654,21 @@ def _test_rasterize():
         shpfiles = glob.glob('test.*')
         for shpfile in shpfiles:
             os.remove(shpfile)
-    
+
+
+def _test_copy():
+    data = np.arange(0,16).astype(np.float32).reshape(4,4)
+    geodict = {'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'xdim':1.0,'ydim':1.0,'nrows':4,'ncols':4}
+    grid1 = Grid2D(data,geodict)
+    grid2 = grid1.copyFromGrid(grid1)
+    grid1._data[0,0] = np.nan
+    print grid2._data
+    print grid2._geodict    
     
 if __name__ == '__main__':
+    _test_interpolate()
     _test_rasterize()
     _test_basics()
     _test_resample()
-    _test_interpolate()
-    
+    _test_copy()    
         

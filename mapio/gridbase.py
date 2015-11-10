@@ -86,15 +86,39 @@ class Grid(DataSet):
         return True
 
     @classmethod
-    def fillGeoDict(cls,geodict):
-        if geodict.has_key('xdim') and geodict.has_key('ydim'): #calculate rows/cols
-            geodict['ncols'] = len(np.arange(geodict['xmin'],geodict['xmax']+geodict['xdim'],geodict['xdim']))
-            geodict['nrows'] = len(np.arange(geodict['ymin'],geodict['ymax']+geodict['ydim'],geodict['ydim']))
-        else: #calculate xdim/ydim
-            geodict['xdim'] = (geodict['xmax']-geodict['xmin'])/geodict['ncols']
-            geodict['ydim'] = (geodict['ymax']-geodict['ymin'])/geodict['nrows']
+    def fixGeoDict(cls,bounds,xdim,ydim,nrows,ncols,preserve='dims'):
+        xmin,xmax,ymin,ymax = bounds
+        mcross = False
+        if xmin > xmax:
+            xmax += 360
+            mcross = True
+        if preserve == 'dims':
+            ncols = int((xmax-xmin)/xdim)
+            xmax = xmin + ncols*xdim
+            xvar = np.arange(xmin,xmax+(xdim*0.1),xdim)
+            ncols = len(xvar)
+            xdiff = np.abs(xmax - xvar[-1]) #xmax is not guaranteed to be exactly the same as what we just calculated...
+            if mcross:
+                xmax -= 360
+
+            nrows = int((ymax-ymin)/ydim)
+            ymax = ymin + nrows*ydim
+            yvar = np.arange(ymin,ymax+(ydim*0.1),ydim)
+            nrows = len(yvar)
+            ydiff = np.abs(ymax - yvar[-1]) #ymax is not guaranteed to be exactly the same as what we just calculated...
+
+        elif preserve == 'shape': #preserve rows and columns
+            xvar,xdim = np.linspace(xmin,xmax,num=ncols,retstep=True)
+            yvar,ydim = np.linspace(ymin,ymax,num=nrows,retstep=True)
+            xmin = xvar[0]
+            xmax = xvar[-1]
+            ymin = yvar[0]
+            ymax = yvar[-1]
+        else:
+            raise Exception('%s not supported' % preserve)
+
+        geodict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'xdim':xdim,'ydim':ydim,'nrows':nrows,'ncols':ncols}
         return geodict
-    
     
     @abc.abstractmethod
     def blockmean(self,geodict):
