@@ -60,6 +60,8 @@ class GDALGrid(Grid2D):
                 geodict['ymin'] = geodict['ymax'] - (geodict['nrows']-1)*geodict['ydim']
         xvar = np.arange(geodict['xmin'],geodict['xmax']+geodict['xdim'],geodict['xdim'])
         yvar = np.arange(geodict['ymin'],geodict['ymax']+geodict['ydim'],geodict['ydim'])
+        xvar2,xdim2 = np.linspace(geodict['xmin'],geodict['xmax'],num=geodict['ncols'],retstep=True)
+        yvar2,ydim2 = np.linspace(geodict['ymin'],geodict['ymax'],num=geodict['nrows'],retstep=True)
         return (geodict,xvar,yvar)
 
     @classmethod
@@ -289,12 +291,14 @@ class GDALGrid(Grid2D):
             
     
     @classmethod
-    def load(cls,filename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan):
+    def load(cls,filename,samplegeodict=None,preserve='dims',resample=False,method='linear',doPadding=False,padValue=np.nan):
         """Create a GDALGrid object from a (possibly subsetted, resampled, or padded) GDAL-compliant grid file.
         :param filename:
           Name of input file.
         :param samplegeodict:
           GeoDict used to specify subset bounds and resolution (if resample is selected)
+        :param preserve:
+          String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         :param resample:
           Boolean used to indicate whether grid should be resampled from the file based on samplegeodict.
         :param method:
@@ -309,6 +313,48 @@ class GDALGrid(Grid2D):
           * When sample bounds are outside (or too close to outside) the bounds of the grid and doPadding=False.
           * When the input file type is not recognized.
         """
+        filegeodict,xvar,yvar = cls.getFileGeoDict(filename)
+        if samplegeodict is not None:
+            hasBounds = False
+            hasDims = False
+            hasShape = False
+            fxdim,fydim = (filegeodict['xdim'],filegeodict['ydim'])
+            try:
+                bounds = (samplegeodict['xmin'],samplegeodict['xmax'],samplegeodict['ymin'],samplegeodict['ymax'])
+                hasBounds = True
+            except:
+                raise DataSetException('Must specify at least the bounds (xmin,xmax,ymin,ymax) of your sampling geodict')
+            try:
+                xdim = samplegeodict['xdim']
+                ydim = samplegeodict['ydim']
+                hasDims = True
+            except:
+                try:
+                    nrows = samplegeodict['nrows']
+                    ncols = samplegeodict['ncols']
+                    hasShape = True
+                except:
+                    raise DataSetException('Either xdim/ydim or nrows/ncols must be specified in input samplegeodict')
+            dims1 = np.array([xdim,ydim])
+            dims2 = np.array([fxdim,fydim])
+            dimsMatch = np.allclose(dims1,dims2)
+            #########################
+            #TODO - figure out what I should do if the dimensions are very close to being equal...
+            #########################
+            if preserve == 'dims' and not dimsMatch and not resample:
+                raise DataSetException('You cannot preserve dims when samplgeodict dims do not match file dims and resampling is off')
+            if not hasDims and preserve == 'dims':
+                raise DataSetException('You cannot preserve dims if you do not specify them.')
+            if not hasShape and preserve == 'shape':
+                raise DataSetException('You cannot preserve shape (nrows/ncols) if you do not specify them.')
+            if preserve == 'dims':
+                nrows = -1
+                ncols = -1
+            else:
+                xdim = -1
+                ydim = -1
+            samplegeodict = cls.fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve=preserve)
+        
         data = None
         geodict = None
         bounds = None
@@ -322,7 +368,7 @@ class GDALGrid(Grid2D):
             #of the file, then we can pad.  If they *didn't* ask for padding and input exceeds, raise exception.
             if resample:
                 PADFACTOR = 2 #how many cells will we buffer out for resampling?
-                filegeodict,xvar,yvar = cls.getFileGeoDict(filename)
+                
                 xdim = filegeodict['xdim']
                 ydim = filegeodict['ydim']
                 fbounds = (filegeodict['xmin'],filegeodict['xmax'],filegeodict['ymin'],filegeodict['ymax'])
@@ -451,9 +497,9 @@ def _resample_test():
         data,geodict = Grid2D._createSampleData(9,7)
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
-        
-        newdict = {'xmin':3.0,'xmax':4.0,'ymin':3.0,'ymax':4.0,'xdim':1.0,'ydim':1.0}
-        newdict = Grid2D.fillGeoDict(newdict)
+
+        bounds = (3.0,4.0,3.0,4.0)
+        newdict = Grid2D.fixGeoDict(bounds,1.0,1.0,-1,-1,preserve='dims')
         gdalgrid3 = GDALGrid.load('test.bil',samplegeodict=newdict,resample=True)
         output = np.array([[34,35],
                            [41,42]])
@@ -465,7 +511,10 @@ def _resample_test():
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
         newdict = {'xmin':0.0,'xmax':4.0,'ymin':0.0,'ymax':4.0,'xdim':1.0,'ydim':1.0}
-        newdict = Grid2D.fillGeoDict(newdict)
+        bounds = (0.0,4.0,0.0,4.0)
+        xdim,ydim = (1.0,1.0)
+        nrows,ncols = (-1,-1)
+        newdict = Grid2D.fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve='dims')
         gdalgrid3 = GDALGrid.load('test.bil',samplegeodict=newdict,resample=True,doPadding=True)
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan],
                            [np.nan,2.5,3.5,4.5,np.nan],
@@ -515,6 +564,26 @@ def _meridian_test():
     except AssertionError,error:
         print 'Failed meridian test:\n %s' % error
     os.remove('test.bil')
+
+def _file_geodict_test():
+    try:
+        xmin = 110.1237
+        xmax = 112.3475
+        ymin = 34.1237
+        ymax = 36.3475
+        nrows = 200
+        ncols = 200
+        xvar,xdim = np.linspace(xmin,xmax,num=ncols,retstep=True)
+        yvar,ydim = np.linspace(ymin,ymax,num=nrows,retstep=True)
+        data = np.random.rand(nrows,ncols)
+        geodict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'xdim':xdim,'ydim':ydim,'nrows':nrows,'ncols':ncols}
+        gdalgrid = GDALGrid(data,geodict)
+        gdalgrid.save('test.flt')
+        sdict = {'xmin':110.5,'xmax':111.5,'ymin':34.5,'ymax':35.5,'xdim':xdim,'ydim':ydim}
+        grid2 = GDALGrid.load('test.flt',samplegeodict=sdict,preserve='dims')
+    except:
+        print 'Failed test of native header.'
+    os.remove('test.flt')
     
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -528,6 +597,7 @@ if __name__ == '__main__':
             sampledict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax}
             grid = GDALGrid.load(gdalfile,samplegeodict=sampledict)
     else:
+        _file_geodict_test()
         _format_test()
         _pad_test()
         _subset_test()
