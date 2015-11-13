@@ -87,9 +87,26 @@ class Grid(DataSet):
 
     @classmethod
     def fixGeoDict(cls,bounds,xdim,ydim,nrows,ncols,preserve='dims'):
+        """
+        Return a full geodict, with either input dimensions preserved or input shape/bounds preserved.
+
+        :param bounds:
+          Tuple of (xmin,xmax,ymin,ymax).  May be changed when preserve='dims'.
+        :param xdim:
+          Width of cells in same units as bounds.  Will be overwritten when preserve='shape'.
+        :param ydim:
+          Height of cells in same units as bounds.  Will be overwritten when preserve='shape'.
+        :param nrows:
+          Number of rows.  Will be overwritten when preserve='dims'.
+        :param ncols:
+          Number of columns.  Will be overwritten when preserve='dims'.
+        :param preserve:
+          One of 'dims' or 'shape'.  Setting this to 'dims' will keep input xdim/ydim values, 
+          and potentially modify the bounds and/or nrows/ncols.
+        """
         xmin,xmax,ymin,ymax = bounds
         mcross = False
-        eps = 1e-9
+        eps = 1e-12
         if xmin > xmax:
             xmax += 360
             mcross = True
