@@ -108,7 +108,7 @@ def createSampleXRange(M,N,filename,bounds=None,xdim=None,ydim=None):
     return data
 
 def createSampleGrid(M,N):
-    """Used for internal testing - create an NxN grid with lower left corner at 0.5,0.5, xdim/ydim = 1.0
+    """Used for internal testing - create an NxN grid with lower left corner at 0.5,0.5, xdim/ydim = 1.0.
     :param M:
        Number of rows in output grid
     :param N:
@@ -183,9 +183,11 @@ class GMTGrid(Grid2D):
             if cdfsig == 'CDF':
                 ftype = 'netcdf'
             else:
+                f.seek(0,0)
+                ncols = struct.unpack('I',f.read(4))[0]
                 f.seek(8,0)
                 offset = struct.unpack('I',f.read(4))[0]
-                if offset == 0 or offset == 1:
+                if (offset == 0 or offset == 1) and ncols > 0:
                     ftype = 'native'
                     
         f.close()

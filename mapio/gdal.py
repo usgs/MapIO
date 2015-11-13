@@ -181,6 +181,18 @@ class GDALGrid(Grid2D):
 
     @classmethod
     def readGDAL(cls,filename,bounds=None,firstColumnDuplicated=False):
+        """
+        Read an ESRI flt/bip/bil/bsq formatted file using rasterIO (GDAL Python wrapper).
+        :param filename:
+          Input ESRI formatted grid file.
+        :param bounds:
+          Tuple of (xmin,xmax,ymin,ymax)
+        :param firstColumnDuplicated:
+          Indicate whether the last column is the same as the first column.
+        :returns:
+          A tuple of (data,geodict) where data is a 2D numpy array of all data found inside bounds, and 
+          geodict gives the geo-referencing information for the data.
+        """
         geodict,xvar,yvar = cls.getFileGeoDict(filename)
         data = None
         with rasterio.drivers():
@@ -265,8 +277,19 @@ class GDALGrid(Grid2D):
         return hdr2
     
     def save(self,filename,format='EHdr'):
-        #http://webhelp.esri.com/arcgisdesktop/9.3/index.cfm?TopicName=BIL,_BIP,_and_BSQ_raster_files
-        #http://resources.esri.com/help/9.3/arcgisdesktop/com/gp_toolref/conversion_tools/float_to_raster_conversion_.htm
+        """
+        Save the data contained in this grid to a float or integer ESRI grid file.  Described here:
+        http://webhelp.esri.com/arcgisdesktop/9.3/index.cfm?TopicName=BIL,_BIP,_and_BSQ_raster_files
+        http://resources.esri.com/help/9.3/arcgisdesktop/com/gp_toolref/conversion_tools/float_to_raster_conversion_.htm.
+
+        :param filename:
+          String representing file to which data should be saved.
+        :param format:
+          Currently this code only supports the GDAL format 'EHdr' (see formats above.)  As rasterIO write support is expanded, this code should add functionality accordingly.
+        :raises DataSetException:
+          When format is not 'EHdr'.        
+        """
+        
         supported = ['EHdr']
         if format not in supported:
             raise DataSetException('Only "%s" file formats supported for saving' % str(supported))

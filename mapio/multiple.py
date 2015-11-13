@@ -55,7 +55,8 @@ class MultiGrid(Grid):
     @abc.abstractmethod
     def load(self,filename):
         """
-        Load layers of data from a file
+        Load layers of data from a file.
+        
         :param filename:
           File to load data from.
         """
@@ -152,6 +153,7 @@ class MultiGrid(Grid):
     def getLayerNames(self):
         """
         Return the list of layer names contained in the MultiGrid.
+        
         :returns:
           List of layer names.
         """

@@ -18,16 +18,17 @@ from dataset import DataSetException
 
 class MultiHazardGrid(MultiGrid):
     def __init__(self,layers,geodict,origin,header,metadata=None):
-        """Construct a ShakeGrid object.
-        :param layers:
-           OrderedDict containing ShakeMap data layers (keys are 'pga', etc., values are 2D arrays of data).
-        :param geodict:
-           Dictionary specifying the spatial extent,resolution and shape of the data.
-        :param origin:
+        """Construct a MultiHazardGrid object.
+        
+        :param layers: 
+          OrderedDict containing earthquake-induced hazard data layers (keys are 'pga', etc., values are 2D arrays of data).
+        :param geodict: 
+          Dictionary specifying the spatial extent,resolution and shape of the data.
+        :param origin: 
           Dictionary with elements:
             - id String of event ID (i.e., 'us2015abcd')
             - source String containing originating network ('us')
-            - time Float event magnitude
+            - time Python datetime of origin time, UTC.
             - lat Float event latitude
             - lon Float event longitude
             - depth Float event depth
@@ -36,7 +37,7 @@ class MultiHazardGrid(MultiGrid):
           Dictionary with elements:
             - type Type of multi-layer earthquake induced hazard ('shakemap','gfe')
             - version Integer product version (1)
-            - process_time Python datetime indicating when data was created.
+            - process_time Python datetime indicating when data was created (UTC)
             - code_version String version of code that created this file (i.e.,'4.0')
             - originator String representing network that created the hazard grid.
             - product_id String representing the ID of the product (may be different from origin ID)
@@ -44,8 +45,7 @@ class MultiHazardGrid(MultiGrid):
             - event_type String, one of ['ACTUAL','SCENARIO']
         :param metadata:
           Dictionary of dictionaries containing other metadata users wish to preserve.
-        :returns:
-           A MultiHazardGrid object.
+        :returns: A MultiHazardGrid object.
         """
         self._layers = collections.OrderedDict()
         self._geodict = geodict
@@ -58,6 +58,31 @@ class MultiHazardGrid(MultiGrid):
         self.setOrigin(origin)
         self.setMetadata(metadata)
 
+    @classmethod
+    def getFileGeoDict(cls,filename):
+        """Get the spatial extent, resolution, and shape of grid inside MultiHazardGrid format HDF file.
+        
+        :param filename:
+           File name of HDF file.
+        :returns:
+          GeoDict specifying spatial extent, resolution, and shape of grid inside HDF file.
+        """
+        f = h5py.File(filename, "r")
+        geodict = {}
+        xvar = f['x'][:]
+        yvar = f['y'][:]
+        geodict['xmin'] = xvar[0]
+        geodict['xmax'] = xvar[-1]
+        geodict['ymin'] = yvar[0]
+        geodict['ymax'] = yvar[-1]
+        geodict['nrows'] = len(yvar)
+        geodict['ncols'] = len(xvar)
+        geodict['xdim'] = xvar[1]-xvar[0]
+        geodict['ydim'] = yvar[1]-yvar[0]
+        f.close()
+
+        return geodict
+        
     def _saveDict(self,group,mydict):
         """
         Recursively save dictionaries into groups in an HDF file.
@@ -86,6 +111,7 @@ class MultiHazardGrid(MultiGrid):
     @classmethod
     def _loadDict(cls,group):
         """Recursively load dictionaries from groups in an HDF file.
+        
         :param group:
           HDF5 group object.
         :returns:
@@ -108,6 +134,7 @@ class MultiHazardGrid(MultiGrid):
         datasets named by layer keys.  Dictionaries contained in "origin", and "header" will be saved in
         groups of those same names.  Dictionaries contained in the "metadata" dictionary will be contained
         in a series of recursive groups under a group called "metadata".
+        
         :param filename:
           Output desired filename (HDF format).
         """
@@ -156,6 +183,7 @@ class MultiHazardGrid(MultiGrid):
     def load(cls,filename):
         """
         Load data from an HDF file into a MultiHazardGrid object.
+        
         :param filename:
           HDF file containing data and metadata for ShakeMap or Secondary Hazards data.
         :returns:
@@ -221,6 +249,7 @@ class MultiHazardGrid(MultiGrid):
     def setHeader(self,header):
         """
         Set the header dictionary.
+        
         :param header:
           Dictionary with elements:
             - type Type of multi-layer earthquake induced hazard ('shakemap','gfe')
@@ -237,6 +266,7 @@ class MultiHazardGrid(MultiGrid):
     def setOrigin(self,origin):
         """
         Set the origin dictionary.
+        
         Dictionary with elements:
             - id String of event ID (i.e., 'us2015abcd')
             - source String containing originating network ('us')
@@ -251,6 +281,7 @@ class MultiHazardGrid(MultiGrid):
     def setMetadata(self,metadata):
         """
         Set the metadata dictionary.
+        
         :param metadata:
           Dictionary of dictionaries of metadata.  Each dictionary can contain any of the following types:
           str,unicode,int,float,long,list,tuple,np.ndarray,dict,datetime.datetime,collections.OrderedDict.
@@ -260,6 +291,7 @@ class MultiHazardGrid(MultiGrid):
     def getHeader(self):
         """
         Return the header dictionary.
+        
         :returns:
           Header dictionary (see setHeader()).
         """
@@ -268,6 +300,7 @@ class MultiHazardGrid(MultiGrid):
     def getOrigin(self):
         """
         Return the origin dictionary.
+        
         :returns:
           Origin dictionary (see setOrigin()).
         """
@@ -276,6 +309,7 @@ class MultiHazardGrid(MultiGrid):
     def getMetadata(self):
         """
         Return the dictionary of arbitrary metadata dictionaries.
+        
         :returns:
           A dictionary of dictionaries containing arbitrary metadata.
         """

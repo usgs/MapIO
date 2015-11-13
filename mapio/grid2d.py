@@ -22,19 +22,13 @@ def testGeoJSON(obj):
     return False
 
 class Grid2D(Grid):
-    """
-    A partially abstract class to represent 2D lat/lon gridded datasets. Some basic methods
-    are implemented here, enough so that all functions of working with data (aside from loading and saving)
-    can be used with this class.  Grids are assumed to be pixel-registered - that is, grid coordinates
-    represent the value at the *center* of the cells.
-    """
     reqfields = set(['xmin','xmax','ymin','ymax','xdim','ydim','ncols','nrows'])
     def __init__(self,data=None,geodict=None):
         """
         Construct a Grid object.
         
         :param data: 
-            A 2D numpy array (can be None)
+            A 2D numpy array (can be None).
         :param geodict: 
             A dictionary (or None) containing the following fields:
              - xmin Longitude minimum (decimal degrees) (Center of upper left cell)
@@ -44,7 +38,7 @@ class Grid2D(Grid):
              - xdim Cell width (decimal degrees)
              - ydim Cell height (decimal degrees)
              - nrows Number of rows of input data (must match input data dimensions)
-             - ncols Number of columns of input data (must match input data dimensions)
+             - ncols Number of columns of input data (must match input data dimensions).
         :returns:
             A Grid object.  Internal representation of geodict input will have nrows/ncols fields added.
         :raises DataSetException:
@@ -96,7 +90,7 @@ class Grid2D(Grid):
 
     @classmethod
     def _createSampleData(self,M,N):
-        """Used for internal testing - create an NxN grid with lower left corner at 0.5,0.5, xdim/ydim = 1.0
+        """Used for internal testing - create an NxN grid with lower left corner at 0.5,0.5, xdim/ydim = 1.0.
         :param M:
            Number of rows in output grid
         :param N:
@@ -126,6 +120,14 @@ class Grid2D(Grid):
 
     @classmethod
     def copyFromGrid(cls,grid):
+        """
+        Copy constructor - can be used to create an instance of any Grid2D subclass from another.
+
+        :param grid:
+          Any Grid2D instance.
+        :returns:
+          A copy of the data in that input Grid2D instance.
+        """
         if not isinstance(grid,Grid2D):
             raise DataSetException('Input to copyFromGrid must be an instance of a Grid2D object (inc. subclasses)')
         return cls(grid.getData(),grid.getGeoDict())
@@ -137,13 +139,13 @@ class Grid2D(Grid):
     
     @classmethod
     def _createSections(self,bounds,geodict,firstColumnDuplicated,isScanLine=False):
-        """Given a grid that goes from -180 to 180 degrees, figure out the two pixel regions that up both sides of the subset
+        """Given a grid that goes from -180 to 180 degrees, figure out the two pixel regions that up both sides of the subset.
         :param bounds:
            Tuple of (xmin,xmax,ymin,ymax)
         :param geodict:
            Geodict dictionary
         :param firstColumnDuplicated:
-          Boolean indicating whether this is a global data set where the first and last columns are identical
+          Boolean indicating whether this is a global data set where the first and last columns are identical.
         :param isScanLine:
           Boolean indicating whether this array is in scan line order (pixel[0,0] is the geographic upper left).
         :returns:
@@ -182,16 +184,16 @@ class Grid2D(Grid):
         return(region1,region2)
     
     def getData(self):
-        """
-        Return a reference to the data inside the Grid
-        :returns:
+        """Return a reference to the data inside the Grid.
+        
+        :returns: 
           A reference to a 2D numpy array.
         """
         return self._data #should we return a copy of the data?
 
     def getGeoDict(self):
         """
-        Return a reference to the geodict inside the Grid
+        Return a reference to the geodict inside the Grid.
         :returns:
           A reference to a dictionary (see constructor).
         """
