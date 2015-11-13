@@ -74,6 +74,7 @@ class GDALGrid(Grid2D):
           Geodict defining a spatial extent that we want to envelope the returned geodict.
         :returns:
           A geodict that is guaranteed to be contained by input geodict.
+          
         """
         fgeodict,xvar,yvar = cls.getFileGeoDict(filename)
         fxmin,fxmax,fymin,fymax = (fgeodict['xmin'],fgeodict['xmax'],fgeodict['ymin'],fgeodict['ymax'])

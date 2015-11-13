@@ -655,6 +655,26 @@ def _test_rasterize():
         for shpfile in shpfiles:
             os.remove(shpfile)
 
+def _test_fixgeodict():
+    subbounds = (-118.7834,-117.0123,32.8754,33.7896)
+    xdim,ydim = (0.02,0.02)
+    nrows = ncols = -1
+    subgeodict = Grid2D.fixGeoDict(subbounds,xdim,ydim,nrows,ncols,preserve='dims')
+    print 'After initial fix, nrows = %i, ncols = %i' % (subgeodict['nrows'],subgeodict['ncols'])
+
+    newbounds = (subgeodict['xmin'],subgeodict['xmax'],subgeodict['ymin'],subgeodict['ymax'])
+    xdim,ydim = (subgeodict['xdim'],subgeodict['ydim'])
+    nrows,ncols = (-1,-1)
+    newdict = Grid2D.fixGeoDict(newbounds,xdim,ydim,nrows,ncols,preserve='dims')
+    print 'After second fix, nrows = %i, ncols = %i' % (newdict['nrows'],newdict['ncols'])
+
+    newbounds = (newdict['xmin'],newdict['xmax'],newdict['ymin'],newdict['ymax'])
+    xdim,ydim = (newdict['xdim'],newdict['ydim'])
+    nrows,ncols = (-1,-1)
+    newdict2 = Grid2D.fixGeoDict(newbounds,xdim,ydim,nrows,ncols,preserve='dims')
+    print 'After third fix, nrows = %i, ncols = %i' % (newdict2['nrows'],newdict2['ncols'])
+    
+    assert subgeodict == newdict
 
 def _test_copy():
     data = np.arange(0,16).astype(np.float32).reshape(4,4)
@@ -666,6 +686,7 @@ def _test_copy():
     print grid2._geodict    
     
 if __name__ == '__main__':
+    _test_fixgeodict()
     _test_interpolate()
     _test_rasterize()
     _test_basics()
