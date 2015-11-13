@@ -13,6 +13,19 @@ from gridbase import Grid
 from dataset import DataSetException
 import h5py
 
+'''Grid2D subclass for reading,writing, and manipulating GMT format grids.
+
+Usage:
+
+::
+
+     gmtgrid = GMTGrid.load(gmtfilename)
+     gmtgrid.getGeoDict()
+
+This class supports reading and writing of all three GMT formats: NetCDF, HDF, and the GMT "native" format.
+
+'''
+
 NETCDF_TYPES = {'B':np.uint8,
                 'b':np.int8,
                 'h':np.int16,
@@ -120,9 +133,18 @@ def createSampleGrid(M,N):
     return gmtgrid
 
 class GMTGrid(Grid2D):
-    """
-    A class that implements a Grid2D object around GMT NetCDF/HDF/native gridded data sets.
-    """
+    '''Grid2D subclass for reading,writing, and manipulating GMT format grids.
+
+    Usage:
+
+    ::
+
+     gmtgrid = GMTGrid.load(gmtfilename)
+     gmtgrid.getGeoDict()
+
+     This class supports reading and writing of all three GMT formats: NetCDF, HDF, and the GMT "native" format.
+
+     '''
     def __init__(self,data,geodict):
         """Construct a GMTGrid object.
         :param data:

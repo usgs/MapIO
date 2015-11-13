@@ -89,23 +89,22 @@ class Grid(DataSet):
     def fixGeoDict(cls,bounds,xdim,ydim,nrows,ncols,preserve='dims'):
         xmin,xmax,ymin,ymax = bounds
         mcross = False
+        eps = 1e-9
         if xmin > xmax:
             xmax += 360
             mcross = True
         if preserve == 'dims':
-            ncols = int((xmax-xmin)/xdim)
-            xmax = xmin + ncols*xdim
+            ncols = int((xmax-xmin)/xdim + eps) + 1
+            xmax = xmin + (ncols - 1)*xdim
             xvar = np.arange(xmin,xmax+(xdim*0.1),xdim)
             ncols = len(xvar)
-            xdiff = np.abs(xmax - xvar[-1]) #xmax is not guaranteed to be exactly the same as what we just calculated...
             if mcross:
                 xmax -= 360
 
-            nrows = int((ymax-ymin)/ydim)
-            ymax = ymin + nrows*ydim
+            nrows = int((ymax-ymin)/ydim + eps) + 1
+            ymax = ymin + (nrows - 1)*ydim
             yvar = np.arange(ymin,ymax+(ydim*0.1),ydim)
             nrows = len(yvar)
-            ydiff = np.abs(ymax - yvar[-1]) #ymax is not guaranteed to be exactly the same as what we just calculated...
 
         elif preserve == 'shape': #preserve rows and columns
             xvar,xdim = np.linspace(xmin,xmax,num=ncols,retstep=True)
