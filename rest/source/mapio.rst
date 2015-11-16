@@ -52,7 +52,11 @@ writing those grids to disk in standard file formats.  For that, see:
 mapio.gdal module
 --------------------
 
-Grid2D subclass for reading,writing, and manipulating ESRI format grids.
+Grid2D subclass for reading,writing, and manipulating ESRI format
+grids.
+
+ * `Integer Format (BIL/BIP/BSQ) Description <http://webhelp.esri.com/arcgisdesktop/9.3/index.cfm?TopicName=BIL,_BIP,_and_BSQ_raster_files>`_
+ * `Float Format (FLT) Description <http://resources.esri.com/help/9.3/arcgisdesktop/com/gp_toolref/conversion_tools/float_to_raster_conversion_.htm>`_
 
 Usage:
 
