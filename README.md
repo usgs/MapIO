@@ -43,6 +43,11 @@ To update:
 
 pip install -U git+git://github.com/usgs/MapIO.git
 
+API Documentation
+-----------------
+
+The documentation for the various classes can be viewed [here](https://github.com/usgs/MapIO/blob/master/rest/source/mapio.rst).
+
 Interoperability
 -----------------
 The various grid classes in this repository read and write files in various formats.  
