@@ -51,7 +51,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'MapIO'
-copyright = u'2015, Mike Hearne'
+copyright = u'2015, United States Geological Survey'
 author = u'Mike Hearne'
 
 # The version info for the project you're documenting, acts as replacement for
