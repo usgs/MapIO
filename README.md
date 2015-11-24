@@ -48,6 +48,18 @@ API Documentation
 
 The documentation for the various classes can be viewed [here](https://github.com/usgs/MapIO/blob/master/rest/source/mapio.rst).
 
+FOR DEVELOPERS
+--------------
+
+To contribute, follow the standard git fork/clone/pull-request development methodology.  Also, it might be nice if you contact the author(s) 
+before doing so.
+
+Also, this project keeps the project version number in the "mapio/__init__.py" file.  Two requests:
+
+ 1. DO NOT modify the contents of this file manually!
+ 2. DO copy the "hooks/pre-commit" script to ".git/hooks".  This will enable git to update the version number with the results of running 
+    "git describe --long".
+
 Interoperability
 -----------------
 The various grid classes in this repository read and write files in various formats.  

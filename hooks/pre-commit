@@ -1,0 +1,8 @@
+#!/bin/sh
+
+version="`git describe --long`"
+cd mapio
+sed -i.bak "s/'.*'/'${version}'/g" __init__.py
+rm *.bak
+
+

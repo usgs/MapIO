@@ -1,7 +1,10 @@
 from distutils.core import setup
+import mapio
+
+myversion = mapio.__version__
 
 setup(name='mapio',
-      version='0.1dev',
+      version=myversion,
       description='Grid Classes',
       author='Mike Hearne,Bruce Worden',
       author_email='mhearne@usgs.gov,cbworden@usgs.gov',
