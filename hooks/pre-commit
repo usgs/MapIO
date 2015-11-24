@@ -1,6 +1,7 @@
 #!/bin/sh
 
-version="`git describe --long`"
+version=`git describe --long | awk -F- '{print $1"."$2}'`
+
 cd mapio
 sed -i.bak "s/'.*'/'${version}'/g" __init__.py
 rm *.bak
