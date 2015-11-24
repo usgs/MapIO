@@ -48,7 +48,7 @@ API Documentation
 
 The documentation for the various classes can be viewed [here](https://github.com/usgs/MapIO/blob/master/rest/source/mapio.rst).
 
-FOR DEVELOPERS
+For Developers
 --------------
 
 To contribute, follow the standard git fork/clone/pull-request development methodology.  Also, it might be nice if you contact the author(s) 
