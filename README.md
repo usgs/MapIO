@@ -51,6 +51,14 @@ The documentation for the various classes can be viewed [here](https://github.co
 For Developers
 --------------
 
+Versioning will work as follows:
+
+Lead developers will set tags using the "git tag" command.  The version number will consist of the tag plus the number
+of commits since that tag, thusly:
+Tag 1.1
+Number of commits since tag 1.1: 7
+Version number = 1.1.7
+
 To contribute, follow the standard git fork/clone/pull-request development methodology.  Also, it might be nice if you contact the author(s) 
 before doing so.
 
