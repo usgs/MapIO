@@ -48,8 +48,16 @@ API Documentation
 
 The documentation for the various classes can be viewed [here](https://github.com/usgs/MapIO/blob/master/rest/source/mapio.rst).
 
-FOR DEVELOPERS
+For Developers
 --------------
+
+Versioning will work as follows:
+
+Lead developers will set tags using the "git tag" command.  The version number will consist of the tag plus the number
+of commits since that tag, thusly:
+Tag 1.1
+Number of commits since tag 1.1: 7
+Version number = 1.1.7
 
 To contribute, follow the standard git fork/clone/pull-request development methodology.  Also, it might be nice if you contact the author(s) 
 before doing so.
@@ -57,8 +65,7 @@ before doing so.
 Also, this project keeps the project version number in the "mapio/__init__.py" file.  Two requests:
 
  1. DO NOT modify the contents of this file manually!
- 2. DO copy the "hooks/pre-commit" script to ".git/hooks".  This will enable git to update the version number with the results of running 
-    "git describe --long".
+ 2. DO copy the "hooks/pre-commit" script to ".git/hooks".  This will enable git to update the version number with the above tag/number of commits information described above.
 
 Interoperability
 -----------------
