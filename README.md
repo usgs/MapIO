@@ -59,6 +59,8 @@ Tag 1.1
 Number of commits since tag 1.1: 7
 Version number = 1.1.7
 
+a
+
 To contribute, follow the standard git fork/clone/pull-request development methodology.  Also, it might be nice if you contact the author(s) 
 before doing so.
 
