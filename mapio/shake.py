@@ -131,7 +131,10 @@ def _getHeaderData(fileobj):
     for uncel in unc_elements:
         key = uncel.getAttribute('name')
         value = float(uncel.getAttribute('value'))
-        numsta = int(uncel.getAttribute('numsta'))
+        try:
+            numsta = int(uncel.getAttribute('numsta'))
+        except:
+            numsta = 0
         uncertainties[key] = (value,numsta)
 
     return (griddict,eventdict,specdict,fields,uncertainties)
