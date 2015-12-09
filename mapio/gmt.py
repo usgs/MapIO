@@ -783,13 +783,12 @@ class GMTGrid(Grid2D):
                 xdim = samplegeodict['xdim']
                 ydim = samplegeodict['ydim']
                 hasDims = True
+
+                nrows = samplegeodict['nrows']
+                ncols = samplegeodict['ncols']
+                hasShape = True
             except:
-                try:
-                    nrows = samplegeodict['nrows']
-                    ncols = samplegeodict['ncols']
-                    hasShape = True
-                except:
-                    raise DataSetException('Either xdim/ydim or nrows/ncols must be specified in input samplegeodict')
+                raise DataSetException('Either xdim/ydim or nrows/ncols must be specified in input samplegeodict')
             dimsMatch = xdim == fxdim and ydim == fydim
             if preserve == 'dims' and not dimsMatch and not resample:
                 raise DataSetException('You cannot preserve dims when samplgeodict dims do not match file dims and resampling is off')
