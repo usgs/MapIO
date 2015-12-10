@@ -207,8 +207,10 @@ class GDALGrid(Grid2D):
                     data,geodict = cls._subsetRegions(src,bounds,geodict,xvar,yvar,firstColumnDuplicated)
         #Put NaN's back in where nodata value was
         nodata = src.get_nodatavals()[0]
-        if (data==nodata).any():
-            data[data == nodata] = np.nan
+        if nodata is not None:
+            if (data==nodata).any():
+                data[data == nodata] = np.nan
+        
         return (data,geodict)
                 
 
