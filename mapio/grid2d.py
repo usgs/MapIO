@@ -191,6 +191,26 @@ class Grid2D(Grid):
         """
         return self._data #should we return a copy of the data?
 
+    def setData(self,data):
+        """Set the data inside the Grid.
+        
+        :param data: 
+          A 2D numpy array.
+        :raises:
+          DataSetException if the number of rows and columns do not match the the internal GeoDict, or if the input
+          is not a numpy array.
+        """
+        if not isinstance(data,np.ndarray):
+            raise DataSetException('setData() input is not a numpy array.')
+
+        if len(data.shape) != 2:
+            raise DataSetException('setData() input array must have two dimensions.')
+
+        m,n = data.shape
+        if m != self._geodict['nrows'] or n != self._geodict['ncols']:
+            raise DataSetException('setData() input array must match rows and columns of existing data.')
+        self._data = data
+
     def getGeoDict(self):
         """
         Return a reference to the geodict inside the Grid.
@@ -686,6 +706,31 @@ def _test_copy():
     grid1._data[0,0] = np.nan
     print grid2._data
     print grid2._geodict    
+
+def _test_setData():
+    data = np.arange(0,16).astype(np.float32).reshape(4,4)
+    geodict = {'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'xdim':1.0,'ydim':1.0,'nrows':4,'ncols':4}
+    grid1 = Grid2D(data,geodict)
+    x = np.ones((4,4))
+    try:
+        grid1.setData(x) #this should pass
+        print 'setData test passed.'
+    except DataSetException as dse:
+        print 'setData test failed.'
+    try:
+        x = np.ones((5,5))
+        grid1.setData(x)
+        print 'setData test did not fail when it should have.'
+    except DataSetException as dse:
+        print 'setData test failed as expected.'
+
+    try:
+        x = 'fred'
+        grid1.setData(x)
+        print 'setData test did not fail when it should have.'
+    except DataSetException as dse:
+        print 'setData test failed as expected.'
+    
     
 if __name__ == '__main__':
     _test_fixgeodict()
@@ -693,5 +738,6 @@ if __name__ == '__main__':
     _test_rasterize()
     _test_basics()
     _test_resample()
-    _test_copy()    
+    _test_copy()
+    _test_setData()
         
