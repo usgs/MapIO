@@ -247,12 +247,14 @@ class ShakeGrid(MultiGrid):
         return geodict
 
     @classmethod
-    def load(cls,shakefilename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan):
+    def load(cls,shakefilename,samplegeodict=None,preserve='dims',resample=False,method='linear',doPadding=False,padValue=np.nan):
         """Create a ShakeGrid object from a ShakeMap grid.xml file.
         :param shakefilename:
           File name or File-like object of ShakeMap grid.xml file.
         :param samplegeodict:
           GeoDict used to specify subset bounds and resolution (if resample is selected)
+        :param preserve:
+          String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         :param resample:
           Boolean used to indicate whether grid should be resampled from the file based on samplegeodict.
         :param method:
@@ -274,7 +276,10 @@ class ShakeGrid(MultiGrid):
 
         if samplegeodict is not None:
             #fill in nrows/ncols or xdim/ydim, whichever is not specified.  xdim/ydim dictate if both pairs are specified.
-            samplegeodict = cls.fillGeoDict(samplegeodict)
+            bounds = (samplegeodict['xmin'],samplegeodict['xmax'],samplegeodict['ymin'],samplegeodict['ymax'])
+            xdim,ydim = samplegeodict['xdim'],samplegeodict['ydim']
+            nrows,ncols = samplegeodict['nrows'],samplegeodict['ncols']
+            samplegeodict = cls.fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve=preserve)
 
         #read the file using the available function
         layers,geodict,eventDict,shakeDict,uncertaintyDict = readShakeFile(shakefile)
@@ -533,7 +538,9 @@ def _save_test():
                       'ymin':-0.5,
                       'ymax':4.5,
                       'xdim':1.0,
-                      'ydim':1.0}
+                      'ydim':1.0,
+                      'nrows':5,
+                      'ncols':5}
         shake3 = ShakeGrid.load('test.xml',samplegeodict=sampledict,resample=False,doPadding=False,padValue=np.nan)
         tdata = shake3.getLayer('pga').getData()
         np.testing.assert_almost_equal(tdata,layers['pga'])
@@ -541,7 +548,7 @@ def _save_test():
         print 'Passed loading with bounds (no resampling or padding)...'
 
         print 'Testing loading shakemap with padding, no resampling...'
-        newdict = {'xmin':-0.5,'xmax':4.5,'ymin':-0.5,'ymax':4.5,'xdim':1.0,'ydim':1.0}
+        newdict = {'xmin':-0.5,'xmax':4.5,'ymin':-0.5,'ymax':4.5,'xdim':1.0,'ydim':1.0,'nrows':5,'ncols':5}
         shake4 = ShakeGrid.load('test.xml',samplegeodict=newdict,resample=False,doPadding=True,padValue=np.nan)
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan],
                            [np.nan,0.0,1.0,2.0,3.0,np.nan],
@@ -566,7 +573,7 @@ def _save_test():
         shake.save('test.xml',version=3)
 
         print 'Testing resampling, no padding...'
-        littledict = {'xmin':2.0,'xmax':4.0,'ymin':2.0,'ymax':4.0,'xdim':1.0,'ydim':1.0}
+        littledict = {'xmin':2.0,'xmax':4.0,'ymin':2.0,'ymax':4.0,'xdim':1.0,'ydim':1.0,'nrows':3,'ncols':3}
         shake5 = ShakeGrid.load('test.xml',samplegeodict=littledict,resample=True,doPadding=False,padValue=np.nan)
         output = np.array([[10.5,11.5,12.5],
                            [16.5,17.5,18.5],
@@ -586,7 +593,7 @@ def _save_test():
         layers['mmi'] = mmi
         shake = ShakeGrid(layers,geodict,eventDict,shakeDict,uncDict)
         shake.save('test.xml',version=3)
-        bigdict = {'xmin':0.0,'xmax':4.0,'ymin':0.0,'ymax':4.0,'xdim':1.0,'ydim':1.0}
+        bigdict = {'xmin':0.0,'xmax':4.0,'ymin':0.0,'ymax':4.0,'xdim':1.0,'ydim':1.0,'nrows':5,'ncols':5}
         shake6 = ShakeGrid.load('test.xml',samplegeodict=bigdict,resample=True,doPadding=True,padValue=np.nan)
         tdata = shake6.getLayer('pga').getData()
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan],
@@ -600,9 +607,6 @@ def _save_test():
         print 'Failed a shakemap load test:\n %s' % error
     os.remove('test.xml')
 
-def _getTest():
-    
-                 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         shakefile = sys.argv[1]

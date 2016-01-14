@@ -354,11 +354,15 @@ class GDALGrid(Grid2D):
                 xdim = samplegeodict['xdim']
                 ydim = samplegeodict['ydim']
                 hasDims = True
-
+            except:
+                pass
+            try:
                 nrows = samplegeodict['nrows']
                 ncols = samplegeodict['ncols']
                 hasShape = True
             except:
+                pass
+            if not hasDims and not hasShape:
                 raise DataSetException('Either xdim/ydim or nrows/ncols must be specified in input samplegeodict')
             dims1 = np.array([xdim,ydim])
             dims2 = np.array([fxdim,fydim])
