@@ -417,6 +417,21 @@ class ShakeGrid(MultiGrid):
                 raise DataSetException('eventdict key value "%s" is the wrong datatype' % str(eventdict[key]))
         self._eventDict = eventdict.copy()
 
+    def getEventDict(self):
+        """Get the event dictionary (the attributes of the "event" element in the ShakeMap header).
+        :returns:
+          Dictionary containing the following fields:
+           - event_id: String like "us2016abcd".
+           - magnitude: Earthquake magnitude.
+           - lat: Earthquake latitude.
+           - lon: Earthquake longitude.
+           - depth: Earthquake depth.
+           - event_timestamp: Earthquake origin time.
+           - event_network: Network of earthquake origin.
+           - event_description: Description of earthquake location.
+        """
+        return self._eventDict
+
     def _setShakeDict(self,shakedict):
         """Set the shake dictionary, validating all values in the dictionary.
         :param shakedict:
@@ -430,6 +445,20 @@ class ShakeGrid(MultiGrid):
             if not self._checkType(shakedict[key],dtype):
                 raise DataSetException('shakedict key value "%s" is the wrong datatype' % str(shakedict[key]))
         self._shakeDict = shakedict.copy()
+
+    def getShakeDict(self):
+        """Get the shake dictionary (the attributes of the "shakemap_grid" element in the ShakeMap header).
+        :returns:
+          Dictionary containing the following fields:
+           - event_id: String like "us2016abcd".
+           - shakemap_id: String like "us2016abcd".
+           - shakemap_version: Version of the map that has been created.
+           - code_version: Version of the ShakeMap software that was used to create the map.
+           - shakemap_originator: Network that created the ShakeMap.
+           - map_status: One of 'RELEASED' or 'REVIEWED'.
+           - shakemap_event_type: One of 'ACTUAL' or 'SCENARIO'.
+        """
+        return self._shakeDict
 
     def _setUncertaintyDict(self,uncertaintyDict):
         """Set the uncertainty dictionary.
@@ -570,6 +599,8 @@ def _save_test():
     except AssertionError,error:
         print 'Failed a shakemap load test:\n %s' % error
     os.remove('test.xml')
+
+def _getTest():
     
                  
 if __name__ == '__main__':
