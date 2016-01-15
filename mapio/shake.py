@@ -314,13 +314,13 @@ class ShakeGrid(MultiGrid):
                     layerdata = np.vstack((toppad,layerdata))
                     grid = Grid2D(layerdata,geodict)
                     if resample: #should I just do an interpolateToGrid() here?
-                        grid.trim(bounds,resample=resample,method=method)
+                        grid.trim(samplegeodict,resample=resample,method=method,preserve=preserve)
                     layers[layername] = grid.getData()
                 geodict = grid.getGeoDict().copy()
             else:
                 for layername,layerdata in layers.iteritems():
                     grid = Grid2D(layerdata,geodict)
-                    grid.trim(bounds,resample=resample,method=method)
+                    grid.trim(samplegeodict,resample=resample,method=method,preserve=preserve)
                     layers[layername] = grid.getData()
                 geodict = grid.getGeoDict().copy()
             

@@ -225,6 +225,7 @@ class GMTGrid(Grid2D):
         :returns:
           A geodict that is guaranteed to be contained by input geodict.
         """
+        
         fgeodict = cls.getFileGeoDict(filename)
         fxmin,fxmax,fymin,fymax = (fgeodict['xmin'],fgeodict['xmax'],fgeodict['ymin'],fgeodict['ymax'])
         xmin,xmax,ymin,ymax = (geodict['xmin'],geodict['xmax'],geodict['ymin'],geodict['ymax'])
@@ -240,7 +241,11 @@ class GMTGrid(Grid2D):
         newymax = fymin + ulrow*fydim
         newymin = fymin + lrrow*fydim
 
-        outgeodict = {'xmin':newxmin,'xmax':newxmax,'ymin':newymin,'ymax':newymax,'xdim':fxdim,'ydim':fydim}
+        #outgeodict = {'xmin':newxmin,'xmax':newxmax,'ymin':newymin,'ymax':newymax,'xdim':fxdim,'ydim':fydim}
+        eps = 1e-12
+        ncols = int((newxmax-newxmin)/fxdim + eps) + 1
+        nrows = int((newymax-newymin)/fydim + eps) + 1
+        outgeodict = cls.fixGeoDict((newxmin,newxmax,newymin,newymax),fxdim,fydim,nrows,ncols,preserve='shape')
         return outgeodict
     
     @classmethod
@@ -1143,7 +1148,7 @@ def _within_test():
         sdict = {'xmin':2.7,'xmax':6.7,'ymin':2.7,'ymax':6.7}
         newdict = GMTGrid.getBoundsWithin('test.grd',sdict)
         testdict = {'xmin':4.5,'xmax':5.5,'ymin':4.5,'ymax':5.5,'xdim':1.0,'ydim':1.0}
-        assert newdict == testdict
+        assert (newdict['xmin'],newdict['xmax'],newdict['ymin'],newdict['ymax']) == (testdict['xmin'],testdict['xmax'],testdict['ymin'],testdict['ymax'])
         gmtgrid2 = GMTGrid.load('test.grd',samplegeodict=newdict)
         output = np.array([[20,21],
                            [28,29]])
