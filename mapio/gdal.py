@@ -91,7 +91,11 @@ class GDALGrid(Grid2D):
         newymax = fymin + ulrow*fydim
         newymin = fymin + lrrow*fydim
 
-        outgeodict = {'xmin':newxmin,'xmax':newxmax,'ymin':newymin,'ymax':newymax,'xdim':fxdim,'ydim':fydim}
+        #outgeodict = {'xmin':newxmin,'xmax':newxmax,'ymin':newymin,'ymax':newymax,'xdim':fxdim,'ydim':fydim}
+        eps = 1e-12
+        ncols = int((newxmax-newxmin)/fxdim + eps) + 1
+        nrows = int((newymax-newymin)/fydim + eps) + 1
+        outgeodict = cls.fixGeoDict((newxmin,newxmax,newymin,newymax),fxdim,fydim,nrows,ncols,preserve='shape')
         return outgeodict
     
     @classmethod

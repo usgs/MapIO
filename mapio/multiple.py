@@ -134,20 +134,22 @@ class MultiGrid(Grid):
         """
         return (self._geodict['xmin'],self._geodict['xmax'],self._geodict['ymin'],self._geodict['ymax'])
 
-    def trim(self,bounds,resample=False,method='linear'):
+    def trim(self,geodict,resample=False,method='linear',preserve='dims'):
         """
         Trim all data layers to a smaller set of bounds, resampling if requested.  If not resampling,
         data will be trimmed to smallest grid boundary possible.
         
-        :param bounds:
-           Tuple of (lonmin,lonmax,latmin,latmax)
+        :param geodict:
+           GeoDict used to specify subset bounds and resolution (if resample is selected)
         :param resample:
            Boolean indicating whether the data should be resampled to *exactly* match input bounds.
         :param method:
            If resampling, method used, one of ('linear','nearest','cubic','quintic')
+        :keyword preserve:
+            String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         """
         for layername,layer in self._layers.iteritems():
-            layer.trim(bounds,resample=resample,method=method)
+            layer.trim(geodict,resample=resample,method=method,preserve=preserve)
         self._geodict = layer.getGeoDict().copy()
 
     def getLayerNames(self):
@@ -182,7 +184,7 @@ class MultiGrid(Grid):
         
         :param row: 
            Row dimension index into internal data array.
-        :param col: 
+'        :param col: 
            Column dimension index into internal data array.
         :returns: 
            Tuple of latitude and longitude.

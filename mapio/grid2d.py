@@ -228,19 +228,21 @@ class Grid2D(Grid):
         """
         return (self._geodict['xmin'],self._geodict['xmax'],self._geodict['ymin'],self._geodict['ymax'])
 
-    def trim(self,bounds,resample=False,method='linear'):
+    def trim(self,geodict,resample=False,method='linear',preserve='dims'):
         """
         Trim data to a smaller set of bounds, resampling if requested.  If not resampling,
         data will be trimmed to largest grid boundary possible.
         
-        :param bounds:
-           Tuple of (lonmin,lonmax,latmin,latmax)
+        :param geodict:
+           GeoDict used to specify subset bounds and resolution (if resample is selected)
         :param resample:
            Boolean indicating whether the data should be resampled to *exactly* match input bounds.
         :param method:
            If resampling, method used, one of ('linear','nearest','cubic','quintic')
+        :keyword preserve:
+            String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         """
-        xmin,xmax,ymin,ymax = bounds
+        xmin,xmax,ymin,ymax = (geodict['xmin'],geodict['xmax'],geodict['ymin'],geodict['ymax'])
         gxmin,gxmax,gymin,gymax = self.getBounds()
         #if any of the input bounds are outside the bounds of the grid, cut off those edges
         xmin = max(xmin,gxmin)
@@ -263,14 +265,15 @@ class Grid2D(Grid):
             self._geodict['ymax'] = newymax
             self._geodict['nrows'],self._geodict['ncols'] = self._data.shape
         else:
-            xdim = self._geodict['xdim']
-            ydim = self._geodict['ydim']
-            indict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'xdim':xdim,'ydim':ydim}
-            ncols = len(np.arange(xmin,xmax+(xdim*0.1),xdim))
-            nrows = len(np.arange(ymin,ymax+(ydim*0.1),ydim))
-            indict['nrows'] = nrows
-            indict['ncols'] = ncols
-            self.interpolateToGrid(indict,method=method)
+            indict = super(Grid2D,self).fixGeoDict((xmin,xmax,ymin,ymax),geodict['xdim'],geodict['ydim'],geodict['nrows'],geodict['ncols'],preserve=preserve)
+            # xdim = self._geodict['xdim']
+            # ydim = self._geodict['ydim']
+            # indict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'xdim':xdim,'ydim':ydim}
+            # ncols = len(np.arange(xmin,xmax+(xdim*0.1),xdim))
+            # nrows = len(np.arange(ymin,ymax+(ydim*0.1),ydim))
+            # indict['nrows'] = nrows
+            # indict['ncols'] = ncols
+            self.interpolateToGrid(indict,method=method,preserve=preserve)
 
     def getValue(self,lat,lon,method='nearest',default=None): #return nearest neighbor value
         """Return numpy array at given latitude and longitude (using nearest neighbor).
@@ -388,7 +391,7 @@ class Grid2D(Grid):
 
         return (xi,yi)
     
-    def interpolateToGrid(self,geodict,method='linear'):
+    def interpolateToGrid(self,geodict,method='linear',preserve='dims'):
         """
         Given a geodict specifying another grid extent and resolution, resample current grid to match.
         
@@ -396,6 +399,8 @@ class Grid2D(Grid):
             geodict dictionary from another grid whose extents are inside the extent of this grid.
         :keyword method: 
             Optional interpolation method - ['linear', 'cubic','nearest']
+        :keyword preserve:
+            String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         :raises DataSetException: 
            If the Grid object upon which this function is being called is not completely contained by the grid to which this Grid is being resampled.
         :raises DataSetException: 
@@ -408,7 +413,7 @@ class Grid2D(Grid):
         bounds = (geodict['xmin'],geodict['xmax'],geodict['ymin'],geodict['ymax'])
         xdim,ydim = (geodict['xdim'],geodict['ydim'])
         nrows,ncols = (geodict['nrows'],geodict['ncols'])
-        geodict = super(Grid2D,self).fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve='dims')
+        geodict = super(Grid2D,self).fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve=preserve)
         xi,yi = self._getInterpCoords(geodict)
 
         #now using scipy interpolate functions
@@ -597,15 +602,15 @@ def _test_resample():
 
     print 'Testing data trimming without resampling...'
     grid = Grid2D(data,geodict)
-    bounds = (2.0,3.0,2.0,3.0)
-    grid.trim(bounds,resample=False)
+    sdict = {'xmin':2.0,'xmax':3.0,'ymin':2.0,'ymax':3.0,'xdim':1.0,'ydim':1.0,'nrows':3,'ncols':3}
+    grid.trim(sdict,resample=False)
     output = np.array([[6,7,8],[11,12,13],[16,17,18]])
     np.testing.assert_almost_equal(grid.getData(),output)
     print 'Passed data trimming without resampling...'
 
     print 'Testing data trimming with resampling...'
     grid = Grid2D(data,geodict)
-    grid.trim(bounds,resample=True)
+    grid.trim(sdict,resample=True,preserve='dims')
     output = np.array([[9.0,10.0],[14.0,15.0]])
     np.testing.assert_almost_equal(grid.getData(),output)
     print 'Passed data trimming with resampling...'
