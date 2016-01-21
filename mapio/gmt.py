@@ -175,18 +175,25 @@ class GMTGrid(Grid2D):
         :returns:
           One of 'netcdf' (NetCDF version 3), 'hdf' (NetCDF version 4), 'native' (so-called GMT native format), or 'unknown'.
         """
+        isThree = True
+        if sys.version_info.major == 2:
+            isThree = False
         f = open(grdfile,'rb')
         #check to see if it's HDF or CDF
         f.seek(1,0)
-        hdfsig = f.read(3).decode('utf-8')
-        #hdfsig = ''.join(struct.unpack('ccc',f.read(3)))
+        if isThree:
+            hdfsig = f.read(3).decode('utf-8')
+        else:
+            hdfsig = ''.join(struct.unpack('ccc',f.read(3)))
         ftype = 'unknown'
         if hdfsig == 'HDF':
             ftype = 'hdf'
         else:
             f.seek(0,0)
-            cdfsig = f.read(3).decode('utf-8')
-            #cdfsig = ''.join(struct.unpack('ccc',f.read(3)))
+            if isThree:
+                cdfsig = f.read(3).decode('utf-8')
+            else:
+                cdfsig = ''.join(struct.unpack('ccc',f.read(3)))
             if cdfsig == 'CDF':
                 ftype = 'netcdf'
             else:
