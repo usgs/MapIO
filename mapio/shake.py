@@ -105,7 +105,7 @@ def _getXMLText(fileobj):
     xmltext = xmltext+'</shakemap_grid>'
     return xmltext
 
-def _getHeaderData(fileobj):
+def getHeaderData(fileobj):
     """Return all relevant header data from ShakeMap grid.xml file.
     :param fileobj:
       File-like object representing an open ShakeMap grid file.
