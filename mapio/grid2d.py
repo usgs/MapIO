@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+#python 3 compatibility
+from __future__ import print_function
+
 #stdlib imports
 import abc
 import textwrap
@@ -15,6 +18,8 @@ import shapely
 from affine import Affine
 from rasterio import features
 from shapely.geometry import MultiPoint,Polygon,mapping
+
+
 
 def testGeoJSON(obj):
     if hasattr(obj,'has_key') and obj.has_key('geometry') and obj.has_key('properties'):
@@ -413,7 +418,7 @@ class Grid2D(Grid):
         bounds = (geodict['xmin'],geodict['xmax'],geodict['ymin'],geodict['ymax'])
         xdim,ydim = (geodict['xdim'],geodict['ydim'])
         nrows,ncols = (geodict['nrows'],geodict['ncols'])
-        geodict = super(Grid2D,self).fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve=preserve)
+        geodict = self.fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve=preserve)
         xi,yi = self._getInterpCoords(geodict)
 
         #now using scipy interpolate functions
@@ -444,12 +449,15 @@ class Grid2D(Grid):
                 self._data = self._data.reshape((newrows,newcols))
         else:
             x,y = np.meshgrid(basex,basey)
-            f = interpolate.NearestNDInterpolator(zip(x.flatten(),y.flatten()),self._data.flatten())
+            #in Python2, list doesn't do anything
+            #in python3, it makes result of zip from iterator into list
+            xy = list(zip(x.flatten(),y.flatten())) 
+            f = interpolate.NearestNDInterpolator(xy,self._data.flatten())
             newrows = geodict['nrows']
             newcols = geodict['ncols']
             xi = np.tile(xi,(newrows,1))
             yi = np.tile(yi.reshape(newrows,1),(1,newcols))
-            self._data = f(zip(xi.flatten(),yi.flatten()))
+            self._data = f(list(zip(xi.flatten(),yi.flatten())))
             self._data = self._data.reshape(xi.shape)
                                                   
             
@@ -568,7 +576,7 @@ def _test_basics():
     geodict = {'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'xdim':1.0,'ydim':1.0,'nrows':4,'ncols':4}
     data = np.arange(0,16).reshape(4,4)
     grid = Grid2D(data,geodict)
-    print 'Testing basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...'
+    print('Testing basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...')
     np.testing.assert_almost_equal(grid.getData(),data)
 
     assert grid.getGeoDict() == geodict
@@ -594,26 +602,26 @@ def _test_basics():
     irow,icol = grid.getRowCol(1.0,3.0,returnFloat=False)
 
     assert irow == 2 and icol == 2
-    print 'Passed basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...'
+    print('Passed basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...')
     
 def _test_resample():
     geodict = {'xmin':0.5,'xmax':4.5,'ymin':0.5,'ymax':4.5,'xdim':1.0,'ydim':1.0,'nrows':5,'ncols':5}
     data = np.arange(0,25).reshape(5,5)
 
-    print 'Testing data trimming without resampling...'
+    print('Testing data trimming without resampling...')
     grid = Grid2D(data,geodict)
     sdict = {'xmin':2.0,'xmax':3.0,'ymin':2.0,'ymax':3.0,'xdim':1.0,'ydim':1.0,'nrows':3,'ncols':3}
     grid.trim(sdict,resample=False)
     output = np.array([[6,7,8],[11,12,13],[16,17,18]])
     np.testing.assert_almost_equal(grid.getData(),output)
-    print 'Passed data trimming without resampling...'
+    print('Passed data trimming without resampling...')
 
-    print 'Testing data trimming with resampling...'
+    print('Testing data trimming with resampling...')
     grid = Grid2D(data,geodict)
     grid.trim(sdict,resample=True,preserve='dims')
     output = np.array([[9.0,10.0],[14.0,15.0]])
     np.testing.assert_almost_equal(grid.getData(),output)
-    print 'Passed data trimming with resampling...'
+    print('Passed data trimming with resampling...')
 
 def _test_interpolate():
     geodict = {'xmin':0.5,'xmax':6.5,'ymin':1.5,'ymax':6.5,'xdim':1.0,'ydim':1.0,'nrows':6,'ncols':7}
@@ -627,7 +635,7 @@ def _test_interpolate():
     # np.testing.assert_almost_equal(grid._data,output)
     
     for method in ['nearest','linear','cubic']:
-        print 'Testing interpolate with method "%s"...' % method
+        print('Testing interpolate with method "%s"...' % method)
         grid = Grid2D(data,geodict)
         #sampledict = {'xmin':2.0,'xmax':3.0,'ymin':2.0,'ymax':3.0,'xdim':1.0,'ydim':1.0}
         sampledict = Grid2D.fixGeoDict((3.0,4.0,3.0,4.0),1.0,1.0,-1,-1)
@@ -641,11 +649,11 @@ def _test_interpolate():
         else:
             pass
         np.testing.assert_almost_equal(grid.getData(),output)
-        print 'Passed interpolate with method "%s".' % method
+        print('Passed interpolate with method "%s".' % method)
 
 def _test_rasterize():
     samplegeodict = {'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'xdim':1.0,'ydim':1.0}
-    print 'Testing rasterizeFromGeometry() trying to get binary output...'
+    print('Testing rasterizeFromGeometry() trying to get binary output...')
     points = MultiPoint([(0.25,3.5,5.0),
                          (1.75,3.75,6.0),
                          (1.0,2.5,10.0),
@@ -659,10 +667,10 @@ def _test_rasterize():
                        [0.0,1.0,0.0,0.0],
                        [0.0,0.0,0.0,1.0]])
     np.testing.assert_almost_equal(grid.getData(),output)
-    print 'Passed rasterizeFromGeometry() trying to get binary output.'
+    print('Passed rasterizeFromGeometry() trying to get binary output.')
 
     try:
-        print 'Testing rasterizeFromGeometry() burning in values from a polygon sequence...'
+        print('Testing rasterizeFromGeometry() burning in values from a polygon sequence...')
         #Define two simple polygons and assign them to shapes
         poly1 = [(0.25,3.75),(1.25,3.25),(1.25,2.25)]
         poly2 = [(2.25,3.75),(3.25,3.75),(3.75,2.75),(3.75,1.50),(3.25,0.75),(2.25,2.25)]
@@ -676,7 +684,7 @@ def _test_rasterize():
                            [0,0,7,7],
                            [0,0,0,7]])
         np.testing.assert_almost_equal(grid.getData(),output)
-        print 'Testing rasterizeFromGeometry() burning in values from a polygon shapefile...'
+        print('Testing rasterizeFromGeometry() burning in values from a polygon shapefile...')
     except:
         shpfiles = glob.glob('test.*')
         for shpfile in shpfiles:
@@ -687,19 +695,19 @@ def _test_fixgeodict():
     xdim,ydim = (0.02,0.02)
     nrows = ncols = -1
     subgeodict = Grid2D.fixGeoDict(subbounds,xdim,ydim,nrows,ncols,preserve='dims')
-    print 'After initial fix, nrows = %i, ncols = %i' % (subgeodict['nrows'],subgeodict['ncols'])
+    print('After initial fix, nrows = %i, ncols = %i' % (subgeodict['nrows'],subgeodict['ncols']))
 
     newbounds = (subgeodict['xmin'],subgeodict['xmax'],subgeodict['ymin'],subgeodict['ymax'])
     xdim,ydim = (subgeodict['xdim'],subgeodict['ydim'])
     nrows,ncols = (-1,-1)
     newdict = Grid2D.fixGeoDict(newbounds,xdim,ydim,nrows,ncols,preserve='dims')
-    print 'After second fix, nrows = %i, ncols = %i' % (newdict['nrows'],newdict['ncols'])
+    print('After second fix, nrows = %i, ncols = %i' % (newdict['nrows'],newdict['ncols']))
 
     newbounds = (newdict['xmin'],newdict['xmax'],newdict['ymin'],newdict['ymax'])
     xdim,ydim = (newdict['xdim'],newdict['ydim'])
     nrows,ncols = (-1,-1)
     newdict2 = Grid2D.fixGeoDict(newbounds,xdim,ydim,nrows,ncols,preserve='dims')
-    print 'After third fix, nrows = %i, ncols = %i' % (newdict2['nrows'],newdict2['ncols'])
+    print('After third fix, nrows = %i, ncols = %i' % (newdict2['nrows'],newdict2['ncols']))
     
     assert subgeodict == newdict
 
@@ -709,8 +717,8 @@ def _test_copy():
     grid1 = Grid2D(data,geodict)
     grid2 = grid1.copyFromGrid(grid1)
     grid1._data[0,0] = np.nan
-    print grid2._data
-    print grid2._geodict    
+    print(grid2._data)
+    print(grid2._geodict)
 
 def _test_setData():
     data = np.arange(0,16).astype(np.float32).reshape(4,4)
@@ -719,22 +727,22 @@ def _test_setData():
     x = np.ones((4,4))
     try:
         grid1.setData(x) #this should pass
-        print 'setData test passed.'
+        print('setData test passed.')
     except DataSetException as dse:
-        print 'setData test failed.'
+        print('setData test failed.')
     try:
         x = np.ones((5,5))
         grid1.setData(x)
-        print 'setData test did not fail when it should have.'
+        print('setData test did not fail when it should have.')
     except DataSetException as dse:
-        print 'setData test failed as expected.'
+        print('setData test failed as expected.')
 
     try:
         x = 'fred'
         grid1.setData(x)
-        print 'setData test did not fail when it should have.'
+        print('setData test did not fail when it should have.')
     except DataSetException as dse:
-        print 'setData test failed as expected.'
+        print('setData test failed as expected.')
     
     
 if __name__ == '__main__':

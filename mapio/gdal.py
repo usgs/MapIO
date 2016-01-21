@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+#python 3 compatibility
+from __future__ import print_function
+
 #stdlib imports
 import os.path
 import sys
@@ -314,7 +317,7 @@ class GDALGrid(Grid2D):
         basefile,ext = os.path.splitext(filename)
         hdrfile = basefile+'.hdr'
         f = open(hdrfile,'wt')
-        for key,value in hdr.iteritems():
+        for (key,value) in hdr.items():
             value = hdr[key]
             f.write('%s  %s\n' % (key,str(value)))
         f.close()
@@ -469,7 +472,7 @@ def createSample(M,N):
 def _format_test():
     try:
         for dtype in [np.uint8,np.uint16,np.uint32,np.int8,np.int16,np.int32,np.float32,np.float64]:
-            print 'Testing saving/loading of data with type %s...' % str(dtype)
+            print('Testing saving/loading of data with type %s...' % str(dtype))
             data = np.arange(0,16).reshape(4,4).astype(dtype)
             if dtype in [np.float32,np.float64]:
                 data[1,1] = np.nan
@@ -478,15 +481,15 @@ def _format_test():
             gdalgrid.save('test.bil')
             gdalgrid2 = GDALGrid.load('test.bil')
             np.testing.assert_almost_equal(gdalgrid2.getData(),gdalgrid.getData())
-            print 'Passed saving/loading of data with type %s...' % str(dtype)
+            print('Passed saving/loading of data with type %s...' % str(dtype))
 
-    except Exception,obj:
-        print 'Failed tests with message: "%s"' % str(obj)
+    except Exception as obj:
+        print('Failed tests with message: "%s"' % str(obj))
     os.remove('test.bil')
 
 def _pad_test():
     try:
-        print 'Test padding data with null values...'
+        print('Test padding data with null values...')
         data,geodict = Grid2D._createSampleData(4,4)
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
@@ -500,14 +503,14 @@ def _pad_test():
                            [np.nan,12.0,13.0,14.0,15.0,np.nan],
                            [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]])
         np.testing.assert_almost_equal(gdalgrid2._data,output)
-        print 'Passed padding data null values.'
-    except AssertionError,error:
-        print 'Failed padding test:\n %s' % error
+        print('Passed padding data null values.')
+    except AssertionError as error:
+        print('Failed padding test:\n %s' % error)
     os.remove('test.bil')
 
 def _subset_test():
     try:
-        print 'Testing subsetting of non-square grid...'
+        print('Testing subsetting of non-square grid...')
         data,geodict = Grid2D._createSampleData(6,4)
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
@@ -517,16 +520,16 @@ def _subset_test():
                            [13,14],
                            [17,18]])
         np.testing.assert_almost_equal(gdalgrid3._data,output)
-        print 'Passed subsetting of non-square grid.'
+        print('Passed subsetting of non-square grid.')
         
-    except AssertionError,error:
-        print 'Failed subset test:\n %s' % error
+    except AssertionError as error:
+        print('Failed subset test:\n %s' % error)
 
     os.remove('test.bil')
 
 def _resample_test():
     try:
-        print 'Test resampling data without padding...'
+        print('Test resampling data without padding...')
         data,geodict = Grid2D._createSampleData(9,7)
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
@@ -537,9 +540,9 @@ def _resample_test():
         output = np.array([[34,35],
                            [41,42]])
         np.testing.assert_almost_equal(gdalgrid3._data,output)
-        print 'Passed resampling data without padding...'
+        print('Passed resampling data without padding...')
         
-        print 'Test resampling data with padding...'
+        print('Test resampling data with padding...')
         data,geodict = Grid2D._createSampleData(4,4)
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
@@ -555,15 +558,15 @@ def _resample_test():
                            [np.nan,10.5,11.5,12.5,np.nan],
                            [np.nan,np.nan,np.nan,np.nan,np.nan]])
         np.testing.assert_almost_equal(gdalgrid3._data,output)
-        print 'Passed resampling data with padding...'
-    except AssertionError,error:
-        print 'Failed resample test:\n %s' % error
+        print('Passed resampling data with padding...')
+    except AssertionError as error:
+        print('Failed resample test:\n %s' % error)
 
     os.remove('test.bil')
 
 def _meridian_test():
     try:
-        print 'Testing resampling of global grid where sample crosses 180/-180 meridian...'
+        print('Testing resampling of global grid where sample crosses 180/-180 meridian...')
         data = np.arange(0,84).astype(np.int32).reshape(7,12)
         geodict = {'xmin':-180.0,'xmax':150.0,'ymin':-90.0,'ymax':90.0,'xdim':30,'ydim':30,'nrows':7,'ncols':12}
         gdalgrid = GDALGrid(data,geodict)
@@ -576,9 +579,9 @@ def _meridian_test():
                            [ 51.5,52.5,47.5,42.5,43.5,44.5]])
         #output = np.random.rand(2,6) #this will fail assertion test
         np.testing.assert_almost_equal(gdalgrid5._data,output)
-        print 'Passed resampling of global grid where sample crosses 180/-180 meridian...'
+        print('Passed resampling of global grid where sample crosses 180/-180 meridian...')
 
-        print 'Testing resampling of global grid where sample crosses 180/-180 meridian and first column is duplicated by last...'
+        print('Testing resampling of global grid where sample crosses 180/-180 meridian and first column is duplicated by last...')
         data = np.arange(0,84).astype(np.int32).reshape(7,12)
         data = np.hstack((data,data[:,0].reshape(7,1)))
         geodict = {'xmin':-180.0,'xmax':180.0,'ymin':-90.0,'ymax':90.0,'xdim':30,'ydim':30,'nrows':7,'ncols':13}
@@ -592,10 +595,10 @@ def _meridian_test():
                            [ 51.5,52.5,47.5,42.5,43.5,44.5]])
         #output = np.random.rand(2,6) #this will fail assertion test
         np.testing.assert_almost_equal(gdalgrid5._data,output)
-        print 'Passed resampling of global grid where sample crosses 180/-180 meridian and first column is duplicated by last...'
+        print('Passed resampling of global grid where sample crosses 180/-180 meridian and first column is duplicated by last...')
         
-    except AssertionError,error:
-        print 'Failed meridian test:\n %s' % error
+    except AssertionError as error:
+        print('Failed meridian test:\n %s' % error)
     os.remove('test.bil')
 
 def _file_geodict_test():
@@ -615,7 +618,7 @@ def _file_geodict_test():
         sdict = {'xmin':110.5,'xmax':111.5,'ymin':34.5,'ymax':35.5,'xdim':xdim,'ydim':ydim}
         grid2 = GDALGrid.load('test.flt',samplegeodict=sdict,preserve='dims')
     except:
-        print 'Failed test of native header.'
+        print('Failed test of native header.')
     os.remove('test.flt')
     
 if __name__ == '__main__':

@@ -11,6 +11,10 @@ are IPython notebooks in the distribution.  They can be viewed here:
  * ShakeMap format grids: https://github.com/MapIO/mapio/blob/master/notebooks/ShakeMap.ipynb
  * The Grid2D class (superclass of GDAL and GMT grids): https://github.com/usgs/MapIO/blob/master/notebooks/Grid2D.ipynb
 
+Compatibility
+---------------
+This library has been tested with both Python 2.7 and Python 3.5.  If any errors are discovered, please contact the author.
+
 Dependencies and Installation
 -----------------------------
 

@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+#python 3 compatibility
+from __future__ import print_function
+
 #stdlib imports
 import sys
 import collections
@@ -15,6 +18,8 @@ from multiple import MultiGrid
 from shake import ShakeGrid
 from grid2d import Grid2D
 from dataset import DataSetException
+
+
 
 class MultiHazardGrid(MultiGrid):
     def __init__(self,layers,geodict,origin,header,metadata=None):
@@ -49,7 +54,7 @@ class MultiHazardGrid(MultiGrid):
         """
         self._layers = collections.OrderedDict()
         self._geodict = geodict
-        for layerkey,layerdata in layers.iteritems():
+        for (layerkey,layerdata) in layers.items():
             try:
                 self._layers[layerkey] = Grid2D(data=layerdata,geodict=geodict)
             except:
@@ -92,11 +97,15 @@ class MultiHazardGrid(MultiGrid):
           Dictionary of values to save in group.  Dictionary can contain objects of the following types:
             - str,unicode,int,float,long,list,tuple,np.ndarray,dict,datetime.datetime,collections.OrderedDict
         """
-        ALLOWED = [str,unicode,int,float,
-                   long,list,tuple,np.ndarray,
+        ALLOWED = [str,int,float,
+                   list,tuple,np.ndarray,
                    dict,datetime.datetime,
                    collections.OrderedDict]
-        for key,value in mydict.iteritems():
+        if sys.version_info.major == 2:
+            ALLOWED.append(unicode)
+            ALLOWED.append(long)
+            
+        for (key,value) in mydict.items():
             tvalue = type(value)
             if tvalue not in ALLOWED:
                 raise DataSetException('Unsupported metadata value type "%s"' % tvalue)
@@ -118,11 +127,11 @@ class MultiHazardGrid(MultiGrid):
           Dictionary of metadata (possibly containing other dictionaries).
         """
         tdict = {}
-        for key,value in group.attrs.iteritems(): #attrs are NOT subgroups
+        for (key,value) in group.attrs.items(): #attrs are NOT subgroups
             if key.find('time') > -1:
                 value = value = datetime.datetime.utcfromtimestamp(value)
             tdict[key] = value
-        for key,value in group.iteritems(): #these are going to be the subgroups
+        for (key,value) in group.items(): #these are going to be the subgroups
             tdict[key] = cls._loadDict(value)
         return tdict
                 
@@ -172,7 +181,7 @@ class MultiHazardGrid(MultiGrid):
         y.attrs['long_name'] = 'y'
         y.attrs['actual_range'] = np.array((yvar[0],yvar[-1]))
         
-        for layerkey,layer in self._layers.iteritems():
+        for (layerkey,layer) in self._layers.items():
             dset = f.create_dataset(layerkey,data=layer.getData(),compression='gzip')
             dset.attrs['long_name'] = layerkey
             dset.attrs['actual_range'] = np.array((np.nanmin(layer._data),np.nanmax(layer._data)))
@@ -200,13 +209,13 @@ class MultiHazardGrid(MultiGrid):
                 raise DataSetException('Missing required data set "%s"' % dset)
 
         header = {}
-        for key,value in f['header'].attrs.iteritems():
+        for (key,value) in f['header'].attrs.items():
             if key.find('time') > -1:
                 value = datetime.datetime.utcfromtimestamp(value)
             header[key] = value
 
         origin = {}
-        for key,value in f['origin'].attrs.iteritems():
+        for (key,value) in f['origin'].attrs.items():
             if key.find('time') > -1:
                 value = datetime.datetime.utcfromtimestamp(value)
             origin[key] = value
@@ -236,15 +245,6 @@ class MultiHazardGrid(MultiGrid):
 
         f.close()
         cls(layers,geodict,origin,header,metadata=metadata)
-        
-
-    # def _validateDict(self,tdict):
-    #     ALLOWED = ['str','unicode','int','float','long','list','tuple','numpy.ndarray']
-    #     #input dict can only have strings, numbers, lists, tuples, or numpy arrays as values (no sub-dictionaries)
-    #     for key,value in tdict.iteritems():
-    #         tvalue = type(value)
-    #         if tvalue not in ALLOWED:
-    #             raise DataSetException('Data type "%s" not allowed in MultiHazardGrid extra metadata' % tvalue)
 
     def setHeader(self,header):
         """
@@ -340,7 +340,7 @@ if __name__ == '__main__':
     header['event_type'] = sgrid._shakeDict['shakemap_event_type']
 
     layers = collections.OrderedDict()
-    for layername,layerdata in sgrid.getData().iteritems():
+    for (layername,layerdata) in sgrid.getData().items():
         layers[layername] = layerdata.getData()
 
     tdict = {'name':'fred','family':{'wife':'wilma','daughter':'pebbles'}}
@@ -353,6 +353,6 @@ if __name__ == '__main__':
     hdfmb = os.path.getsize('test.hdf')/float(1e6)
     xmltime = (t2-t1).seconds + (t2-t1).microseconds/float(1e6)
     hdftime = (t4-t3).seconds + (t4-t3).microseconds/float(1e6)
-    print 'Input XML file size: %.2f MB (loading time %.3f seconds)' % (xmlmb,xmltime)
-    print 'Output HDF file size: %.2f MB (loading time %.3f seconds)' % (hdfmb,hdftime)
+    print('Input XML file size: %.2f MB (loading time %.3f seconds)' % (xmlmb,xmltime))
+    print('Output HDF file size: %.2f MB (loading time %.3f seconds)' % (hdfmb,hdftime))
     os.remove('test.hdf')    
