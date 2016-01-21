@@ -1,12 +1,18 @@
 #!/usr/bin/env python
 
+#python 3 compatibility
+from __future__ import print_function
+
 #stdlib imports
 from xml.dom import minidom
 from datetime import datetime
 from collections import OrderedDict
 import re
 import sys
-import StringIO
+if sys.version_info.major == 2:
+    import StringIO
+else:
+    from io import StringIO
 import os.path
 
 #third party
@@ -15,6 +21,8 @@ from multiple import MultiGrid
 from dataset import DataSetException
 from grid2d import Grid2D
 import numpy as np
+
+
 
 GRIDKEYS = {'event_id':'string',
             'shakemap_id':'string',
@@ -67,7 +75,7 @@ def _readElement(element,keys):
       Dictionary of named attributes with values from DOM element, converted to int, float or datetime where needed.
     """
     eldict = OrderedDict()
-    for key,dtype in keys.iteritems():
+    for (key,dtype) in keys.items():
         if dtype == 'datetime':
             eldict[key] = datetime.strptime(element.getAttribute(key)[0:19],TIMEFMT)
         elif dtype == 'int':
@@ -213,7 +221,7 @@ class ShakeGrid(MultiGrid):
         """
         self._layers = OrderedDict()
         self._geodict = geodict
-        for layerkey,layerdata in layers.iteritems():
+        for (layerkey,layerdata) in layers.items():
             self._layers[layerkey] = Grid2D(data=layerdata,geodict=geodict)
         self._setEventDict(eventDict)
         self._setShakeDict(shakeDict)
@@ -303,7 +311,7 @@ class ShakeGrid(MultiGrid):
 
             if doPadding:
                 leftpad,rightpad,bottompad,toppad,geodict = super(MultiGrid,cls)._getPadding(geodict,bounds,padValue)
-                for layername,layerdata in layers.iteritems():
+                for (layername,layerdata) in layers.items():
                     #pad left side
                     layerdata = np.hstack((leftpad,layerdata))
                     #pad right side
@@ -318,7 +326,7 @@ class ShakeGrid(MultiGrid):
                     layers[layername] = grid.getData()
                 geodict = grid.getGeoDict().copy()
             else:
-                for layername,layerdata in layers.iteritems():
+                for (layername,layerdata) in layers.items():
                     grid = Grid2D(layerdata,geodict)
                     grid.trim(samplegeodict,resample=resample,method=method,preserve=preserve)
                     layers[layername] = grid.getData()
@@ -333,48 +341,70 @@ class ShakeGrid(MultiGrid):
         :param version:
           Integer Shakemap version number.
         """
+
+        #handle differences btw python2 and python3
+        isThree = True
+        if sys.version_info.major == 2:
+            isThree = False
+        
         isFile = False
         if not hasattr(filename,'read'):
             isFile = True
-            f = open(filename,'wt')
+            f = open(filename,'wb')
         else:
             f = filename    
         SCHEMA1 = 'http://www.w3.org/2001/XMLSchema-instance'
         SCHEMA2 = 'http://earthquake.usgs.gov/eqcenter/shakemap'
         SCHEMA3 = 'http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd'
 
-        f.write('<?xml version="1.0" encoding="US-ASCII" standalone="yes"?>')
+        f.write(b'<?xml version="1.0" encoding="US-ASCII" standalone="yes"?>')
         fmt = '<shakemap_grid xmlns:xsi="%s" xmlns="%s" xsi:schemaLocation="%s" event_id="%s" shakemap_id="%s" shakemap_version="%i" code_version="%s" process_timestamp="%s" shakemap_originator="%s" map_status="%s" shakemap_event_type="%s">\n'
         tpl = (SCHEMA1,SCHEMA2,SCHEMA3,
                self._shakeDict['event_id'],self._shakeDict['shakemap_id'],self._shakeDict['shakemap_version'],
                self._shakeDict['code_version'],datetime.utcnow().strftime(TIMEFMT),
                self._shakeDict['shakemap_originator'],self._shakeDict['map_status'],self._shakeDict['shakemap_event_type'])
-        f.write(fmt % tpl)
+        if isThree:
+            f.write(bytes(fmt % tpl,'ascii'))
+        else:
+            f.write(fmt % tpl)
         fmt = '<event event_id="%s" magnitude="%.1f" depth="%.1f" lat="%.4f" lon="%.4f" event_timestamp="%s" event_network="%s" event_description="%s"/>\n'
         tpl = (self._eventDict['event_id'],self._eventDict['magnitude'],self._eventDict['depth'],
                self._eventDict['lat'],self._eventDict['lon'],self._eventDict['event_timestamp'].strftime(TIMEFMT),
                self._eventDict['event_network'],self._eventDict['event_description'])
-        f.write(fmt % tpl)
+        if isThree:
+            f.write(bytes(fmt % tpl,'ascii'))
+        else:
+            f.write(fmt % tpl)
         fmt = '<grid_specification lon_min="%.4f" lat_min="%.4f" lon_max="%.4f" lat_max="%.4f" nominal_lon_spacing="%.4f" nominal_lat_spacing="%.4f" nlon="%i" nlat="%i"/>'
         tpl = (self._geodict['xmin'],self._geodict['ymin'],self._geodict['xmax'],self._geodict['ymax'],
                self._geodict['xdim'],self._geodict['ydim'],self._geodict['ncols'],self._geodict['nrows'])
-        f.write(fmt % tpl)
+        if isThree:
+            f.write(bytes(fmt % tpl,'ascii'))
+        else:
+            f.write(fmt % tpl)
         fmt = '<event_specific_uncertainty name="%s" value="%.4f" numsta="%i" />\n'
-        for key,unctuple in self._uncertaintyDict.iteritems():
+        for (key,unctuple) in self._uncertaintyDict.items():
             value,numsta = unctuple
             tpl = (key,value,numsta)
-            f.write(fmt % tpl)
-        f.write('<grid_field index="1" name="LON" units="dd" />\n')
-        f.write('<grid_field index="2" name="LAT" units="dd" />\n')
+            if isThree:
+                f.write(bytes(fmt % tpl,'ascii'))
+            else:
+                f.write(fmt % tpl)
+        f.write(b'<grid_field index="1" name="LON" units="dd" />\n')
+        f.write(b'<grid_field index="2" name="LAT" units="dd" />\n')
         idx = 3
         fmt = '<grid_field index="%i" name="%s" units="%s" />\n'
         data_formats = ['%.4f','%.4f']
         for field in self._layers.keys():
             tpl = (idx,field.upper(),FIELDKEYS[field][0])
             data_formats.append(FIELDKEYS[field][1])
-            f.write(fmt % tpl)
+            if isThree:
+                db = bytes(fmt % tpl,'ascii')
+            else:
+                db = fmt % tpl
+            f.write(db)
             idx += 1
-        f.write('<grid_data>\n')
+        f.write(b'<grid_data>\n')
         lat,lon = Grid().getLatLonMesh(self._geodict)
         nfields = 2 + len(self._layers)
         data = np.zeros((self._geodict['nrows']*self._geodict['ncols'],nfields))
@@ -385,7 +415,7 @@ class ShakeGrid(MultiGrid):
             data[:,fidx] = grid.getData().flatten()
             fidx += 1
         np.savetxt(f,data,delimiter=' ',fmt=data_formats)
-        f.write('</grid_data>\n')
+        f.write(b'</grid_data>\n')
         if isFile:
             f.close()
 
@@ -415,8 +445,8 @@ class ShakeGrid(MultiGrid):
         :raises DataSetException:
           When one of the values in the dictionary does not match its expected type.        
         """
-        for key,dtype in EVENTKEYS.iteritems():
-            if not eventdict.has_key(key):
+        for (key,dtype) in EVENTKEYS.items():
+            if key not in eventdict:
                 raise DataSetException('eventdict is missing key "%s"' % key)
             if not self._checkType(eventdict[key],dtype):
                 raise DataSetException('eventdict key value "%s" is the wrong datatype' % str(eventdict[key]))
@@ -444,8 +474,8 @@ class ShakeGrid(MultiGrid):
         :raises DataSetException:
           When one of the values in the dictionary does not match its expected type.        
         """
-        for key,dtype in GRIDKEYS.iteritems():
-            if not shakedict.has_key(key):
+        for (key,dtype) in GRIDKEYS.items():
+            if key not in shakedict:
                 raise DataSetException('shakedict is missing key "%s"' % key)
             if not self._checkType(shakedict[key],dtype):
                 raise DataSetException('shakedict key value "%s" is the wrong datatype' % str(shakedict[key]))
@@ -488,12 +518,12 @@ def _trim_test(shakefile):
 def _read_test(xmlfile):
     try:
         shakegrid = ShakeGrid.load(xmlfile)
-    except Exception,error:
-        print 'Failed to read grid.xml format file "%s". Error "%s".' % (xmlfile,str(error))
+    except Exception as error:
+        print('Failed to read grid.xml format file "%s". Error "%s".' % (xmlfile,str(error)))
     
 def _save_test():
     try:
-        print 'Testing save/read functionality for shakemap grids...'
+        print('Testing save/read functionality for shakemap grids...')
         pga = np.arange(0,16,dtype=np.float32).reshape(4,4)
         pgv = np.arange(1,17,dtype=np.float32).reshape(4,4)
         mmi = np.arange(2,18,dtype=np.float32).reshape(4,4)
@@ -523,16 +553,16 @@ def _save_test():
                    'mmi':(0.0,0)}
         shake = ShakeGrid(layers,geodict,eventDict,shakeDict,uncDict)
         
-        print 'Testing save/read functionality...'
+        print('Testing save/read functionality...')
         shake.save('test.xml',version=3)
         shake2 = ShakeGrid.load('test.xml')
         for layer in ['pga','pgv','mmi']:
             tdata = shake2.getLayer(layer).getData()
             np.testing.assert_almost_equal(tdata,layers[layer])
 
-        print 'Passed save/read functionality for shakemap grids.'
+        print('Passed save/read functionality for shakemap grids.')
 
-        print 'Testing loading with bounds (no resampling or padding)...'
+        print('Testing loading with bounds (no resampling or padding)...')
         sampledict = {'xmin':-0.5,
                       'xmax':4.5,
                       'ymin':-0.5,
@@ -545,9 +575,9 @@ def _save_test():
         tdata = shake3.getLayer('pga').getData()
         np.testing.assert_almost_equal(tdata,layers['pga'])
 
-        print 'Passed loading with bounds (no resampling or padding)...'
+        print('Passed loading with bounds (no resampling or padding)...')
 
-        print 'Testing loading shakemap with padding, no resampling...'
+        print('Testing loading shakemap with padding, no resampling...')
         newdict = {'xmin':-0.5,'xmax':4.5,'ymin':-0.5,'ymax':4.5,'xdim':1.0,'ydim':1.0,'nrows':5,'ncols':5}
         shake4 = ShakeGrid.load('test.xml',samplegeodict=newdict,resample=False,doPadding=True,padValue=np.nan)
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan],
@@ -558,7 +588,7 @@ def _save_test():
                            [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]])
         tdata = shake4.getLayer('pga').getData()
         np.testing.assert_almost_equal(tdata,output)
-        print 'Passed loading shakemap with padding, no resampling...'
+        print('Passed loading shakemap with padding, no resampling...')
 
         #make a bigger grid
         pga = np.arange(0,36,dtype=np.float32).reshape(6,6)
@@ -572,7 +602,7 @@ def _save_test():
         shake = ShakeGrid(layers,geodict,eventDict,shakeDict,uncDict)
         shake.save('test.xml',version=3)
 
-        print 'Testing resampling, no padding...'
+        print('Testing resampling, no padding...')
         littledict = {'xmin':2.0,'xmax':4.0,'ymin':2.0,'ymax':4.0,'xdim':1.0,'ydim':1.0,'nrows':3,'ncols':3}
         shake5 = ShakeGrid.load('test.xml',samplegeodict=littledict,resample=True,doPadding=False,padValue=np.nan)
         output = np.array([[10.5,11.5,12.5],
@@ -580,9 +610,9 @@ def _save_test():
                            [22.5,23.5,24.5]])
         tdata = shake5.getLayer('pga').getData()
         np.testing.assert_almost_equal(tdata,output)
-        print 'Passed resampling, no padding...'
+        print('Passed resampling, no padding...')
 
-        print 'Testing resampling and padding...'
+        print('Testing resampling and padding...')
         pga = np.arange(0,16,dtype=np.float32).reshape(4,4)
         pgv = np.arange(1,17,dtype=np.float32).reshape(4,4)
         mmi = np.arange(2,18,dtype=np.float32).reshape(4,4)
@@ -602,9 +632,9 @@ def _save_test():
                            [np.nan,10.5,11.5,12.5,np.nan],
                            [np.nan,np.nan,np.nan,np.nan,np.nan]])
         np.testing.assert_almost_equal(tdata,output)
-        print 'Passed resampling and padding...'
-    except AssertionError,error:
-        print 'Failed a shakemap load test:\n %s' % error
+        print('Passed resampling and padding...')
+    except AssertionError as error:
+        print('Failed a shakemap load test:\n %s' % error)
     os.remove('test.xml')
 
 if __name__ == '__main__':

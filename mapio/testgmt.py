@@ -1,14 +1,36 @@
 #!/usr/bin/env python
 
+#python 3 compatibility
+from __future__ import print_function
+
 import rasterio
 from scipy.io import netcdf
 import numpy as np
-from neicio.cmdoutput import getCommandOutput
+import subprocess
 import sys
 
-from grid.gdal import GDALGrid
-from grid.gmt import GMTGrid
+from gdal import GDALGrid
+from gmt import GMTGrid
 
+def getCommandOutput(cmd):
+    """
+    Internal method for calling external command.
+    @param cmd: String command ('ls -l', etc.)
+    @return: Three-element tuple containing a boolean indicating success or failure, 
+    the stdout from running the command, and stderr.
+    """
+    proc = subprocess.Popen(cmd,
+                            shell=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE
+                            )
+    stdout,stderr = proc.communicate()
+    retcode = proc.returncode
+    if retcode == 0:
+        retcode = True
+    else:
+        retcode = False
+    return (retcode,stdout,stderr)
 
 if __name__ == '__main__':
     #make a data set
@@ -26,7 +48,7 @@ if __name__ == '__main__':
     cmd = 'gmt grdtrack -nn track.xy -Ggmt_from_python.grd'
     res,stdout,stderr = getCommandOutput(cmd)
     
-    print stdout
+    print(stdout)
 
     #now create an XY file from our grid
     f = open('from_python.xyz','wt')
@@ -60,7 +82,7 @@ if __name__ == '__main__':
     #again use gmt to get the value at 1.5,1.5 (should be 9)
     cmd = 'gmt grdtrack -nn track.xy -Gfrom_gdal.grd'
     res,stdout,stderr = getCommandOutput(cmd)
-    print stdout
+    print(stdout)
 
     #now use our GMT reader to load that grid and compare to original
     gmtgrid3 = GMTGrid.load('from_gdal.grd')

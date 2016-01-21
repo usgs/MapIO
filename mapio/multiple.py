@@ -1,8 +1,14 @@
+
+#python 3 compatibility
+from __future__ import print_function
+
 from gridbase import Grid
 from dataset import DataSetException
 from grid2d import Grid2D
 import abc
 from collections import OrderedDict
+
+
 
 class MultiGrid(Grid):
     reqfields = set(['xmin','xmax','ymin','ymax','xdim','ydim','ncols','nrows'])
@@ -148,7 +154,7 @@ class MultiGrid(Grid):
         :keyword preserve:
             String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         """
-        for layername,layer in self._layers.iteritems():
+        for (layername,layer) in self._layers.items():
             layer.trim(geodict,resample=resample,method=method,preserve=preserve)
         self._geodict = layer.getGeoDict().copy()
 
@@ -222,7 +228,7 @@ class MultiGrid(Grid):
 
         This function modifies the internal griddata and geodict object variables.
         """
-        for layername,layer in self._layers.iteritems():
+        for (layername,layer) in self._layers.items():
             layer.interpolateToGrid(geodict,method=method)
         self._geodict = layer.getGeoDict().copy()
 

@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 
+#python 3 compatibility
+from __future__ import print_function
+
 #third party imports
 import numpy as np
 
 from dataset import DataSet,DataSetException
 from gridbase import Grid
 from openquake.hazardlib.geo import geodetic
+
+
 
 class Cloud(DataSet):
     def __init__(self,lon,lat,data):
@@ -51,12 +56,12 @@ def _test():
     lat = np.random.random_integers(-90000,90000,size=npoints)/1000.0
     data = np.random.rand(npoints)
     cloud = Cloud(lon,lat,data)
-    print 'Bounds of whole globe (basically)'
-    print cloud.getBounds()
+    print('Bounds of whole globe (basically)')
+    print(cloud.getBounds())
     bounds = (-120.0,-70,20.0,55.0)
     cloud.trim(bounds)
-    print 'Bounds after trimming to %s' % str(bounds)
-    print cloud.getBounds()
+    print('Bounds after trimming to %s' % str(bounds))
+    print(cloud.getBounds())
 
 if __name__ == '__main__':
     _test()
