@@ -259,7 +259,7 @@ class GMTGrid(Grid2D):
         eps = 1e-12
         ncols = int((newxmax-newxmin)/fxdim + eps) + 1
         nrows = int((newymax-newymin)/fydim + eps) + 1
-        outgeodict = cls.fixGeoDict((newxmin,newxmax,newymin,newymax),fxdim,fydim,nrows,ncols,preserve='shape')
+        outgeodict = cls.fixGeoDict((newxmin,newxmax,newymin,newymax),fxdim,fydim,nrows,ncols,preserve='dims')
         return outgeodict
     
     @classmethod
