@@ -159,7 +159,7 @@ def readShakeFile(fileobj):
         - Dictionary representing the grid element in the ShakeMap header.
         - Dictionary representing the list of event_specific_uncertainty elements in the ShakeMap header.
     """
-    griddict,eventdict,specdict,fields,uncertainties = _getHeaderData(fileobj)
+    griddict,eventdict,specdict,fields,uncertainties = getHeaderData(fileobj)
     ncols = specdict['nlon']
     nrows = specdict['nlat']
     layers = OrderedDict()
@@ -241,7 +241,7 @@ class ShakeGrid(MultiGrid):
         else:
             isFileObj = True
             shakefile = shakefilename
-        griddict,eventdict,specdict,fields,uncertainties = _getHeaderData(shakefile)
+        griddict,eventdict,specdict,fields,uncertainties = getHeaderData(shakefile)
         if isFileObj:
             shakefile.close()
         geodict = {'xmin':specdict['lon_min'],
