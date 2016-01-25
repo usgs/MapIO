@@ -105,7 +105,24 @@ def _getXMLText(fileobj):
     xmltext = xmltext+'</shakemap_grid>'
     return xmltext
 
-def getHeaderData(fileobj):
+def getHeaderData(shakefile):
+    """Return all relevant header data from ShakeMap grid.xml file.
+    :param fileobj:
+      File-like object representing an open ShakeMap grid file.
+    :returns:
+      Tuple of dictionaries:
+        - Dictionary representing the grid element in the ShakeMap header.
+        - Dictionary representing the event element in the ShakeMap header.
+        - Dictionary representing the grid_specification element in the ShakeMap header.
+        - Dictionary representing the list of grid_field elements in the ShakeMap header.
+        - Dictionary representing the list of event_specific_uncertainty elements in the ShakeMap header.
+    """
+    f = open(shakefile,'rt')
+    griddict,eventdict,specdict,fields,uncertainties = _getHeaderData(f)
+    f.close()
+    return (griddict,eventdict,specdict,fields,uncertainties)
+
+def _getHeaderData(fileobj):
     """Return all relevant header data from ShakeMap grid.xml file.
     :param fileobj:
       File-like object representing an open ShakeMap grid file.
@@ -159,7 +176,7 @@ def readShakeFile(fileobj):
         - Dictionary representing the grid element in the ShakeMap header.
         - Dictionary representing the list of event_specific_uncertainty elements in the ShakeMap header.
     """
-    griddict,eventdict,specdict,fields,uncertainties = getHeaderData(fileobj)
+    griddict,eventdict,specdict,fields,uncertainties = _getHeaderData(fileobj)
     ncols = specdict['nlon']
     nrows = specdict['nlat']
     layers = OrderedDict()
@@ -241,7 +258,7 @@ class ShakeGrid(MultiGrid):
         else:
             isFileObj = True
             shakefile = shakefilename
-        griddict,eventdict,specdict,fields,uncertainties = getHeaderData(shakefile)
+        griddict,eventdict,specdict,fields,uncertainties = _getHeaderData(shakefile)
         if isFileObj:
             shakefile.close()
         geodict = {'xmin':specdict['lon_min'],

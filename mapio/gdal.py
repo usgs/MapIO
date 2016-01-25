@@ -214,7 +214,7 @@ class GDALGrid(Grid2D):
                     data,geodict = cls._subsetRegions(src,bounds,geodict,xvar,yvar,firstColumnDuplicated)
         #Put NaN's back in where nodata value was
         nodata = src.get_nodatavals()[0]
-        if nodata is not None:
+        if nodata is not None and np.dtype in [np.float32,np.float64]: #NaNs only valid for floating point data
             if (data==nodata).any():
                 data[data == nodata] = np.nan
         
