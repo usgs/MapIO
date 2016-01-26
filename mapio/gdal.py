@@ -432,6 +432,16 @@ class GDALGrid(Grid2D):
                     samplebounds = rbounds
 
         data,geodict = cls.readGDAL(filename,samplebounds,firstColumnDuplicated=firstColumnDuplicated)
+        #sometimes just using the bounds means that the calculations for reading in rows and columns
+        #will give either one more row or one more column than requested, or both.  If that happens, trim off the
+        #right-most and/or bottom-most column/row.
+        if samplegeodict is not None and not resample:
+            drows,dcols = data.shape
+            if drows > nrows:
+                data = data[0:-1,0:]
+            if dcols > ncols:
+                data = data[:,0:-1]
+            geodict = samplegeodict.copy()
         if doPadding:
             #up to this point, all we've done is either read in the whole file or cut out (along existing
             #boundaries) the section of data we want.  Now we do padding as necessary.
