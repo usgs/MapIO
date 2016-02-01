@@ -12,8 +12,9 @@ import warnings
 #third party imports
 import rasterio
 import numpy as np
-from grid2d import Grid2D
-from dataset import DataSetException,DataSetWarning
+from .grid2d import Grid2D
+from .dataset import DataSetException,DataSetWarning
+from .geodict import GeoDict
 
 class GDALGrid(Grid2D):
     def __init__(self,data,geodict):
@@ -21,14 +22,14 @@ class GDALGrid(Grid2D):
         :param data:
            2D numpy data array (must match geodict spec)
         :param geodict:
-           Dictionary specifying the spatial extent,resolution and shape of the data.
+           GeoDict Object specifying the spatial extent,resolution and shape of the data.
         :returns:
            A GMTGrid object.
         :raises DataSetException:
           When data and geodict dimensions do not match. 
         """
         m,n = data.shape
-        if m != geodict['nrows'] or n != geodict['ncols']:
+        if m != geodict.nrows or n != geodict.ncols:
             raise DataSetException('Input geodict does not match shape of input data.')
         self._data = data
         self._geodict = geodict
@@ -39,11 +40,12 @@ class GDALGrid(Grid2D):
         :param filename:
            File name of ESRI grid file.
         :returns:
-           - GeoDict specifying spatial extent, resolution, and shape of grid inside ESRI grid file.
+           - GeoDict object specifying spatial extent, resolution, and shape of grid inside ESRI grid file.
            - xvar array specifying X coordinates of data columns
            - yvar array specifying Y coordinates of data rows
         :raises DataSetException:
           When the file contains a grid with more than one band.
+          When the file geodict is internally inconsistent.
         """
         geodict = {}
         with rasterio.drivers():
@@ -61,28 +63,30 @@ class GDALGrid(Grid2D):
                 geodict['ncols'] = src.width
                 geodict['xmax'] = geodict['xmin'] + (geodict['ncols']-1)*geodict['xdim']
                 geodict['ymin'] = geodict['ymax'] - (geodict['nrows']-1)*geodict['ydim']
-        xvar = np.arange(geodict['xmin'],geodict['xmax']+geodict['xdim'],geodict['xdim'])
-        yvar = np.arange(geodict['ymin'],geodict['ymax']+geodict['ydim'],geodict['ydim'])
-        xvar2,xdim2 = np.linspace(geodict['xmin'],geodict['xmax'],num=geodict['ncols'],retstep=True)
-        yvar2,ydim2 = np.linspace(geodict['ymin'],geodict['ymax'],num=geodict['nrows'],retstep=True)
-        return (geodict,xvar,yvar)
+
+                gd = GeoDict(geodict)
+        xvar = np.arange(gd.xmin,gd.xmax+gd.xdim,gd.xdim)
+        yvar = np.arange(gd.ymin,gd.ymax+gd.ydim,gd.ydim)
+        xvar2,xdim2 = np.linspace(gd.xmin,gd.xmax,num=gd.ncols,retstep=True)
+        yvar2,ydim2 = np.linspace(gd.ymin,gd.ymax,num=gd.nrows,retstep=True)
+        return (gd,xvar,yvar)
 
     @classmethod
     def getBoundsWithin(cls,filename,geodict):
         """
-        Return a geodict for a file that is guaranteed to be contained by an input geodict.
+        Return a geodict object for a file that is guaranteed to be contained by an input geodict.
         :param filename:
           Path to an ESRI grid file.
         :param geodict:
-          Geodict defining a spatial extent that we want to envelope the returned geodict.
+          Geodict object defining a spatial extent that we want to envelope the returned geodict.
         :returns:
           A geodict that is guaranteed to be contained by input geodict.
           
         """
         fgeodict,xvar,yvar = cls.getFileGeoDict(filename)
-        fxmin,fxmax,fymin,fymax = (fgeodict['xmin'],fgeodict['xmax'],fgeodict['ymin'],fgeodict['ymax'])
-        xmin,xmax,ymin,ymax = (geodict['xmin'],geodict['xmax'],geodict['ymin'],geodict['ymax'])
-        fxdim,fydim = (fgeodict['xdim'],fgeodict['ydim'])
+        fxmin,fxmax,fymin,fymax = (fgeodict.xmin,fgeodict.xmax,fgeodict.ymin,fgeodict.ymax)
+        xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
+        fxdim,fydim = (fgeodict.xdim,fgeodict.ydim)
         
         ulcol = int(np.ceil((xmin - fxmin)/fxdim))+1
         ulrow = int(np.floor((ymax - fymin)/fydim))-1
@@ -98,18 +102,21 @@ class GDALGrid(Grid2D):
         eps = 1e-12
         ncols = int((newxmax-newxmin)/fxdim + eps) + 1
         nrows = int((newymax-newymin)/fydim + eps) + 1
-        outgeodict = cls.fixGeoDict((newxmin,newxmax,newymin,newymax),fxdim,fydim,nrows,ncols,preserve='shape')
+        outgeodict = GeoDict({'xmin':newxmin,'xmax':newxmax,
+                              'ymin':newymin,'ymax':newymax,
+                              'xdim':fxdim,'ydim':fydim,
+                              'nrows':nrows,'ncols':ncols},preserve='dims')
         return outgeodict
     
     @classmethod
-    def _subsetRegions(self,src,bounds,fgeodict,xvar,yvar,firstColumnDuplicated):
+    def _subsetRegions(self,src,sampledict,fgeodict,xvar,yvar,firstColumnDuplicated):
         """Internal method used to do subsampling of data for all three GMT formats.
         :param zvar:
           A numpy array-like thing (CDF/HDF variable, or actual numpy array)
-        :param bounds:
-          Tuple with (xmin,xmax,ymin,ymax) for subsetting.
+        :param sampledict:
+          GeoDict object with bounds and row/col information.
         :param fgeodict:
-          Geo dictionary with the file information.
+          GeoDict object with the file information.
         :param xvar:
           Numpy array specifying X coordinates of data columns
         :param yvar:
@@ -119,102 +126,167 @@ class GDALGrid(Grid2D):
         :returns:
           Tuple of (data,geodict) (subsetted data and geodict describing that data).
         """
-        txmin,txmax,tymin,tymax = bounds
+        txmin,txmax,tymin,tymax = (sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax)
+        trows,tcols = (sampledict.nrows,sampledict.ncols)
         #we're not doing anything fancy with the data here, just cutting out what we need
-        xmin = max(fgeodict['xmin'],txmin)
-        xmax = min(fgeodict['xmax'],txmax)
-        ymin = max(fgeodict['ymin'],tymin)
-        ymax = min(fgeodict['ymax'],tymax)
+        xmin = max(fgeodict.xmin,txmin)
+        xmax = min(fgeodict.xmax,txmax)
+        ymin = max(fgeodict.ymin,tymin)
+        ymax = min(fgeodict.ymax,tymax)
+        
         #these are the bounds of the whole file
-        gxmin = fgeodict['xmin']
-        gxmax = fgeodict['xmax']
-        gymin = fgeodict['ymin']
-        gymax = fgeodict['ymax']
-        xdim = fgeodict['xdim']
-        ydim = fgeodict['ydim']
-        gnrows = fgeodict['nrows']
-        gncols = fgeodict['ncols']
+        gxmin = fgeodict.xmin
+        gxmax = fgeodict.xmax
+        gymin = fgeodict.ymin
+        gymax = fgeodict.ymax
+        xdim = fgeodict.xdim
+        ydim = fgeodict.ydim
+        gnrows = fgeodict.nrows
+        gncols = fgeodict.ncols
+        geodict = None
         if xmin == gxmin and xmax == gxmax and ymin == gymin and ymax == gymax:
+            #just read the whole file
+            tfdict = fgeodict.asDict()
             data = src.read()
             data = np.squeeze(data)
             if firstColumnDuplicated:
                 data = data[:,0:-1]
-                geodict['xmax'] -= geodict['xdim']
+                tfdict['xmax'] -= geodict.xdim
+                tfdict['ncols'] -= 1
+            geodict = GeoDict(tfdict)
         else:
             if xmin > xmax:
                 #cut user's request into two regions - one from the minimum to the
                 #meridian, then another from the meridian to the maximum.
-                (region1,region2) = self._createSections((xmin,xmax,ymin,ymax),fgeodict,firstColumnDuplicated)
-                (iulx1,iuly1,ilrx1,ilry1) = region1
-                (iulx2,iuly2,ilrx2,ilry2) = region2
-                window1 = ((iuly1,ilry1),(iulx1,ilrx1))
-                window2 = ((iuly2,ilry2),(iulx2,ilrx2))
+                #new create sections algorithm
+                #get section from the xmin to the 180 meridian
+                iuly1,iulx1 = fgeodict.getRowCol(tymax,txmin)
+                ilry1,ilrx1 = fgeodict.getRowCol(tymin,fgeodict.xmax)
+                #get section from the 180 meridian to xmax
+                iuly2,iulx2 = fgeodict.getRowCol(tymax,fgeodict.xmin)
+                ilry2,ilrx2 = fgeodict.getRowCol(tymin,txmax)
+
+                if firstColumnDuplicated:
+                    ilrx1 -= 1
+
+                tnrows = (ilry1 - iuly1)+1
+                tncols = (ilrx1 - iulx1)+1 + (ilrx2 - iulx2)+1
+                #fix potential incorrect number of rows or columns that result from ??
+                if tnrows < sampledict.nrows:
+                    if tnrows == sampledict.nrows-1:
+                        ilry2 += 1
+                    else:
+                        raise DataSetException('Could not resolve differences between input rows and calculated ones.')
+                if tnrows > sampledict.nrows:
+                    if tnrows == sampledict.nrows+1:
+                        ilry2 -= 1
+                    else:
+                        raise DataSetException('Could not resolve differences between input rows and calculated ones.')
+                if tncols < sampledict.ncols:
+                    if tncols == sampledict.ncols-1:
+                        ilrx2 += 1
+                    else:
+                        raise DataSetException('Could not resolve differences between input cols and calculated ones.')
+                if tncols > sampledict.ncols:
+                    if tncols == sampledict.ncols+1:
+                        ilrx2 -= 1
+                    else:
+                        raise DataSetException('Could not resolve differences between input rows and calculated ones.')
+                
+                #(region1,region2) = self._createSections((xmin,xmax,ymin,ymax),fgeodict,firstColumnDuplicated)
+                #(iulx1,iuly1,ilrx1,ilry1) = region1
+                #(iulx2,iuly2,ilrx2,ilry2) = region2
+                window1 = ((iuly1,ilry1+1),(iulx1,ilrx1+1))
+                window2 = ((iuly2,ilry2+1),(iulx2,ilrx2+1))
                 section1 = src.read(1,window=window1)
                 section2 = src.read(1,window=window2)
                 data = np.hstack((section1,section2))
-                outrows,outcols = data.shape
-                xmin = (gxmin + iulx1*xdim)
-                ymax = gymax - iuly1*ydim
-                xmax = gxmin + (ilrx2-1)*xdim
-                ymin = gymin + (gnrows-ilry1)*ydim
-                fgeodict['xmin'] = xmin
-                fgeodict['xmax'] = xmax + 360
-                fgeodict['ymin'] = ymin
-                fgeodict['ymax'] = ymax
-                fgeodict['nrows'],fgeodict['ncols'] = data.shape
+                tfdict = {}
+                newymax,newxmin = fgeodict.getLatLon(iuly1,iulx1)
+                newymin,newxmax = fgeodict.getLatLon(ilry2,ilrx2)
+                tfdict['xmin'] = newxmin
+                tfdict['xmax'] = newxmax
+                tfdict['ymin'] = newymin
+                tfdict['ymax'] = newymax
+                tfdict['xdim'] = xdim
+                tfdict['ydim'] = ydim
+                tfdict['nrows'],tfdict['ncols'] = data.shape
+                geodict = GeoDict(tfdict)
             else:
-                #get the highest index of a positive difference btw xmin and xvar
-                #use that as an index to get the xmin on a grid cell
-                ixmin = np.where((xmin-xvar) >= 0)[0].max()
-                ixmax = np.where((xmax-xvar) <= 0)[0].min()
-
-                iymin = int((gymax - ymax)/ydim)
-                iymax = int((gymax - ymin)/ydim)
-                
-                # iymax = int(np.ceil((gnrows-1) - ((ymin-gymin)/ydim)))
-                # iymin = int(np.floor((gnrows-1) - ((ymax-gymin)/ydim)))
-               
-                fgeodict['xmin'] = xvar[ixmin].copy()
-                fgeodict['xmax'] = xvar[ixmax].copy()
-                fgeodict['ymin'] = gymax - iymax*ydim
-                fgeodict['ymax'] = gymax - iymin*xdim
-                window = ((iymin,iymax+1),(ixmin,ixmax+1))
+                iuly,iulx = fgeodict.getRowCol(tymax,txmin)
+                ilry,ilrx = fgeodict.getRowCol(tymin,txmax)
+                tnrows = (ilry - iuly)+1
+                tncols = (ilrx - iulx)+1
+                #fix potential incorrect number of rows or columns that result from ??
+                if tnrows < sampledict.nrows:
+                    if tnrows == sampledict.nrows-1:
+                        ilry += 1
+                    else:
+                        raise DataSetException('Could not resolve differences between input rows and calculated ones.')
+                if tnrows > sampledict.nrows:
+                    if tnrows == sampledict.nrows+1:
+                        ilry -= 1
+                    else:
+                        raise DataSetException('Could not resolve differences between input rows and calculated ones.')
+                if tncols < sampledict.ncols:
+                    if tncols == sampledict.ncols-1:
+                        ilrx += 1
+                    else:
+                        raise DataSetException('Could not resolve differences between input cols and calculated ones.')
+                if tncols > sampledict.ncols:
+                    if tncols == sampledict.ncols+1:
+                        ilrx -= 1
+                    else:
+                        raise DataSetException('Could not resolve differences between input rows and calculated ones.')
+                window = ((iuly,ilry+1),(iulx,ilrx+1))
+                tfdict = {}
+                newymax,newxmin = fgeodict.getLatLon(iuly,iulx)
+                newymin,newxmax = fgeodict.getLatLon(ilry,ilrx)
+                tfdict['xmin'] = newxmin
+                tfdict['xmax'] = newxmax
+                tfdict['ymin'] = newymin
+                tfdict['ymax'] = newymax
+                tfdict['xdim'] = xdim
+                tfdict['ydim'] = ydim
+                #window = ((iymin,iymax+1),(ixmin,ixmax+1))
                 data = src.read(1,window=window)
                 data = np.squeeze(data)
-                fgeodict['nrows'],fgeodict['ncols'] = data.shape
+                tfdict['nrows'],tfdict['ncols'] = data.shape
+                geodict = GeoDict(tfdict)
             
         
-        return (data,fgeodict)
+        return (data,geodict)
 
     @classmethod
-    def readGDAL(cls,filename,bounds=None,firstColumnDuplicated=False):
+    def readGDAL(cls,filename,sampledict=None,firstColumnDuplicated=False):
         """
         Read an ESRI flt/bip/bil/bsq formatted file using rasterIO (GDAL Python wrapper).
         :param filename:
           Input ESRI formatted grid file.
-        :param bounds:
-          Tuple of (xmin,xmax,ymin,ymax)
+        :param sampledict:
+          GeoDict object containing bounds, x/y dims, nrows/ncols.
         :param firstColumnDuplicated:
           Indicate whether the last column is the same as the first column.
         :returns:
           A tuple of (data,geodict) where data is a 2D numpy array of all data found inside bounds, and 
           geodict gives the geo-referencing information for the data.
         """
-        geodict,xvar,yvar = cls.getFileGeoDict(filename)
+        fgeodict,xvar,yvar = cls.getFileGeoDict(filename)
         data = None
         with rasterio.drivers():
             with rasterio.open(filename) as src:
-                if bounds is None:
+                if sampledict is None:
                     data = src.read()
                     data = np.squeeze(data)
+                    geodict = fgeodict.copy()
                     if firstColumnDuplicated:
                         data = data[:,0:-1]
-                        geodict['xmax'] -= geodict['xdim']
+                        geodict.xmax -= geodict.xdim
                 else:
-                    data,geodict = cls._subsetRegions(src,bounds,geodict,xvar,yvar,firstColumnDuplicated)
+                    data,geodict = cls._subsetRegions(src,sampledict,fgeodict,xvar,yvar,firstColumnDuplicated)
         #Put NaN's back in where nodata value was
         nodata = src.get_nodatavals()[0]
-        if nodata is not None and np.dtype in [np.float32,np.float64]: #NaNs only valid for floating point data
+        if nodata is not None and data.dtype in [np.float32,np.float64]: #NaNs only valid for floating point data
             if (data==nodata).any():
                 data[data == nodata] = np.nan
         
@@ -258,10 +330,10 @@ class GDALGrid(Grid2D):
             raise DataSetException('Data type "%s" not supported.' % str(self._data.dtype))
         hdr['BANDROWBYTES'] = hdr['NCOLS']*(hdr['NBITS']/8)
         hdr['TOTALROWBYTES'] = hdr['NCOLS']*(hdr['NBITS']/8)
-        hdr['ULXMAP'] = self._geodict['xmin']
-        hdr['ULYMAP'] = self._geodict['ymax']
-        hdr['XDIM'] = self._geodict['xdim']
-        hdr['YDIM'] = self._geodict['ydim']
+        hdr['ULXMAP'] = self._geodict.xmin
+        hdr['ULYMAP'] = self._geodict.ymax
+        hdr['XDIM'] = self._geodict.xdim
+        hdr['YDIM'] = self._geodict.ydim
         #try to have a nice readable NODATA value in the header file
         zmin = np.nanmin(self._data)
         zmax = np.nanmax(self._data)
@@ -329,7 +401,7 @@ class GDALGrid(Grid2D):
         :param filename:
           Name of input file.
         :param samplegeodict:
-          GeoDict used to specify subset bounds and resolution (if resample is selected)
+          GeoDict object used to specify subset bounds and resolution (if resample is selected)
         :param preserve:
           String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         :param resample:
@@ -347,57 +419,21 @@ class GDALGrid(Grid2D):
           * When the input file type is not recognized.
         """
         filegeodict,xvar,yvar = cls.getFileGeoDict(filename)
-        if samplegeodict is not None:
-            hasBounds = False
-            hasDims = False
-            hasShape = False
-            fxdim,fydim = (filegeodict['xdim'],filegeodict['ydim'])
-            try:
-                bounds = (samplegeodict['xmin'],samplegeodict['xmax'],samplegeodict['ymin'],samplegeodict['ymax'])
-                hasBounds = True
-            except:
-                raise DataSetException('Must specify at least the bounds (xmin,xmax,ymin,ymax) of your sampling geodict')
-            try:
-                xdim = samplegeodict['xdim']
-                ydim = samplegeodict['ydim']
-                hasDims = True
-            except:
-                pass
-            try:
-                nrows = samplegeodict['nrows']
-                ncols = samplegeodict['ncols']
-                hasShape = True
-            except:
-                pass
-            if not hasDims and not hasShape:
-                raise DataSetException('Either xdim/ydim or nrows/ncols must be specified in input samplegeodict')
-            dims1 = np.array([xdim,ydim])
-            dims2 = np.array([fxdim,fydim])
-            dimsMatch = np.allclose(dims1,dims2)
-            #########################
-            #TODO - figure out what I should do if the dimensions are very close to being equal...
-            #########################
-            if preserve == 'dims' and not dimsMatch and not resample:
-                raise DataSetException('You cannot preserve dims when samplgeodict dims do not match file dims and resampling is off')
-            if not hasDims and preserve == 'dims':
-                raise DataSetException('You cannot preserve dims if you do not specify them.')
-            if not hasShape and preserve == 'shape':
-                raise DataSetException('You cannot preserve shape (nrows/ncols) if you do not specify them.')
-            if preserve == 'dims':
-                nrows = -1
-                ncols = -1
-            else:
-                xdim = -1
-                ydim = -1
-            samplegeodict = cls.fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve=preserve)
+        #verify that if not resampling, the dimensions of the sampling geodict must match the file.
+        if resample == False and samplegeodict is not None:
+            dxdim = np.abs(filegeodict.xdim - samplegeodict.xdim)
+            dydim = np.abs(filegeodict.ydim - samplegeodict.ydim)
+            if dxdim > GeoDict.EPS or dxdim > GeoDict.EPS:
+                raise DataSetException('File dimensions are different from sampledict dimensions.') 
+
         
         data = None
         geodict = None
         bounds = None
-        samplebounds = None
+        sampledict = None
         firstColumnDuplicated = False
         if samplegeodict is not None:
-            bounds = (samplegeodict['xmin'],samplegeodict['xmax'],samplegeodict['ymin'],samplegeodict['ymax'])
+            bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
             samplebounds = bounds
             #if the user wants resampling, we can't just read the bounds they asked for, but instead
             #go outside those bounds.  if they asked for padding and the input bounds exceed the bounds
@@ -405,9 +441,9 @@ class GDALGrid(Grid2D):
             if resample:
                 PADFACTOR = 2 #how many cells will we buffer out for resampling?
                 
-                xdim = filegeodict['xdim']
-                ydim = filegeodict['ydim']
-                fbounds = (filegeodict['xmin'],filegeodict['xmax'],filegeodict['ymin'],filegeodict['ymax'])
+                xdim = filegeodict.xdim
+                ydim = filegeodict.ydim
+                fbounds = (filegeodict.xmin,filegeodict.xmax,filegeodict.ymin,filegeodict.ymax)
                 hasMeridianWrap = False
                 if fbounds[0] == fbounds[1]-360:
                     firstColumnDuplicated = True
@@ -430,12 +466,27 @@ class GDALGrid(Grid2D):
                         samplebounds = rbounds
                 else:
                     samplebounds = rbounds
-
-        data,geodict = cls.readGDAL(filename,samplebounds,firstColumnDuplicated=firstColumnDuplicated)
+                #does this dictionary need to be on the file boundaries?
+                sdict = {'xmin':samplebounds[0],
+                         'xmax':samplebounds[1],
+                         'ymin':samplebounds[2],
+                         'ymax':samplebounds[3],
+                         'xdim':samplegeodict.xdim,
+                         'ydim':samplegeodict.ydim,
+                         'nrows':2,
+                         'ncols':2}
+                sampledict = GeoDict(sdict,preserve='dims')
+            else:
+                sampledict = samplegeodict
+                         
+                    
+        data,geodict = cls.readGDAL(filename,sampledict,firstColumnDuplicated=firstColumnDuplicated)
         #sometimes just using the bounds means that the calculations for reading in rows and columns
         #will give either one more row or one more column than requested, or both.  If that happens, trim off the
         #right-most and/or bottom-most column/row.
-        if samplegeodict is not None and not resample:
+        if samplegeodict is not None and not resample and not doPadding:
+            nrows = samplegeodict.nrows
+            ncols = samplegeodict.ncols
             drows,dcols = data.shape
             if drows > nrows:
                 data = data[0:-1,0:]
@@ -446,7 +497,8 @@ class GDALGrid(Grid2D):
             #up to this point, all we've done is either read in the whole file or cut out (along existing
             #boundaries) the section of data we want.  Now we do padding as necessary.
             #_getPadding is a class method inherited from Grid (our grandparent)
-            leftpad,rightpad,bottompad,toppad,geodict = super(Grid2D,cls)._getPadding(geodict,samplebounds,padValue)
+            #because we're in a class method, we have to do some gymnastics to call it.
+            leftpad,rightpad,bottompad,toppad,geodict = super(Grid2D,cls)._getPadding(geodict,sampledict,padValue)
             data = np.hstack((leftpad,data))
             data = np.hstack((data,rightpad))
             data = np.vstack((toppad,data))
@@ -455,8 +507,8 @@ class GDALGrid(Grid2D):
         #it using the Grid2D super class
         if resample:
             grid = Grid2D(data,geodict)
-            if samplegeodict['xmin'] > samplegeodict['xmax']:
-                samplegeodict['xmax'] += 360
+            if samplegeodict.xmin > samplegeodict.xmax:
+                samplegeodict.xmax += 360
             grid.interpolateToGrid(samplegeodict,method=method)
             data = grid.getData()
             geodict = grid.getGeoDict()
@@ -640,8 +692,15 @@ if __name__ == '__main__':
             xmax = float(sys.argv[3])
             ymin = float(sys.argv[4])
             ymax = float(sys.argv[5])
-            sampledict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax}
-            grid = GDALGrid.load(gdalfile,samplegeodict=sampledict)
+            xdim = float(sys.argv[6])
+            ydim = float(sys.argv[7])
+            fgeodict = GDALGrid.getFileGeoDict(gdalfile)
+            sampledict1 = GeoDict({'xmin':xmin,'xmax':xmax,
+                                   'ymin':ymin,'ymax':ymax,
+                                   'xdim':xdim,'ydim':ydim,
+                                   'nrows':2,'ncols':2},preserve='dims')
+            sampledict2 = GDALGrid.getBoundsWithin(gdalfile,sampledict1)
+            grid = GDALGrid.load(gdalfile,samplegeodict=sampledict2)
     else:
         _file_geodict_test()
         _format_test()

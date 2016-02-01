@@ -5,7 +5,6 @@ import numpy as np
 
 #third party imports
 from .dataset import DataSet
-from .geodict import GeoDict
 
 class Grid(DataSet):
     """
@@ -38,17 +37,21 @@ class Grid(DataSet):
         raise NotImplementedError
     
     @classmethod
-    def _getPadding(cls,geodict,paddict,padvalue):
-        #get pad left columns - go outside specified bounds if not exact edge
-        pxmin,pxmax,pymin,pymax = (paddict.xmin,paddict.xmax,paddict.ymin,paddict.ymax)
-        gxmin,gxmax,gymin,gymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
-        xdim,ydim = (geodict.xdim,geodict.ydim)
-        nrows,ncols = (geodict.nrows,geodict.ncols)
+    def _getPadding(cls,geodict,padbounds,padvalue):
+        xmin,xmax,ymin,ymax = padbounds
+        gxmin,gxmax,gymin,gymax = (geodict['xmin'],geodict['xmax'],geodict['ymin'],geodict['ymax'])
+        xdim = geodict['xdim']
+        ydim = geodict['ydim']
+        nrows,ncols = (geodict['nrows'],geodict['ncols'])
+        padleftcols = int((gxmin - xmin)/xdim)
+        padrightcols = int((xmax - gxmax)/xdim)
+        padbottomrows = int((gymin - ymin)/ydim)
+        padtoprows = int((ymax - gymax)/ydim)
 
-        padleftcols = np.ceil((gxmin - pxmin)/xdim)
-        padrightcols = np.ceil((pxmax - gxmax)/xdim)
-        padbottomrows = np.ceil((gymin - pymin)/ydim)
-        padtoprows = np.ceil((pymax - gymax)/ydim)
+        padleftcols = np.ceil((gxmin - xmin)/xdim)
+        padrightcols = np.ceil((xmax - gxmax)/xdim)
+        padbottomrows = np.ceil((gymin - ymin)/ydim)
+        padtoprows = np.ceil((ymax - gymax)/ydim)
 
         #if any of these are negative, set them to zero
         if padleftcols < 0:
@@ -67,19 +70,13 @@ class Grid(DataSet):
         toppad = np.ones((padtoprows,ncols))*padvalue
 
         #now figure out what the new bounds are
-        outdict = {}
-        outdict['ncols'] = int(ncols)
-        outdict['nrows'] = int(nrows + bottompad.shape[0] + toppad.shape[0])
-        
-        outdict['xmin'] = gxmin - (padleftcols)*xdim
-        outdict['xmax'] = gxmax + (padrightcols)*xdim
-        outdict['ymin'] = gymin - (padbottomrows)*ydim
-        outdict['ymax'] = gymax + (padtoprows)*ydim
-        outdict['xdim'] = xdim
-        outdict['ydim'] = ydim
-        
-        gd = GeoDict(outdict)
-        return (leftpad,rightpad,bottompad,toppad,gd)
+        geodict['xmin'] = gxmin - padleftcols*xdim
+        geodict['xmax'] = gxmax + padrightcols*xdim
+        geodict['ymin'] = gymin - padbottomrows*ydim
+        geodict['ymax'] = gymax + padtoprows*ydim
+        geodict['ncols'] = geodict['ncols'] + leftpad.shape[1] + rightpad.shape[1]
+        geodict['nrows'] = geodict['nrows'] + bottompad.shape[0] + toppad.shape[0]
+        return (leftpad,rightpad,bottompad,toppad,geodict)
     
     @classmethod 
     def checkGeoDict(cls,geodict):
@@ -163,8 +160,8 @@ class Grid(DataSet):
     
     @staticmethod
     def getLatLonMesh(geodict):
-        lons = np.linspace(geodict.xmin,geodict.xmax,num=geodict.ncols)
-        lats = np.linspace(geodict.ymin,geodict.ymax,num=geodict.nrows)
+        lons = np.linspace(geodict['xmin'],geodict['xmax'],num=geodict['ncols'])
+        lats = np.linspace(geodict['ymin'],geodict['ymax'],num=geodict['nrows'])
         lon,lat = np.meshgrid(lons,lats)
         return (lat,lon)
     

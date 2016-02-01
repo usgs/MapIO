@@ -2,9 +2,9 @@
 #python 3 compatibility
 from __future__ import print_function
 
-from gridbase import Grid
-from dataset import DataSetException
-from grid2d import Grid2D
+from .gridbase import Grid
+from .dataset import DataSetException
+from .grid2d import Grid2D
 import abc
 from collections import OrderedDict
 
@@ -151,7 +151,7 @@ class MultiGrid(Grid):
            Boolean indicating whether the data should be resampled to *exactly* match input bounds.
         :param method:
            If resampling, method used, one of ('linear','nearest','cubic','quintic')
-        :keyword preserve:
+        :param preserve:
             String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         """
         for (layername,layer) in self._layers.items():
@@ -219,10 +219,11 @@ class MultiGrid(Grid):
         
         :param geodict: 
             geodict dictionary from another grid whose extents are inside the extent of this grid.
-        :keyword method: 
+        :param method: 
             Optional interpolation method - ['linear', 'cubic','quintic','nearest']
         :raises DataSetException: 
-           If the Grid object upon which this function is being called is not completely contained by the grid to which this Grid is being resampled.
+           If the Grid object upon which this function is being called is not completely contained by the 
+           grid to which this Grid is being resampled.
         :raises DataSetException: 
            If the resulting interpolated grid shape does not match input geodict.
 

@@ -11,9 +11,9 @@ import sys
 #third party imports
 import numpy as np
 from scipy.io import netcdf
-from grid2d import Grid2D
-from gridbase import Grid
-from dataset import DataSetException
+from .grid2d import Grid2D
+from .gridbase import Grid
+from .dataset import DataSetException
 import h5py
 
 
