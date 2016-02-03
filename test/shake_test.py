@@ -93,6 +93,10 @@ def test_save():
 
         print('Passed save/read functionality for shakemap grids.')
 
+        print('Testing getFileGeoDict method...')
+        fgeodict = ShakeGrid.getFileGeoDict('test.xml')
+        print('Passed save/read functionality for shakemap grids.')
+        
         print('Testing loading with bounds (no resampling or padding)...')
         sampledict = GeoDict({'xmin':-0.5,'xmax':3.5,
                               'ymin':-0.5,'ymax':3.5,

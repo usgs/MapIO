@@ -252,10 +252,16 @@ class ShakeGrid(MultiGrid):
         self._setUncertaintyDict(uncertaintyDict)
 
     @classmethod
-    def getFileGeoDict(cls,shakefilename):
+    def getFileGeoDict(cls,shakefilename,preserve=None):
         """Get the spatial extent, resolution, and shape of grids inside ShakeMap grid file.
         :param filename:
            File name of ShakeMap grid file.
+        :param preserve:
+          String (one of None,'dims','shape','corner')
+              None: All input parameters are assumed to be self-consistent, an exception will be raised if they are not.
+              'dims': xdim/ydim and boundaries are assumed to be correct, number of rows and columns will be adjusted if required.
+              'shape': rows/cols and boundaries are assumed to be correct, xdim and ydim will be adjusted if required.
+              'corner': xmin,ymax,xdim,ydim,nrows,ncols are assumed to be correct, xmax and ymin will be adjusted if required.
         :returns:
           GeoDict specifying spatial extent, resolution, and shape of grids inside ShakeMap grid file.
         """
@@ -268,14 +274,14 @@ class ShakeGrid(MultiGrid):
         griddict,eventdict,specdict,fields,uncertainties = _getHeaderData(shakefile)
         if isFileObj:
             shakefile.close()
-        geodict = {'xmin':specdict['lon_min'],
+        geodict = GeoDict({'xmin':specdict['lon_min'],
                    'xmax':specdict['lon_max'],
                    'ymin':specdict['lat_min'],
                    'ymax':specdict['lat_max'],
                    'xdim':specdict['nominal_lon_spacing'],
                    'ydim':specdict['nominal_lat_spacing'],
                    'nrows':specdict['nlat'],
-                   'ncols':specdict['nlon']}
+                   'ncols':specdict['nlon']},preserve=preserve)
         return geodict
 
     @classmethod

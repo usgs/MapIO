@@ -305,24 +305,28 @@ class GeoDict(object):
     def getDeltas(self):
         #handle cases where we're crossing the meridian from the eastern hemisphere to the western
         if self._xmin > self._xmax:
-            txmax = self._xmax + 360
+            txmax = self._xmax + 360.0
         else:
             txmax = self._xmax
         #try calculating xmax from xmin, xdim, and ncols
         xmax = self._xmin + self._xdim*(self._ncols-1)
-        dxmax = np.abs(xmax - txmax)
+        #dxmax = np.abs(xmax - txmax)
+        dxmax = np.abs(float(xmax)/txmax - 1.0)
 
         #try calculating xdim from bounds and ncols
         xdim = np.abs((txmax - self._xmin)/(self._ncols-1))
-        dxdim = np.abs((xdim - self._xdim))
+        #dxdim = np.abs((xdim - self._xdim))
+        dxdim = np.abs(float(xdim)/self._xdim - 1.0)
 
         #try calculating ymax from ymin, ydim, and nrows
         ymax = self._ymin + self._ydim*(self._nrows-1)
-        dymax = np.abs(ymax - self._ymax)
+        #dymax = np.abs(ymax - self._ymax)
+        dymax = np.abs(float(ymax)/self._ymax - 1.0)
 
         #try calculating xdim from bounds and ncols
         ydim = np.abs((self._ymax - self._ymin)/(self._nrows-1))
-        dydim = np.abs(ydim - self._ydim)
+        #dydim = np.abs(ydim - self._ydim)
+        dydim = np.abs(float(ydim)/self._ydim - 1.0)
 
         return (dxmax,dxdim,dymax,dydim)
         
@@ -340,53 +344,55 @@ class GeoDict(object):
                 raise DataSetException('GeoDict Y resolution is not consistent with bounds and number of rows')
         elif self.preserve == 'dims':
             #sacrifice rows/cols (shape) in favor of preserving the dimensions and the bounds
-            if dxdim > self.EPS:
-                if self._xmin > self._xmax:
-                    txmax = self._xmax + 360
-                else:
-                    txmax = self._xmax
-                ncols = int(np.round(((txmax - self._xmin)/self._xdim)+1))
-                xmax = self._xmin + self._xdim*(ncols-1)
-                dxmax = np.abs(xmax - txmax)
-                if dxmax > self.EPS:
-                    raise DataSetException('Could not preserve bounds when changing shape in X dimension.')
-                self._ncols = ncols
-            if dydim > self.EPS:
-                nrows = int(np.round(((self._ymax - self._ymin)/self._ydim)+1))
-                ymax = self._ymin + self._ydim*(nrows-1)
-                dymax = np.abs(ymax - self._ymax)
-                if dymax > self.EPS:
-                    raise DataSetException('Could not preserve bounds when changing shape in Y dimension.')
-                self._nrows = nrows
+            if self._xmin > self._xmax:
+                txmax = self._xmax + 360
+            else:
+                txmax = self._xmax
+            ncols = int(np.round(((txmax - self._xmin)/self._xdim)+1))
+            xmax = self._xmin + self._xdim*(ncols-1)
+            dxmax = np.abs(xmax - txmax)
+            if dxmax > self.EPS:
+                raise DataSetException('Could not preserve bounds when changing shape in X dimension.')
+            self._ncols = ncols
+
+            nrows = int(np.round(((self._ymax - self._ymin)/self._ydim)+1))
+            ymax = self._ymin + self._ydim*(nrows-1)
+            dymax = np.abs(ymax - self._ymax)
+            if dymax > self.EPS:
+                raise DataSetException('Could not preserve bounds when changing shape in Y dimension.')
+            self._nrows = nrows
         elif self.preserve == 'shape':
             #sacrifice dimensions in favor of rows/cols (shape) and boundaries
-            if dxdim > self.EPS:
-                xdim = ((self._xmax - self._xmin)/(self._ncols-1))
-                xmax = self._xmin + xdim*(self._ncols-1)
-                dxmax = np.abs(xmax - self._xmax)
-                if dxmax > self.EPS:
-                    raise DataSetException('Could not preserve bounds when changing shape in X dimension.')
-                self._xdim = xdim
-            if dydim > self.EPS:
-                ydim = ((self._ymax - self._ymin)/(self._nrows-1))
-                ymax = self._ymin + ydim*(self._nrows-1)
-                dymax = np.abs(ymax - self._ymax)
-                if dymax > self.EPS:
-                    raise DataSetException('Could not preserve bounds when changing shape in Y dimension.')
-                self._ydim = ydim
+            xdim = ((self._xmax - self._xmin)/(self._ncols-1))
+            xmax = self._xmin + xdim*(self._ncols-1)
+            dxmax = np.abs(xmax - self._xmax)
+            if dxmax > self.EPS:
+                raise DataSetException('Could not preserve bounds when changing shape in X dimension.')
+            self._xdim = xdim
+
+            ydim = ((self._ymax - self._ymin)/(self._nrows-1))
+            ymax = self._ymin + ydim*(self._nrows-1)
+            dymax = np.abs(ymax - self._ymax)
+            if dymax > self.EPS:
+                raise DataSetException('Could not preserve bounds when changing shape in Y dimension.')
+            self._ydim = ydim
         elif self.preserve == 'corner':
             #assume that:
             #xmin/ymax are ok
             #xdim/ydim are ok
             #nrows/ncols are ok
             #xmax/ymin are NOT ok, recalculate them
+            if self._xmin > self._xmax:
+                txmax = self._xmax + 360.0
+            else:
+                txmax = self._xmax
             xmax = self._xmin + self._xdim*(self._ncols-1)
-            dxmax = np.abs(xmax - self._xmax)
+            dxmax = np.abs(float(xmax)/txmax - 1.0)
             if dxmax > self.EPS:
                 self._xmax = xmax
 
             ymin = self._ymax - self._ydim*(self._nrows-1)
-            dymin = np.abs(ymin - self._ymin)
+            dymin = np.abs(float(ymin)/self._ymin - 1.0)
             if dymin > self.EPS:
                 self._ymin = ymin
         else:

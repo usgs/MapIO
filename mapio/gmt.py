@@ -471,7 +471,9 @@ class GMTGrid(Grid2D):
             geodict['xmax'] -= geodict['xdim']/2.0
             geodict['ymin'] += geodict['ydim']/2.0
             geodict['ymax'] -= geodict['ydim']/2.0
-        gd = GeoDict(geodict)
+        #because xdim/ydim are not explicitly defined in netcdf headers, here we'll assume
+        #that those values are adjustable, and we'll preserve the shape and extent.
+        gd = GeoDict(geodict,preserve='shape')
         return (gd,xvar,yvar)
 
     @classmethod
@@ -680,7 +682,9 @@ class GMTGrid(Grid2D):
             geodict['ymin'] += geodict['ydim']/2.0
             geodict['ymax'] -= geodict['ydim']/2.0
         f.close()
-        gd = GeoDict(geodict)
+        #because xdim/ydim are not explicitly defined in hdf headers, here we'll assume
+        #that those values are adjustable, and we'll preserve the shape and extent.
+        gd = GeoDict(geodict,preserve='shape')
         return (gd,xvar,yvar)
         
     @classmethod
