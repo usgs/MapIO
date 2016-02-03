@@ -56,6 +56,7 @@ def test_format():
     except Exception as obj:
         print('Failed tests with message: "%s"' % str(obj))
     os.remove('test.bil')
+    os.remove('test.hdr')
 
 def test_pad():
     try:
@@ -76,7 +77,9 @@ def test_pad():
         print('Passed padding data null values.')
     except AssertionError as error:
         print('Failed padding test:\n %s' % error)
-    os.remove('test.bil')
+    if os.path.isfile('test.bil'):
+        os.remove('test.bil')
+        os.remove('test.hdr')
 
 def test_subset():
     try:
@@ -100,6 +103,7 @@ def test_subset():
         print('Failed subset test:\n %s' % error)
 
     os.remove('test.bil')
+    os.remove('test.hdr')
 
 def test_resample():
     try:
@@ -144,6 +148,7 @@ def test_resample():
         print('Failed resample test:\n %s' % error)
 
     os.remove('test.bil')
+    os.remove('test.hdr')
 
 def test_meridian():
     try:
@@ -190,6 +195,7 @@ def test_meridian():
     except AssertionError as error:
         print('Failed meridian test:\n %s' % error)
     os.remove('test.bil')
+    os.remove('test.hdr')
 
     
 if __name__ == '__main__':

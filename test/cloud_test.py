@@ -3,6 +3,10 @@
 #python 3 compatibility
 from __future__ import print_function
 
+#stdlib imports
+import os.path
+import sys
+
 #third party imports
 import numpy as np
 

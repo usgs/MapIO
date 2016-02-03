@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
-from dataset import DataSetException
+from .dataset import DataSetException
 
 class GeoDict(object):
     EPS = 1e-12

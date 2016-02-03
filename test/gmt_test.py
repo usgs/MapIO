@@ -20,7 +20,8 @@ sys.path.insert(0,mapiodir) #put this at the front of the system path, ignoring 
 from mapio.grid2d import Grid2D
 from mapio.gridbase import Grid
 from mapio.dataset import DataSetException
-from mapio.gmt import GMTGrid,indexArray,sub2ind
+from mapio.gmt import GMTGrid,indexArray,sub2ind,NETCDF_TYPES,INVERSE_NETCDF_TYPES
+from mapio.geodict import GeoDict
 import h5py
 
 def createSampleXRange(M,N,filename,bounds=None,xdim=None,ydim=None):
@@ -76,7 +77,8 @@ def createSampleGrid(M,N):
                'ymax':yvar[-1],
                'xdim':1.0,
                'ydim':1.0}
-    gmtgrid = GMTGrid(data,geodict)
+    gd = GeoDict(geodict)
+    gmtgrid = GMTGrid(data,gd)
     return gmtgrid
 
 def test_save():
@@ -114,7 +116,10 @@ def test_pad():
             gmtgrid = createSampleGrid(4,4)
             gmtgrid.save('test.grd',format=fmt)
 
-            newdict = {'xmin':-0.5,'xmax':4.5,'ymin':-0.5,'ymax':4.5,'xdim':1.0,'ydim':1.0}
+            newdict = GeoDict({'xmin':-0.5,'xmax':4.5,
+                               'ymin':-0.5,'ymax':4.5,
+                               'xdim':1.0,'ydim':1.0,
+                               'nrows':2,'ncols':2},preserve='dims')
             gmtgrid2 = GMTGrid.load('test.grd',samplegeodict=newdict,doPadding=True)
             output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan],
                                [np.nan,0.0,1.0,2.0,3.0,np.nan],
@@ -133,10 +138,16 @@ def test_subset():
         for fmt in ['netcdf','hdf','native']:
             print('Testing subsetting of non-square grid (format %s)...' % fmt)
             data = np.arange(0,24).reshape(6,4).astype(np.int32)
-            geodict = {'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':5.5,'xdim':1.0,'ydim':1.0,'nrows':6,'ncols':4}
+            geodict = GeoDict({'xmin':0.5,'xmax':3.5,
+                               'ymin':0.5,'ymax':5.5,
+                               'xdim':1.0,'ydim':1.0,
+                               'nrows':6,'ncols':4})
             gmtgrid = GMTGrid(data,geodict)
             gmtgrid.save('test.grd',format=fmt)
-            newdict = {'xmin':1.5,'xmax':2.5,'ymin':1.5,'ymax':3.5,'xdim':1.0,'ydim':1.0}
+            newdict = GeoDict({'xmin':1.5,'xmax':2.5,
+                               'ymin':1.5,'ymax':3.5,
+                               'xdim':1.0,'ydim':1.0,
+                               'nrows':2,'ncols':2},preserve='dims')
             gmtgrid3 = GMTGrid.load('test.grd',samplegeodict=newdict)
             output = np.array([[9,10],
                                [13,14],
@@ -154,15 +165,20 @@ def test_resample():
         for fmt in ['netcdf','hdf','native']:
             print('Test resampling data without padding (format %s)...' % fmt)
             data = np.arange(0,63).astype(np.int32).reshape(9,7)
-            geodict = {'xmin':0.5,'xmax':6.5,'ymin':0.5,'ymax':8.5,'xdim':1.0,'ydim':1.0,'nrows':9,'ncols':7}
+            geodict = GeoDict({'xmin':0.5,'xmax':6.5,
+                               'ymin':0.5,'ymax':8.5,
+                               'xdim':1.0,'ydim':1.0,
+                               'nrows':9,'ncols':7})
             gmtgrid = GMTGrid(data,geodict)
             gmtgrid.save('test.grd',format=fmt)
 
-            newdict = {'xmin':3.0,'xmax':4.0,'ymin':3.0,'ymax':4.0,'xdim':1.0,'ydim':1.0}
             bounds = (3.0,4.0,3.0,4.0)
             xdim,ydim = (1.0,1.0)
             nrows,ncols = (-1,-1)
-            newdict = Grid2D.fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve='dims')
+            newdict = GeoDict({'xmin':3.0,'xmax':4.0,
+                               'ymin':3.0,'ymax':4.0,
+                               'xdim':1.0,'ydim':1.0,
+                               'nrows':2,'ncols':2},preserve='dims')
             gmtgrid3 = GMTGrid.load('test.grd',samplegeodict=newdict,resample=True)
             output = np.array([[34,35],
                                [41,42]])
@@ -176,7 +192,10 @@ def test_resample():
             bounds = (0.0,4.0,0.0,4.0)
             xdim,ydim = (1.0,1.0)
             nrows,ncols = (-1,-1)
-            newdict = Grid2D.fixGeoDict(bounds,xdim,ydim,nrows,ncols,preserve='dims')
+            newdict = GeoDict({'xmin':0.0,'xmax':4.0,
+                               'ymin':0.0,'ymax':4.0,
+                               'xdim':1.0,'ydim':1.0,
+                               'nrows':2,'ncols':2},preserve='dims')
             gmtgrid3 = GMTGrid.load('test.grd',samplegeodict=newdict,resample=True,doPadding=True)
             output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan],
                                [np.nan,2.5,3.5,4.5,np.nan],
@@ -195,11 +214,17 @@ def test_meridian():
         for fmt in ['netcdf','hdf','native']:
             print('Testing resampling of global grid where sample crosses 180/-180 meridian (format %s)...' % fmt)
             data = np.arange(0,84).astype(np.int32).reshape(7,12)
-            geodict = {'xmin':-180.0,'xmax':150.0,'ymin':-90.0,'ymax':90.0,'xdim':30,'ydim':30,'nrows':7,'ncols':12}
+            geodict = GeoDict({'xmin':-180.0,'xmax':150.0,
+                               'ymin':-90.0,'ymax':90.0,
+                               'xdim':30,'ydim':30,
+                               'nrows':7,'ncols':12})
             gmtgrid = GMTGrid(data,geodict)
             gmtgrid.save('test.grd',format=fmt)
 
-            sampledict = {'xmin':105,'xmax':-105,'ymin':-15.0,'ymax':15.0,'xdim':30.0,'ydim':30.0,'nrows':2,'ncols':5}
+            sampledict = GeoDict({'xmin':105,'xmax':-105,
+                                  'ymin':-15.0,'ymax':15.0,
+                                  'xdim':30.0,'ydim':30.0,
+                                  'nrows':2,'ncols':5},preserve='dims')
             gmtgrid5 = GMTGrid.load('test.grd',samplegeodict=sampledict,resample=True,doPadding=True)
 
             output = np.array([[ 39.5,40.5,35.5,30.5,31.5,32.5],
@@ -211,11 +236,17 @@ def test_meridian():
             print('Testing resampling of global grid where sample crosses 180/-180 meridian and first column is duplicated by last (format %s)...' % fmt)
             data = np.arange(0,84).astype(np.int32).reshape(7,12)
             data = np.hstack((data,data[:,0].reshape(7,1)))
-            geodict = {'xmin':-180.0,'xmax':180.0,'ymin':-90.0,'ymax':90.0,'xdim':30,'ydim':30,'nrows':7,'ncols':13}
+            geodict = GeoDict({'xmin':-180.0,'xmax':180.0,
+                               'ymin':-90.0,'ymax':90.0,
+                               'xdim':30,'ydim':30,
+                               'nrows':7,'ncols':13})
             gmtgrid = GMTGrid(data,geodict)
             gmtgrid.save('test.grd')
 
-            sampledict = {'xmin':105,'xmax':-105,'ymin':-15.0,'ymax':15.0,'xdim':30.0,'ydim':30.0,'nrows':2,'ncols':5}
+            sampledict = GeoDict({'xmin':105,'xmax':-105,
+                                  'ymin':-15.0,'ymax':15.0,
+                                  'xdim':30.0,'ydim':30.0,
+                                  'nrows':2,'ncols':5},preserve='dims')
             gmtgrid5 = GMTGrid.load('test.grd',samplegeodict=sampledict,resample=True,doPadding=True)
 
             output = np.array([[ 39.5,40.5,35.5,30.5,31.5,32.5],
@@ -248,7 +279,10 @@ def test_xrange():
 
         print('Testing loading partial x_range style grid...')
         #test with subsetting
-        newdict = {'xmin':1.5,'xmax':2.5,'ymin':1.5,'ymax':3.5,'xdim':1.0,'ydim':1.0}
+        newdict = GeoDict({'xmin':1.5,'xmax':2.5,
+                           'ymin':1.5,'ymax':3.5,
+                           'xdim':1.0,'ydim':1.0,
+                           'nrows':2,'ncols':2},preserve='dims')
         gmtgrid3 = GMTGrid.load('test.grd',samplegeodict=newdict)
         output = np.array([[9,10],
                            [13,14],
@@ -258,7 +292,10 @@ def test_xrange():
 
         print('Testing x_range style grid where we cross meridian...')
         data = createSampleXRange(7,12,'test.grd',(-180.,150.,-90.,90.),xdim=30.,ydim=30.)
-        sampledict = {'xmin':105,'xmax':-105,'ymin':-15.0,'ymax':15.0,'xdim':30.0,'ydim':30.0,'nrows':2,'ncols':5}
+        sampledict = GeoDict({'xmin':105,'xmax':-105,
+                              'ymin':-15.0,'ymax':15.0,
+                              'xdim':30.0,'ydim':30.0,
+                              'nrows':2,'ncols':5},preserve='dims')
         gmtgrid5 = GMTGrid.load('test.grd',samplegeodict=sampledict,resample=True,doPadding=True)
         print('Testing x_range style grid where we cross meridian...')
         
@@ -271,10 +308,16 @@ def test_within():
         print('Testing class method getBoundsWithin()...')
         gmtgrid = createSampleGrid(8,8)
         gmtgrid.save('test.grd',format='netcdf')
-        sdict = {'xmin':2.7,'xmax':6.7,'ymin':2.7,'ymax':6.7}
+        sdict = GeoDict({'xmin':2.7,'xmax':6.7,
+                         'ymin':2.7,'ymax':6.7,
+                         'xdim':1.0,'ydim':1.0,
+                         'nrows':2,'ncols':2},preserve='dims')
         newdict = GMTGrid.getBoundsWithin('test.grd',sdict)
-        testdict = {'xmin':4.5,'xmax':5.5,'ymin':4.5,'ymax':5.5,'xdim':1.0,'ydim':1.0}
-        assert (newdict['xmin'],newdict['xmax'],newdict['ymin'],newdict['ymax']) == (testdict['xmin'],testdict['xmax'],testdict['ymin'],testdict['ymax'])
+        testdict = GeoDict({'xmin':4.5,'xmax':5.5,
+                            'ymin':4.5,'ymax':5.5,
+                            'xdim':1.0,'ydim':1.0,
+                            'nrows':2,'ncols':2},preserve='dims')
+        assert (newdict.xmin,newdict.xmax,newdict.ymin,newdict.ymax) == (testdict.xmin,testdict.xmax,testdict.ymin,testdict.ymax)
         gmtgrid2 = GMTGrid.load('test.grd',samplegeodict=newdict)
         output = np.array([[20,21],
                            [28,29]])
@@ -283,28 +326,6 @@ def test_within():
     except AssertionError as error:
         print('Failed test of getBoundsWithin():\n %s' % error)
     os.remove('test.grd')
-
-def test_native_header():
-    try:
-        xmin = 110.1237
-        xmax = 112.3475
-        ymin = 34.1237
-        ymax = 36.3475
-        nrows = 200
-        ncols = 200
-        xvar,xdim = np.linspace(xmin,xmax,num=ncols,retstep=True)
-        yvar,ydim = np.linspace(ymin,ymax,num=nrows,retstep=True)
-        data = np.random.rand(nrows,ncols)
-        geodict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'xdim':xdim,'ydim':ydim,'nrows':nrows,'ncols':ncols}
-        gmtgrid = GMTGrid(data,geodict)
-        gmtgrid.save('test.nc',format='native')
-        sdict = {'xmin':110.5,'xmax':111.5,'ymin':34.5,'ymax':35.5,'xdim':xdim,'ydim':ydim}
-        grid2 = GMTGrid.load('test.nc',samplegeodict=sdict,preserve='dims')
-    except:
-        print('Failed test of native header.')
-    os.remove('test.nc')
-    
-    
     
 if __name__ == '__main__':
     if len(sys.argv) > 1:
@@ -318,7 +339,6 @@ if __name__ == '__main__':
             sampledict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax}
             grid = GMTGrid.load(gmtfile,samplegeodict=sampledict)
     else:
-        test_native_header()
         test_index()
         test_save()
         test_resample()

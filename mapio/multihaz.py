@@ -28,7 +28,7 @@ class MultiHazardGrid(MultiGrid):
         :param layers: 
           OrderedDict containing earthquake-induced hazard data layers (keys are 'pga', etc., values are 2D arrays of data).
         :param geodict: 
-          Dictionary specifying the spatial extent,resolution and shape of the data.
+          GeoDict object specifying the spatial extent,resolution and shape of the data.
         :param origin: 
           Dictionary with elements:
             - id String of event ID (i.e., 'us2015abcd')
@@ -86,7 +86,7 @@ class MultiHazardGrid(MultiGrid):
         geodict['ydim'] = yvar[1]-yvar[0]
         f.close()
 
-        return geodict
+        return GeoDict(geodict)
         
     def _saveDict(self,group,mydict):
         """
@@ -165,8 +165,8 @@ class MultiHazardGrid(MultiGrid):
         metadata = f.create_group('metadata')
         self._saveDict(metadata,self._metadata)
 
-        xvar = np.linspace(self._geodict['xmin'],self._geodict['xmax'],self._geodict['ncols'])
-        yvar = np.linspace(self._geodict['ymin'],self._geodict['ymax'],self._geodict['nrows'])
+        xvar = np.linspace(self._geodict.xmin,self._geodict.xmax,self._geodict.ncols)
+        yvar = np.linspace(self._geodict.ymin,self._geodict.ymax,self._geodict.nrows)
         x = f.create_dataset('x',data=xvar,compression='gzip',shape=xvar.shape,dtype=str(xvar.dtype))
         x.attrs['CLASS'] = 'DIMENSION_SCALE'
         x.attrs['NAME'] = 'x'
