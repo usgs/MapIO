@@ -5,8 +5,8 @@ from .dataset import DataSetException
 
 class GeoDict(object):
     EPS = 1e-12
-    REQ_KEYS = ['xmin','xmax','ymin','ymax','xdim','ydim','nrows','ncols']
-    def __init__(self,geodict,preserve=None):
+    REQ_KEYS = ['xmin','xmax','ymin','ymax','dx','dy','ny','nx']
+    def __init__(self,geodict,adjust=None):
         """
         An object which represents the spatial information for a grid and is guaranteed to be self-consistent.
 
@@ -16,20 +16,17 @@ class GeoDict(object):
              - xmax Longitude maximum (decimal degrees) (Center of upper right cell)
              - ymin Longitude minimum (decimal degrees) (Center of lower left cell)
              - ymax Longitude maximum (decimal degrees) (Center of lower right cell)
-             - xdim Cell width (decimal degrees)
-             - ydim Cell height (decimal degrees)
-             - nrows Number of rows of input data (must match input data dimensions)
-             - ncols Number of columns of input data (must match input data dimensions).
-        :param preserve:
-            String (one of None,'dims','shape','corner')
+             - dx Cell width (decimal degrees)
+             - dy Cell height (decimal degrees)
+             - ny Number of rows of input data (must match input data dimensions)
+             - nx Number of columns of input data (must match input data dimensions).
+        :param adjust:
+            String (one of None,'bounds','res')
               None: All input parameters are assumed to be self-consistent, an exception will be raised if they are not.
-              'dims': xdim/ydim and boundaries are assumed to be correct, number of rows and columns will be adjusted if required.
-              'shape': rows/cols and boundaries are assumed to be correct, xdim and ydim will be adjusted if required.
-              'corner': xmin,ymax,xdim,ydim,nrows,ncols are assumed to be correct, xmax and ymin will be adjusted if required.
+              'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin will be recalculated.
+              'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will be recalculated.
         :raises DataSetException:
-          When preserve is set to None, and any parameters are not self-consistent.
-          When preserve is set to 'dims', and parameters are not self-consistent after adjusting number of rows/cols.
-          When preserve is set to 'shape', and parameters are not self-consistent after adjusting xdim/ydim.
+          When adjust is set to None, and any parameters are not self-consistent.
         """
         for key in self.REQ_KEYS:
             if key not in geodict.keys():
@@ -39,13 +36,69 @@ class GeoDict(object):
         self._xmax = geodict['xmax']
         self._ymin = geodict['ymin']
         self._ymax = geodict['ymax']
-        self._xdim = geodict['xdim']
-        self._ydim = geodict['ydim']
-        self._nrows = geodict['nrows']
-        self._ncols = geodict['ncols']
-        self.preserve = preserve
-        self.validate()
+        self._dx = geodict['dx']
+        self._dy = geodict['dy']
+        self._ny = geodict['ny']
+        self._nx = geodict['nx']
+        self.validate(adjust=adjust)
 
+    @classmethod
+    def createDictFromBox(cls,xmin,xmax,ymin,ymax,dx,dy,inside=False):
+        if xmin > xmax:
+            txmax = xmax + 360
+        else:
+            txmax = xmax
+        if inside:
+            nx = np.floor(((txmax-xmin)/dx)+1)
+            ny = np.floor(((ymax-ymin)/dy)+1)
+            xmax2 = xmin + (nx-1)*dx
+            ymin2 = ymax - (ny-1)*dx
+        else:
+            nx = np.ceil(((txmax-xmin)/dx)+1)
+            ny = np.ceil(((ymax-ymin)/dy)+1)
+        xmax2 = xmin + (nx-1)*dx
+        ymin2 = ymax - (ny-1)*dx
+        return cls({'xmin':xmin,'xmax':xmax2,
+                    'ymin':ymin2,'ymax':ymax,
+                    'dx':dx,'dy':dy,
+                    'nx':nx,'ny':ny})
+
+    @classmethod
+    def createDictFromCenter(cls,cx,cy,dx,dy,xspan,yspan):
+        xmin = cx - xspan/2.0
+        xmax = cx + xspan/2.0
+        ymin = cy - yspan/2.0
+        ymax = cy + yspan/2.0
+        return cls.createDictFromBox(xmin,xmax,ymin,ymax,dx,dy)
+
+    def getBoundsWithin(self,geodict):
+        fxmin,fxmax,fymin,fymax = (self.xmin,self.xmax,self.ymin,self.ymax)
+        xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
+        fdx,fdy = (self.dx,self.dy)
+
+        #find the nearest cell grid to xmin that is greater than xmin
+        fleftcol = np.ceil((xmin-fxmin)/fdx)
+        frightcol = np.floor((xmax-fxmin)/fdx)
+        
+        ftoprow = np.ceil((fymax-ymax)/fdy)
+        fbottomrow = np.floor((fymax-ymin)/fdy)
+
+        #these should all be on the host grid
+        newxmin = fxmin + fleftcol*fdx
+        newxmax = fxmin + frightcol*fdx
+        newymin = fymax - fbottomrow*fdx
+        newymax = fymax - ftoprow*fdx
+
+        nx = round((newxmax-newxmin)/fdx + 1)
+        ny = round((newymax-newymin)/fdy + 1)
+
+        outgeodict = GeoDict({'xmin':newxmin,'xmax':newxmax,
+                              'ymin':newymin,'ymax':newymax,
+                              'dx':fdx,'dy':fdy,
+                              'ny':ny,'nx':nx})
+        return outgeodict
+            
+        
     def asDict(self):
         """Return GeoDict object in dictionary representation.
         :returns:
@@ -56,16 +109,16 @@ class GeoDict(object):
         tdict['xmax'] = self._xmax
         tdict['ymin'] = self._ymin
         tdict['ymax'] = self._ymax
-        tdict['xdim'] = self._xdim
-        tdict['ydim'] = self._ydim
-        tdict['nrows'] = self._nrows
-        tdict['ncols'] = self._ncols
+        tdict['dx'] = self._dx
+        tdict['dy'] = self._dy
+        tdict['ny'] = self._ny
+        tdict['nx'] = self._nx
         return tdict
         
         
     def __repr__(self):
         rfmt = '''Bounds: (%.4f,%.4f,%.4f,%.4f)\nDims: (%.4f,%.4f)\nShape: (%i,%i)'''
-        rtpl = (self._xmin,self._xmax,self._ymin,self._ymax,self._xdim,self._ydim,self._nrows,self._ncols)
+        rtpl = (self._xmin,self._xmax,self._ymin,self._ymax,self._dx,self._dy,self._ny,self._nx)
         return rfmt % rtpl
         
     def copy(self):
@@ -73,10 +126,10 @@ class GeoDict(object):
                    'xmax':self._xmax,
                    'ymin':self._ymin,
                    'ymax':self._ymax,
-                   'xdim':self._xdim,
-                   'ydim':self._ydim,
-                   'nrows':self._nrows,
-                   'ncols':self._ncols}
+                   'dx':self._dx,
+                   'dy':self._dy,
+                   'ny':self._ny,
+                   'nx':self._nx}
         return GeoDict(geodict)
         
     def __eq__(self,other):
@@ -95,13 +148,13 @@ class GeoDict(object):
             return False
         if np.abs(self._ymax-other.ymax) > self.EPS:
             return False
-        if np.abs(self._xdim-other.xdim) > self.EPS:
+        if np.abs(self._dx-other.dx) > self.EPS:
             return False
-        if np.abs(self._ydim-other.ydim) > self.EPS:
+        if np.abs(self._dy-other.dy) > self.EPS:
             return False
-        if np.abs(self._nrows-other.nrows) > self.EPS:
+        if np.abs(self._ny-other.ny) > self.EPS:
             return False
-        if np.abs(self._ncols-other.ncols) > self.EPS:
+        if np.abs(self._nx-other.nx) > self.EPS:
             return False
         return True
 
@@ -117,10 +170,10 @@ class GeoDict(object):
         """
         ulx = self._xmin
         uly = self._ymax
-        xdim = self._xdim
-        ydim = self._ydim
-        lon = ulx + col*xdim
-        lat = uly - row*ydim
+        dx = self._dx
+        dy = self._dy
+        lon = ulx + col*dx
+        lat = uly - row*dy
         return (lat,lon)
 
     def getRowCol(self,lat,lon,returnFloat=False):
@@ -137,13 +190,13 @@ class GeoDict(object):
         """
         ulx = self._xmin
         uly = self._ymax
-        xdim = self._xdim
-        ydim = self._ydim
+        dx = self._dx
+        dy = self._dy
         #check to see if we're in a scenario where the grid crosses the meridian
         if self._xmax < ulx and lon < ulx:
             lon += 360
-        col = (lon-ulx)/xdim
-        row = (uly-lat)/ydim
+        col = (lon-ulx)/dx
+        row = (uly-lat)/dy
         if returnFloat:
             return (row,col)
         
@@ -183,36 +236,36 @@ class GeoDict(object):
         return self._ymax
 
     @property
-    def xdim(self):
-        """Get xdim value.
+    def dx(self):
+        """Get dx value.
         :returns:
-          xdim value.
+          dx value.
         """
-        return self._xdim
+        return self._dx
 
     @property
-    def ydim(self):
-        """Get ydim value.
+    def dy(self):
+        """Get dy value.
         :returns:
-          ydim value.
+          dy value.
         """
-        return self._ydim
+        return self._dy
 
     @property
-    def nrows(self):
-        """Get nrows value.
+    def ny(self):
+        """Get ny value.
         :returns:
-          nrows value.
+          ny value.
         """
-        return self._nrows
+        return self._ny
 
     @property
-    def ncols(self):
-        """Get ncols value.
+    def nx(self):
+        """Get nx value.
         :returns:
-          ncols value.
+          nx value.
         """
-        return self._ncols
+        return self._nx
 
     @xmin.setter
     def xmin(self, value):
@@ -258,48 +311,48 @@ class GeoDict(object):
         self._ymax = value
         self.validate()
 
-    @xdim.setter
-    def xdim(self, value):
-        """Set xdim value, re-validate object.
+    @dx.setter
+    def dx(self, value):
+        """Set dx value, re-validate object.
         :param value:
           Value to set.
         :raises DataSetException:
           When validation fails.
         """
-        self._xdim = value
+        self._dx = value
         self.validate()
 
-    @ydim.setter
-    def ydim(self, value):
-        """Set ydim value, re-validate object.
+    @dy.setter
+    def dy(self, value):
+        """Set dy value, re-validate object.
         :param value:
           Value to set.
         :raises DataSetException:
           When validation fails.
         """
-        self._ydim = value
+        self._dy = value
         self.validate()
 
-    @nrows.setter
-    def nrows(self, value):
-        """Set nrows value, re-validate object.
+    @ny.setter
+    def ny(self, value):
+        """Set ny value, re-validate object.
         :param value:
           Value to set.
         :raises DataSetException:
           When validation fails.
         """
-        self._nrows = value
+        self._ny = value
         self.validate()
 
-    @ncols.setter
-    def ncols(self, value):
-        """Set ncols value, re-validate object.
+    @nx.setter
+    def nx(self, value):
+        """Set nx value, re-validate object.
         :param value:
           Value to set.
         :raises DataSetException:
           When validation fails.
         """
-        self._ncols = value
+        self._nx = value
         self.validate()
 
     def getDeltas(self):
@@ -308,93 +361,52 @@ class GeoDict(object):
             txmax = self._xmax + 360.0
         else:
             txmax = self._xmax
-        #try calculating xmax from xmin, xdim, and ncols
-        xmax = self._xmin + self._xdim*(self._ncols-1)
+        #try calculating xmax from xmin, dx, and nx
+        xmax = self._xmin + self._dx*(self._nx-1)
         #dxmax = np.abs(xmax - txmax)
         dxmax = np.abs(float(xmax)/txmax - 1.0)
 
-        #try calculating xdim from bounds and ncols
-        xdim = np.abs((txmax - self._xmin)/(self._ncols-1))
-        #dxdim = np.abs((xdim - self._xdim))
-        dxdim = np.abs(float(xdim)/self._xdim - 1.0)
+        #try calculating dx from bounds and nx
+        dx = np.abs((txmax - self._xmin)/(self._nx-1))
+        #ddx = np.abs((dx - self._dx))
+        ddx = np.abs(float(dx)/self._dx - 1.0)
 
-        #try calculating ymax from ymin, ydim, and nrows
-        ymax = self._ymin + self._ydim*(self._nrows-1)
+        #try calculating ymax from ymin, dy, and ny
+        ymax = self._ymin + self._dy*(self._ny-1)
         #dymax = np.abs(ymax - self._ymax)
         dymax = np.abs(float(ymax)/self._ymax - 1.0)
 
-        #try calculating xdim from bounds and ncols
-        ydim = np.abs((self._ymax - self._ymin)/(self._nrows-1))
-        #dydim = np.abs(ydim - self._ydim)
-        dydim = np.abs(float(ydim)/self._ydim - 1.0)
+        #try calculating dx from bounds and nx
+        dy = np.abs((self._ymax - self._ymin)/(self._ny-1))
+        #ddy = np.abs(dy - self._dy)
+        ddy = np.abs(float(dy)/self._dy - 1.0)
 
-        return (dxmax,dxdim,dymax,dydim)
+        return (dxmax,ddx,dymax,ddy)
         
-    def validate(self):
-        dxmax,dxdim,dymax,dydim = self.getDeltas()
+    def validate(self,adjust=None):
+        dxmax,ddx,dymax,ddy = self.getDeltas()
 
-        if self.preserve is None:
+        if adjust is None:
             if dxmax > self.EPS:
                 raise DataSetException('GeoDict X resolution is not consistent with bounds and number of columns')
-            if dxdim > self.EPS:
+            if ddx > self.EPS:
                 raise DataSetException('GeoDict X resolution is not consistent with bounds and number of columns')
             if dymax > self.EPS:
                 raise DataSetException('GeoDict Y resolution is not consistent with bounds and number of rows')
-            if dydim > self.EPS:
+            if ddy > self.EPS:
                 raise DataSetException('GeoDict Y resolution is not consistent with bounds and number of rows')
-        elif self.preserve == 'dims':
-            #sacrifice rows/cols (shape) in favor of preserving the dimensions and the bounds
+        elif adjust == 'bounds':
             if self._xmin > self._xmax:
                 txmax = self._xmax + 360
             else:
                 txmax = self._xmax
-            ncols = int(np.round(((txmax - self._xmin)/self._xdim)+1))
-            xmax = self._xmin + self._xdim*(ncols-1)
-            dxmax = np.abs(xmax - txmax)
-            if dxmax > self.EPS:
-                raise DataSetException('Could not preserve bounds when changing shape in X dimension.')
-            self._ncols = ncols
-
-            nrows = int(np.round(((self._ymax - self._ymin)/self._ydim)+1))
-            ymax = self._ymin + self._ydim*(nrows-1)
-            dymax = np.abs(ymax - self._ymax)
-            if dymax > self.EPS:
-                raise DataSetException('Could not preserve bounds when changing shape in Y dimension.')
-            self._nrows = nrows
-        elif self.preserve == 'shape':
-            #sacrifice dimensions in favor of rows/cols (shape) and boundaries
-            xdim = ((self._xmax - self._xmin)/(self._ncols-1))
-            xmax = self._xmin + xdim*(self._ncols-1)
-            dxmax = np.abs(xmax - self._xmax)
-            if dxmax > self.EPS:
-                raise DataSetException('Could not preserve bounds when changing shape in X dimension.')
-            self._xdim = xdim
-
-            ydim = ((self._ymax - self._ymin)/(self._nrows-1))
-            ymax = self._ymin + ydim*(self._nrows-1)
-            dymax = np.abs(ymax - self._ymax)
-            if dymax > self.EPS:
-                raise DataSetException('Could not preserve bounds when changing shape in Y dimension.')
-            self._ydim = ydim
-        elif self.preserve == 'corner':
-            #assume that:
-            #xmin/ymax are ok
-            #xdim/ydim are ok
-            #nrows/ncols are ok
-            #xmax/ymin are NOT ok, recalculate them
-            if self._xmin > self._xmax:
-                txmax = self._xmax + 360.0
-            else:
-                txmax = self._xmax
-            xmax = self._xmin + self._xdim*(self._ncols-1)
-            dxmax = np.abs(float(xmax)/txmax - 1.0)
-            if dxmax > self.EPS:
-                self._xmax = xmax
-
-            ymin = self._ymax - self._ydim*(self._nrows-1)
-            dymin = np.abs(float(ymin)/self._ymin - 1.0)
-            if dymin > self.EPS:
-                self._ymin = ymin
+            self._xmax = self._xmin + self._dx*(self._nx-1)
+            self._ymin = self._ymax - self._dy*(self._ny-1)
+        elif adjust == 'res':
+            self._dx = ((self._xmax - self._xmin)/(self._nx-1))
+            self._dy = ((self._ymax - self._ymin)/(self._ny-1))
         else:
-            raise DataSetException('Unsupported preserve option "%s"' % preserve)
+            raise DataSetException('Unsupported adjust option "%s"' % adjust)
+        if self._xmax > 180:
+            self._xmax -= 360
 

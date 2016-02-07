@@ -42,13 +42,13 @@ class Grid(DataSet):
         #get pad left columns - go outside specified bounds if not exact edge
         pxmin,pxmax,pymin,pymax = (paddict.xmin,paddict.xmax,paddict.ymin,paddict.ymax)
         gxmin,gxmax,gymin,gymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
-        xdim,ydim = (geodict.xdim,geodict.ydim)
-        nrows,ncols = (geodict.nrows,geodict.ncols)
+        dx,dy = (geodict.dx,geodict.dy)
+        ny,nx = (geodict.ny,geodict.nx)
 
-        padleftcols = np.ceil((gxmin - pxmin)/xdim)
-        padrightcols = np.ceil((pxmax - gxmax)/xdim)
-        padbottomrows = np.ceil((gymin - pymin)/ydim)
-        padtoprows = np.ceil((pymax - gymax)/ydim)
+        padleftcols = np.ceil((gxmin - pxmin)/dx)
+        padrightcols = np.ceil((pxmax - gxmax)/dx)
+        padbottomrows = np.ceil((gymin - pymin)/dy)
+        padtoprows = np.ceil((pymax - gymax)/dy)
 
         #if any of these are negative, set them to zero
         if padleftcols < 0:
@@ -60,52 +60,52 @@ class Grid(DataSet):
         if padtoprows < 0:
             padtoprows = 0
 
-        leftpad = np.ones((nrows,padleftcols))*padvalue
-        rightpad = np.ones((nrows,padrightcols))*padvalue
-        ncols += padrightcols + padleftcols
-        bottompad = np.ones((padbottomrows,ncols))*padvalue
-        toppad = np.ones((padtoprows,ncols))*padvalue
+        leftpad = np.ones((ny,padleftcols))*padvalue
+        rightpad = np.ones((ny,padrightcols))*padvalue
+        nx += padrightcols + padleftcols
+        bottompad = np.ones((padbottomrows,nx))*padvalue
+        toppad = np.ones((padtoprows,nx))*padvalue
 
         #now figure out what the new bounds are
         outdict = {}
-        outdict['ncols'] = int(ncols)
-        outdict['nrows'] = int(nrows + bottompad.shape[0] + toppad.shape[0])
+        outdict['nx'] = int(nx)
+        outdict['ny'] = int(ny + bottompad.shape[0] + toppad.shape[0])
         
-        outdict['xmin'] = gxmin - (padleftcols)*xdim
-        outdict['xmax'] = gxmax + (padrightcols)*xdim
-        outdict['ymin'] = gymin - (padbottomrows)*ydim
-        outdict['ymax'] = gymax + (padtoprows)*ydim
-        outdict['xdim'] = xdim
-        outdict['ydim'] = ydim
+        outdict['xmin'] = gxmin - (padleftcols)*dx
+        outdict['xmax'] = gxmax + (padrightcols)*dx
+        outdict['ymin'] = gymin - (padbottomrows)*dy
+        outdict['ymax'] = gymax + (padtoprows)*dy
+        outdict['dx'] = dx
+        outdict['dy'] = dy
         
         gd = GeoDict(outdict)
         return (leftpad,rightpad,bottompad,toppad,gd)
     
     @classmethod 
     def checkGeoDict(cls,geodict):
-        reqfields = set(['xmin','xmax','ymin','ymax','xdim','ydim','nrows','ncols'])
+        reqfields = set(['xmin','xmax','ymin','ymax','dx','dy','ny','nx'])
         if not reqfields.issubset(set(geodict.keys())):
             return False
         return True
 
     @classmethod
-    def fixGeoDict(cls,bounds,xdim,ydim,nrows,ncols,preserve='dims'):
+    def fixGeoDict(cls,bounds,dx,dy,ny,nx,preserve='dims'):
         """
         Return a full geodict, with either input dimensions preserved or input shape/bounds preserved.
 
         :param bounds:
           Tuple of (xmin,xmax,ymin,ymax).  May be changed when preserve='dims'.
-        :param xdim:
+        :param dx:
           Width of cells in same units as bounds.  Will be overwritten when preserve='shape'.
-        :param ydim:
+        :param dy:
           Height of cells in same units as bounds.  Will be overwritten when preserve='shape'.
-        :param nrows:
+        :param ny:
           Number of rows.  Will be overwritten when preserve='dims'.
-        :param ncols:
+        :param nx:
           Number of columns.  Will be overwritten when preserve='dims'.
         :param preserve:
-          One of 'dims' or 'shape'.  Setting this to 'dims' will keep input xdim/ydim values, 
-          and potentially modify the bounds and/or nrows/ncols.
+          One of 'dims' or 'shape'.  Setting this to 'dims' will keep input dx/dy values, 
+          and potentially modify the bounds and/or ny/nx.
         """
         xmin,xmax,ymin,ymax = bounds
         mcross = False
@@ -114,21 +114,21 @@ class Grid(DataSet):
             xmax += 360
             mcross = True
         if preserve == 'dims':
-            ncols = int((xmax-xmin)/xdim + eps) + 1
-            xmax = xmin + (ncols - 1)*xdim
-            xvar = np.arange(xmin,xmax+(xdim*0.1),xdim)
-            ncols = len(xvar)
+            nx = int((xmax-xmin)/dx + eps) + 1
+            xmax = xmin + (nx - 1)*dx
+            xvar = np.arange(xmin,xmax+(dx*0.1),dx)
+            nx = len(xvar)
             if mcross:
                 xmax -= 360
 
-            nrows = int((ymax-ymin)/ydim + eps) + 1
-            ymax = ymin + (nrows - 1)*ydim
-            yvar = np.arange(ymin,ymax+(ydim*0.1),ydim)
-            nrows = len(yvar)
+            ny = int((ymax-ymin)/dy + eps) + 1
+            ymax = ymin + (ny - 1)*dy
+            yvar = np.arange(ymin,ymax+(dy*0.1),dy)
+            ny = len(yvar)
 
         elif preserve == 'shape': #preserve rows and columns
-            xvar,xdim = np.linspace(xmin,xmax,num=ncols,retstep=True)
-            yvar,ydim = np.linspace(ymin,ymax,num=nrows,retstep=True)
+            xvar,dx = np.linspace(xmin,xmax,num=nx,retstep=True)
+            yvar,dy = np.linspace(ymin,ymax,num=ny,retstep=True)
             xmin = xvar[0]
             xmax = xvar[-1]
             ymin = yvar[0]
@@ -136,7 +136,7 @@ class Grid(DataSet):
         else:
             raise Exception('%s not supported' % preserve)
 
-        geodict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'xdim':xdim,'ydim':ydim,'nrows':nrows,'ncols':ncols}
+        geodict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'dx':dx,'dy':dy,'ny':ny,'nx':nx}
         return geodict
     
     @abc.abstractmethod
@@ -155,7 +155,7 @@ class Grid(DataSet):
         :param cloud:
           A Cloud instance containing scattered XY data.
         :param geodict:
-          A geodict object where nrows/ncols are optional (will be calculated from bounds/cell dimensions)
+          A geodict object where ny/nx are optional (will be calculated from bounds/cell dimensions)
         :returns:
           An instance of a Grid object.
         """
@@ -163,8 +163,8 @@ class Grid(DataSet):
     
     @staticmethod
     def getLatLonMesh(geodict):
-        lons = np.linspace(geodict.xmin,geodict.xmax,num=geodict.ncols)
-        lats = np.linspace(geodict.ymin,geodict.ymax,num=geodict.nrows)
+        lons = np.linspace(geodict.xmin,geodict.xmax,num=geodict.nx)
+        lats = np.linspace(geodict.ymin,geodict.ymax,num=geodict.ny)
         lon,lat = np.meshgrid(lons,lats)
         return (lat,lon)
     

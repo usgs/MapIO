@@ -28,14 +28,14 @@ def createSample(M,N):
     data = data.astype(np.int32) #arange gives int64 by default, not supported by netcdf3
     xvar = np.arange(0.5,0.5+N,1.0)
     yvar = np.arange(0.5,0.5+M,1.0)
-    geodict = {'nrows':N,
-               'ncols':N,
+    geodict = {'ny':N,
+               'nx':N,
                'xmin':0.5,
                'xmax':xvar[-1],
                'ymin':0.5,
                'ymax':yvar[-1],
-               'xdim':1.0,
-               'ydim':1.0}
+               'dx':1.0,
+               'dy':1.0}
     gmtgrid = GDALGrid(data,geodict)
     return gmtgrid
 
@@ -46,7 +46,7 @@ def test_format():
             data = np.arange(0,16).reshape(4,4).astype(dtype)
             if dtype in [np.float32,np.float64]:
                 data[1,1] = np.nan
-            geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'xdim':1.0,'ydim':1.0,'nrows':4,'ncols':4})
+            geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'dx':1.0,'dy':1.0,'ny':4,'nx':4})
             gdalgrid = GDALGrid(data,geodict)
             gdalgrid.save('test.bil')
             gdalgrid2 = GDALGrid.load('test.bil')
@@ -65,7 +65,7 @@ def test_pad():
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
 
-        newdict = GeoDict({'xmin':-0.5,'xmax':4.5,'ymin':-0.5,'ymax':4.5,'xdim':1.0,'ydim':1.0,'nrows':2,'ncols':2},preserve='dims')
+        newdict = GeoDict({'xmin':-0.5,'xmax':4.5,'ymin':-0.5,'ymax':4.5,'dx':1.0,'dy':1.0,'ny':6,'nx':6})
         gdalgrid2 = GDALGrid.load('test.bil',samplegeodict=newdict,doPadding=True)
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan],
                            [np.nan,0.0,1.0,2.0,3.0,np.nan],
@@ -89,9 +89,8 @@ def test_subset():
         gdalgrid.save('test.bil')
         newdict = GeoDict({'xmin':1.5,'xmax':2.5,
                            'ymin':1.5,'ymax':3.5,
-                           'xdim':1.0,'ydim':1.0,
-                           'ncols':2,'nrows':2},
-                           preserve='dims')
+                           'dx':1.0,'dy':1.0,
+                           'nx':2,'ny':3})
         gdalgrid3 = GDALGrid.load('test.bil',samplegeodict=newdict)
         output = np.array([[9,10],
                            [13,14],
@@ -113,11 +112,10 @@ def test_resample():
         gdalgrid.save('test.bil')
 
         bounds = (3.0,4.0,3.0,4.0)
-        #newdict = Grid2D.fixGeoDict(bounds,1.0,1.0,-1,-1,preserve='dims')
         newdict = GeoDict({'xmin':3.0,'xmax':4.0,
                            'ymin':3.0,'ymax':4.0,
-                           'xdim':1.0,'ydim':1.0,
-                           'nrows':2,'ncols':2},preserve='dims')
+                           'dx':1.0,'dy':1.0,
+                           'ny':2,'nx':2})
         gdalgrid3 = GDALGrid.load('test.bil',samplegeodict=newdict,resample=True)
         output = np.array([[34,35],
                            [41,42]])
@@ -128,14 +126,14 @@ def test_resample():
         data,geodict = Grid2D._createSampleData(4,4)
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
-        newdict = {'xmin':0.0,'xmax':4.0,'ymin':0.0,'ymax':4.0,'xdim':1.0,'ydim':1.0}
+        newdict = {'xmin':0.0,'xmax':4.0,'ymin':0.0,'ymax':4.0,'dx':1.0,'dy':1.0}
         bounds = (0.0,4.0,0.0,4.0)
-        xdim,ydim = (1.0,1.0)
-        nrows,ncols = (-1,-1)
+        dx,dy = (1.0,1.0)
+        ny,nx = (-1,-1)
         newdict = GeoDict({'xmin':0.0,'xmax':4.0,
                           'ymin':0.0,'ymax':4.0,
-                          'xdim':xdim,'ydim':ydim,
-                          'nrows':2,'ncols':ncols},preserve='dims')
+                          'dx':dx,'dy':dy,
+                          'ny':5,'nx':5})
         gdalgrid3 = GDALGrid.load('test.bil',samplegeodict=newdict,resample=True,doPadding=True)
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan],
                            [np.nan,2.5,3.5,4.5,np.nan],
@@ -154,14 +152,14 @@ def test_meridian():
     try:
         print('Testing resampling of global grid where sample crosses 180/-180 meridian...')
         data = np.arange(0,84).astype(np.int32).reshape(7,12)
-        geodict = GeoDict({'xmin':-180.0,'xmax':150.0,'ymin':-90.0,'ymax':90.0,'xdim':30,'ydim':30,'nrows':7,'ncols':12})
+        geodict = GeoDict({'xmin':-180.0,'xmax':150.0,'ymin':-90.0,'ymax':90.0,'dx':30,'dy':30,'ny':7,'nx':12})
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
 
         sampledict = GeoDict({'xmin':105,'xmax':-105,
                               'ymin':-15.0,'ymax':15.0,
-                              'xdim':30.0,'ydim':30.0,
-                              'nrows':2,'ncols':5},preserve='dims')
+                              'dx':30.0,'dy':30.0,
+                              'ny':2,'nx':6})
         gdalgrid5 = GDALGrid.load('test.bil',samplegeodict=sampledict,resample=True,doPadding=True)
 
         output = np.array([[ 39.5,40.5,35.5,30.5,31.5,32.5],
@@ -175,15 +173,15 @@ def test_meridian():
         data = np.hstack((data,data[:,0].reshape(7,1)))
         geodict = GeoDict({'xmin':-180.0,'xmax':180.0,
                            'ymin':-90.0,'ymax':90.0,
-                           'xdim':30,'ydim':30,
-                           'nrows':7,'ncols':13})
+                           'dx':30,'dy':30,
+                           'ny':7,'nx':13})
         gdalgrid = GDALGrid(data,geodict)
         gdalgrid.save('test.bil')
 
         sampledict = GeoDict({'xmin':105,'xmax':-105,
                               'ymin':-15.0,'ymax':15.0,
-                              'xdim':30.0,'ydim':30.0,
-                              'nrows':2,'ncols':5},preserve='dims')
+                              'dx':30.0,'dy':30.0,
+                              'ny':2,'nx':6})
         gdalgrid5 = GDALGrid.load('test.bil',samplegeodict=sampledict,resample=True,doPadding=True)
 
         output = np.array([[ 39.5,40.5,35.5,30.5,31.5,32.5],
@@ -199,31 +197,10 @@ def test_meridian():
 
     
 if __name__ == '__main__':
-    homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
-    mapiodir = os.path.abspath(os.path.join(homedir,'..','mapio'))
-    sys.path.append(mapiodir)
-    if len(sys.argv) > 1:
-        gdalfile = sys.argv[1]
-        sampledict = None
-        if len(sys.argv) > 2:
-            xmin = float(sys.argv[2])
-            xmax = float(sys.argv[3])
-            ymin = float(sys.argv[4])
-            ymax = float(sys.argv[5])
-            xdim = float(sys.argv[6])
-            ydim = float(sys.argv[7])
-            fgeodict,xvar,yvar = GDALGrid.getFileGeoDict(gdalfile)
-            sampledict1 = GeoDict({'xmin':xmin,'xmax':xmax,
-                                   'ymin':ymin,'ymax':ymax,
-                                   'xdim':xdim,'ydim':ydim,
-                                   'nrows':2,'ncols':2},preserve='dims')
-            sampledict2 = GDALGrid.getBoundsWithin(gdalfile,sampledict1)
-            grid = GDALGrid.load(gdalfile,samplegeodict=sampledict2)
-    else:
-        test_format()
-        test_pad()
-        test_subset()
-        test_resample()
-        test_meridian()
+    test_format()
+    test_pad()
+    test_subset()
+    test_resample()
+    test_meridian()
         
 

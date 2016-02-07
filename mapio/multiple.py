@@ -11,7 +11,7 @@ from collections import OrderedDict
 
 
 class MultiGrid(Grid):
-    reqfields = set(['xmin','xmax','ymin','ymax','xdim','ydim','ncols','nrows'])
+    reqfields = set(['xmin','xmax','ymin','ymax','dx','dy','nx','ny'])
     def __init__(self,layers,descriptions=None):
         """
         Construct a semi-abstract MultiGrid object, which can contain many 2D layers of gridded data, all at the 
@@ -82,7 +82,7 @@ class MultiGrid(Grid):
           If the data layer dimensions don't match the geodict.
         """
         nr,nc = data.shape
-        if nr != self._geodict['nrows'] or nc != self._geodict['ncols']:
+        if nr != self._geodict['ny'] or nc != self._geodict['nx']:
             raise DataSetException("Data layer dimensions don't match those already in the grid")
         self._layers[name] = Grid2D(data,self._geodict.copy())
         self._descriptions[name] = desc
@@ -152,7 +152,7 @@ class MultiGrid(Grid):
         :param method:
            If resampling, method used, one of ('linear','nearest','cubic','quintic')
         :param preserve:
-            String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
+            String (one of 'dims','shape') indicating whether dx/dy of input geodict should be preserved or ny/nx.
         """
         for (layername,layer) in self._layers.items():
             layer.trim(geodict,resample=resample,method=method,preserve=preserve)

@@ -57,8 +57,8 @@ def test_save():
         mmi = np.arange(2,18,dtype=np.float32).reshape(4,4)
         geodict = GeoDict({'xmin':0.5,'xmax':3.5,
                            'ymin':0.5,'ymax':3.5,
-                           'xdim':1.0,'ydim':1.0,
-                           'nrows':4,'ncols':4})
+                           'dx':1.0,'dy':1.0,
+                           'ny':4,'nx':4})
         layers = OrderedDict()
         layers['pga'] = pga
         layers['pgv'] = pgv
@@ -100,8 +100,8 @@ def test_save():
         print('Testing loading with bounds (no resampling or padding)...')
         sampledict = GeoDict({'xmin':-0.5,'xmax':3.5,
                               'ymin':-0.5,'ymax':3.5,
-                              'xdim':1.0,'ydim':1.0,
-                              'nrows':5,'ncols':5})
+                              'dx':1.0,'dy':1.0,
+                              'ny':5,'nx':5})
         shake3 = ShakeGrid.load('test.xml',samplegeodict=sampledict,resample=False,doPadding=False,padValue=np.nan)
         tdata = shake3.getLayer('pga').getData()
         np.testing.assert_almost_equal(tdata,layers['pga'])
@@ -111,8 +111,8 @@ def test_save():
         print('Testing loading shakemap with padding, no resampling...')
         newdict = GeoDict({'xmin':-0.5,'xmax':4.5,
                            'ymin':-0.5,'ymax':4.5,
-                           'xdim':1.0,'ydim':1.0,
-                           'nrows':6,'ncols':6})
+                           'dx':1.0,'dy':1.0,
+                           'ny':6,'nx':6})
         shake4 = ShakeGrid.load('test.xml',samplegeodict=newdict,resample=False,doPadding=True,padValue=np.nan)
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan],
                            [np.nan,0.0,1.0,2.0,3.0,np.nan],
@@ -134,16 +134,16 @@ def test_save():
         layers['mmi'] = mmi
         geodict = GeoDict({'xmin':0.5,'xmax':5.5,
                            'ymin':0.5,'ymax':5.5,
-                           'xdim':1.0,'ydim':1.0,
-                           'nrows':6,'ncols':6})
+                           'dx':1.0,'dy':1.0,
+                           'ny':6,'nx':6})
         shake = ShakeGrid(layers,geodict,eventDict,shakeDict,uncDict)
         shake.save('test.xml',version=3)
 
         print('Testing resampling, no padding...')
         littledict = GeoDict({'xmin':2.0,'xmax':4.0,
                               'ymin':2.0,'ymax':4.0,
-                              'xdim':1.0,'ydim':1.0,
-                              'nrows':3,'ncols':3})
+                              'dx':1.0,'dy':1.0,
+                              'ny':3,'nx':3})
         shake5 = ShakeGrid.load('test.xml',samplegeodict=littledict,resample=True,doPadding=False,padValue=np.nan)
         output = np.array([[10.5,11.5,12.5],
                            [16.5,17.5,18.5],
@@ -158,8 +158,8 @@ def test_save():
         mmi = np.arange(2,18,dtype=np.float32).reshape(4,4)
         geodict = GeoDict({'xmin':0.5,'ymax':3.5,
                            'ymin':0.5,'xmax':3.5,
-                           'xdim':1.0,'ydim':1.0,
-                           'nrows':4,'ncols':4})
+                           'dx':1.0,'dy':1.0,
+                           'ny':4,'nx':4})
         layers = OrderedDict()
         layers['pga'] = pga
         layers['pgv'] = pgv
@@ -168,8 +168,8 @@ def test_save():
         shake.save('test.xml',version=3)
         bigdict = GeoDict({'xmin':0.0,'xmax':4.0,
                            'ymin':0.0,'ymax':4.0,
-                           'xdim':1.0,'ydim':1.0,
-                           'nrows':5,'ncols':5})
+                           'dx':1.0,'dy':1.0,
+                           'ny':5,'nx':5})
         shake6 = ShakeGrid.load('test.xml',samplegeodict=bigdict,resample=True,doPadding=True,padValue=np.nan)
         tdata = shake6.getLayer('pga').getData()
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan],

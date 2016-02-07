@@ -34,7 +34,7 @@ if __name__ == '__main__':
         
     shakefile = sys.argv[1]
     t1 = datetime.datetime.now()
-    sgrid = ShakeGrid.load(shakefile,fixFileGeoDict='corner')
+    sgrid = ShakeGrid.load(shakefile,adjust='res')
     t2 = datetime.datetime.now()
     origin = {}
     origin['id'] = sgrid._eventDict['event_id']

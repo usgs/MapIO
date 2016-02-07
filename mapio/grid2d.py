@@ -29,7 +29,7 @@ def testGeoJSON(obj):
     return False
 
 class Grid2D(Grid):
-    reqfields = set(['xmin','xmax','ymin','ymax','xdim','ydim','ncols','nrows'])
+    reqfields = set(['xmin','xmax','ymin','ymax','dx','dy','nx','ny'])
     def __init__(self,data=None,geodict=None):
         """
         Construct a Grid object.
@@ -48,8 +48,8 @@ class Grid2D(Grid):
             dims = data.shape
             if len(dims) != 2:
                 raise DataSetException('Grid data must be 2D.  Input data has shape of %s' % str(data.shape))
-            nrows,ncols = dims
-            if nrows != geodict.nrows or ncols != geodict.ncols:
+            ny,nx = dims
+            if ny != geodict.ny or nx != geodict.nx:
                 raise DataSetException('Input geodict does not match shape of input data.')
             self._geodict = geodict.copy()
             self._data = data.copy()
@@ -65,28 +65,28 @@ class Grid2D(Grid):
         """
         xmin,xmax,ymin,ymax = (self._geodict.xmin,self._geodict.xmax,
                                self._geodict.ymin,self._geodict.ymax)
-        nrows,ncols = self._data.shape
-        xdim,ydim = (self._geodict.xdim,self._geodict.ydim)
+        ny,nx = self._data.shape
+        dx,dy = (self._geodict.dx,self._geodict.dy)
         zmin = np.nanmin(self._data)
         zmax = np.nanmax(self._data)
         rstr = '''<%s Object:
-        nrows: %i
-        ncols: %i
+        ny: %i
+        nx: %i
         xmin: %.4f
         xmax: %.4f
         ymin: %.4f
         ymax: %.4f
-        xdim: %.4f
-        ydim: %.4f
+        dx: %.4f
+        dy: %.4f
         zmin: %.6f
-        zmax: %.6f>''' % (self.__class__.__name__,nrows,ncols,xmin,xmax,ymin,ymax,xdim,ydim,zmin,zmax)
+        zmax: %.6f>''' % (self.__class__.__name__,ny,nx,xmin,xmax,ymin,ymax,dx,dy,zmin,zmax)
         parts = rstr.split('\n')
         newrstr = '\n'.join([p.strip() for p in parts])
         return textwrap.dedent(newrstr)
 
     @classmethod
     def _createSampleData(self,M,N):
-        """Used for internal testing - create an NxN grid with lower left corner at 0.5,0.5, xdim/ydim = 1.0.
+        """Used for internal testing - create an NxN grid with lower left corner at 0.5,0.5, dx/dy = 1.0.
         :param M:
            Number of rows in output grid
         :param N:
@@ -99,14 +99,14 @@ class Grid2D(Grid):
         data = data.astype(np.int32) #arange gives int64 by default, not supported by netcdf3
         xvar = np.arange(0.5,0.5+N,1.0)
         yvar = np.arange(0.5,0.5+M,1.0)
-        geodict = {'nrows':M,
-                   'ncols':N,
+        geodict = {'ny':M,
+                   'nx':N,
                    'xmin':0.5,
                    'xmax':xvar[-1],
                    'ymin':0.5,
                    'ymax':yvar[-1],
-                   'xdim':1.0,
-                   'ydim':1.0}
+                   'dx':1.0,
+                   'dy':1.0}
         gd = GeoDict(geodict)
         return (data,gd)
     
@@ -152,24 +152,24 @@ class Grid2D(Grid):
         (bxmin,bxmax,bymin,bymax) = bounds
         ulx = geodict.xmin
         uly = geodict.ymax
-        xdim = geodict.xdim
-        ydim = geodict.ydim
-        ncols = geodict.ncols
-        nrows = geodict.nrows
+        dx = geodict.dx
+        dy = geodict.dy
+        nx = geodict.nx
+        ny = geodict.ny
         #section 1
-        iulx1 = int(np.floor((bxmin - ulx)/xdim))
-        ilrx1 = int(ncols)
+        iulx1 = int(np.floor((bxmin - ulx)/dx))
+        ilrx1 = int(nx)
 
         if not isScanLine:
-            iuly1 = int(np.ceil((uly - bymax)/ydim))
-            ilry1 = int(np.floor((uly - bymin)/ydim)) + 1
+            iuly1 = int(np.ceil((uly - bymax)/dy))
+            ilry1 = int(np.floor((uly - bymin)/dy)) + 1
         else:
-            ilry1 = int(np.ceil((uly - bymin)/ydim))
-            iuly1 = int(np.floor((uly - bymax)/ydim)) + 1
+            ilry1 = int(np.ceil((uly - bymin)/dy))
+            iuly1 = int(np.floor((uly - bymax)/dy)) + 1
 
         #section 2
         iulx2 = 0
-        ilrx2 = int(np.ceil((bxmax - ulx)/xdim)) + 1
+        ilrx2 = int(np.ceil((bxmax - ulx)/dx)) + 1
         iuly2 = iuly1
         ilry2 = ilry1
 
@@ -204,7 +204,7 @@ class Grid2D(Grid):
             raise DataSetException('setData() input array must have two dimensions.')
 
         m,n = data.shape
-        if m != self._geodict.nrows or n != self._geodict.ncols:
+        if m != self._geodict.ny or n != self._geodict.nx:
             raise DataSetException('setData() input array must match rows and columns of existing data.')
         self._data = data
 
@@ -214,7 +214,7 @@ class Grid2D(Grid):
         :returns:
           A reference to a dictionary (see constructor).
         """
-        return self._geodict #should we return a copy of the geodict?
+        return self._geodict.copy()
 
     def getBounds(self):
         """
@@ -225,10 +225,10 @@ class Grid2D(Grid):
         """
         return (self._geodict.xmin,self._geodict.xmax,self._geodict.ymin,self._geodict.ymax)
 
-    def trim(self,geodict,resample=False,method='linear',preserve='dims'):
+    def trim(self,geodict,resample=False,method='linear'):
         """
         Trim data to a smaller set of bounds, resampling if requested.  If not resampling,
-        data will be trimmed to largest grid boundary possible.
+        data will be trimmed to largest grid boundary possible that fits inside input bounds.
         
         :param geodict:
            GeoDict used to specify subset bounds and resolution (if resample is selected)
@@ -236,37 +236,23 @@ class Grid2D(Grid):
            Boolean indicating whether the data should be resampled to *exactly* match input bounds.
         :param method:
            If resampling, method used, one of ('linear','nearest','cubic','quintic')
-        :param preserve:
-            String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         """
         xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
         gxmin,gxmax,gymin,gymax = self.getBounds()
+        fdx,fdy = (self._geodict.dx,self._geodict.dy)
         #if any of the input bounds are outside the bounds of the grid, cut off those edges
         xmin = max(xmin,gxmin)
         xmax = min(xmax,gxmax)
         ymin = max(ymin,gymin)
         ymax = min(ymax,gymax)
         if not resample:
-            uly,ulx = self.getRowCol(ymax,xmin,returnFloat=True)
-            lry,lrx = self.getRowCol(ymin,xmax,returnFloat=True)
-            uly = int(np.floor(uly)) #these are in pixel space!
-            ulx = int(np.floor(ulx))
-            lrx = int(np.ceil(lrx))
-            lry = int(np.ceil(lry))
-            self._data = self._data[uly:lry+1,ulx:lrx+1]
-            newymax,newxmin = self.getLatLon(uly,ulx)
-            newymin,newxmax = self.getLatLon(lry,lrx)
-            newdict = {}
-            newdict['xmin'] = newxmin
-            newdict['xmax'] = newxmax
-            newdict['ymin'] = newymin
-            newdict['ymax'] = newymax
-            newdict['xdim'] = self._geodict.xdim
-            newdict['ydim'] = self._geodict.ydim
-            newdict['nrows'],newdict['ncols'] = self._data.shape
-            self._geodict = GeoDict(newdict,preserve=preserve)
+            sampledict = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,fdx,fdy,inside=True)
+            iuly,iulx = self._geodict.getRowCol(sampledict.ymax,sampledict.xmin)
+            ilry,ilrx = self._geodict.getRowCol(sampledict.ymin,sampledict.xmax)
+            self._data = self._data[iuly:ilry+1,iulx:ilrx+1]
+            self._geodict = sampledict
         else:
-            self.interpolateToGrid(geodict,method=method,preserve=preserve)
+            self.interpolateToGrid(geodict,method=method)
 
     def getValue(self,lat,lon,method='nearest',default=None): #return nearest neighbor value
         """Return numpy array at given latitude and longitude (using nearest neighbor).
@@ -286,8 +272,8 @@ class Grid2D(Grid):
             row,col = self.getRowCol(lat,lon)
         else:
             row,col = self.getRowCol(lat,lon,returnFloat=True)
-        nrows,ncols = self._data.shape
-        if (row < 0).any() or (row > nrows-1).any() or (col < 0).any() or (col > ncols-1).any():
+        ny,nx = self._data.shape
+        if (row < 0).any() or (row > ny-1).any() or (col < 0).any() or (col > nx-1).any():
             if default is None:
                 msg = 'One of more of your lat/lon values is outside Grid boundaries: %s' % (str(self.getRange()))
                 raise DataSetException(msg)
@@ -329,8 +315,8 @@ class Grid2D(Grid):
         #remember that pixel coordinates are (0,0) at the top left and increase going down and to the right
         #geographic coordinates are (xmin,ymin) at the bottom left and increase going up and to the right
         dims = self._data.shape
-        nrows1 = self._geodict.nrows
-        ncols1 = self._geodict.ncols
+        ny1 = self._geodict.ny
+        nx1 = self._geodict.nx
 
         #handle meridian crossing grids
         if self._geodict.xmin > self._geodict.xmax:
@@ -341,12 +327,12 @@ class Grid2D(Grid):
         
         ymin1 = self._geodict.ymin
         ymax1 = self._geodict.ymax
-        xdim1 = self._geodict.xdim
-        ydim1 = self._geodict.ydim
+        dx1 = self._geodict.dx
+        dy1 = self._geodict.dy
         
         #extract the geographic information about the grid we're sampling to
-        nrows = geodict.nrows
-        ncols = geodict.ncols
+        ny = geodict.ny
+        nx = geodict.nx
 
         #handle meridian crossing grids
         if geodict.xmin > geodict.xmax:
@@ -357,28 +343,28 @@ class Grid2D(Grid):
 
         ymin = geodict.ymin
         ymax = geodict.ymax
-        xdim = geodict.xdim
-        ydim = geodict.ydim
+        dx = geodict.dx
+        dy = geodict.dy
 
         #make sure that the grid we're resampling TO is completely contained by our current grid
         if xmin1 > xmin or xmax1 < xmax or ymin1 > ymin or ymax1 < ymax:
             raise DataSetException('Grid you are resampling TO is not completely contained by base grid.')
         
-        gxi = np.linspace(xmin,xmax,num=ncols)
-        gyi = np.linspace(ymin,ymax,num=nrows)
+        gxi = np.linspace(xmin,xmax,num=nx)
+        gyi = np.linspace(ymin,ymax,num=ny)
         
         #we need to handle the meridian crossing here...
         if xmin > xmax:
             xmax += 360
             xmin1 += 360
 
-        xi = (gxi - xmin1)/xdim1
-        #yi = (gyi - ymin1)/ydim1
-        yi = np.array(sorted(((ymax1 - gyi)/ydim1)))
+        xi = (gxi - xmin1)/dx1
+        #yi = (gyi - ymin1)/dy1
+        yi = np.array(sorted(((ymax1 - gyi)/dy1)))
 
         return (xi,yi)
     
-    def interpolateToGrid(self,geodict,method='linear',preserve='dims'):
+    def interpolateToGrid(self,geodict,method='linear'):
         """
         Given a geodict specifying another grid extent and resolution, resample current grid to match.
         
@@ -386,8 +372,6 @@ class Grid2D(Grid):
             geodict dictionary from another grid whose extents are inside the extent of this grid.
         :param method: 
             Optional interpolation method - ['linear', 'cubic','nearest']
-        :param preserve:
-            String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         :raises DataSetException: 
            If the Grid object upon which this function is being called is not completely contained by the grid to which this Grid is being resampled.
         :raises DataSetException: 
@@ -398,12 +382,12 @@ class Grid2D(Grid):
         if method not in ['linear', 'cubic','nearest']:
             raise DataSetException('Resampling method must be one of "linear", "cubic","nearest"')
         bounds = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
-        xdim,ydim = (geodict.xdim,geodict.ydim)
-        nrows,ncols = (geodict.nrows,geodict.ncols)
+        dx,dy = (geodict.dx,geodict.dy)
+        ny,nx = (geodict.ny,geodict.nx)
         xi,yi = self._getInterpCoords(geodict)
 
         #now using scipy interpolate functions
-        baserows,basecols = self._geodict.nrows,self._geodict.ncols
+        baserows,basecols = self._geodict.ny,self._geodict.nx
         basex = np.arange(0,basecols) #base grid PIXEL coordinates
         basey = np.arange(0,baserows)
         if method in ['linear','cubic']:
@@ -434,30 +418,30 @@ class Grid2D(Grid):
             #in python3, it makes result of zip from iterator into list
             xy = list(zip(x.flatten(),y.flatten())) 
             f = interpolate.NearestNDInterpolator(xy,self._data.flatten())
-            newrows = geodict.nrows
-            newcols = geodict.ncols
+            newrows = geodict.ny
+            newcols = geodict.nx
             xi = np.tile(xi,(newrows,1))
             yi = np.tile(yi.reshape(newrows,1),(1,newcols))
             self._data = f(list(zip(xi.flatten(),yi.flatten())))
             self._data = self._data.reshape(xi.shape)
                                                   
             
-        nrows,ncols = geodict.nrows,geodict.ncols
+        ny,nx = geodict.ny,geodict.nx
         dims = self._data.shape
-        nrows_new = dims[0]
-        ncols_new = dims[1]
-        if nrows_new != nrows or ncols_new != ncols:
-            msg = "Interpolation failed!  Results (%i,%i) don't match (%i,%i)!" % (nrows_new,ncols_new,nrows,ncols)
+        ny_new = dims[0]
+        nx_new = dims[1]
+        if ny_new != ny or nx_new != nx:
+            msg = "Interpolation failed!  Results (%i,%i) don't match (%i,%i)!" % (ny_new,nx_new,ny,nx)
             raise DataSetException(msg)
         #now the extents and resolution of the two grids should be identical...
-        gdict = {'nrows':geodict.nrows,
-                 'ncols':geodict.ncols,
+        gdict = {'ny':geodict.ny,
+                 'nx':geodict.nx,
                  'xmin':geodict.xmin,
                  'xmax':geodict.xmax,
                  'ymin':geodict.ymin,
                  'ymax':geodict.ymax,
-                 'xdim':geodict.xdim,
-                 'ydim':geodict.ydim}
+                 'dx':geodict.dx,
+                 'dy':geodict.dy}
         self._geodict = GeoDict(gdict)
 
     @classmethod
@@ -470,7 +454,7 @@ class Grid2D(Grid):
             - One GeoJSON like object or sequence of such objects. (http://geojson.org/)
             - A tuple of (geometry,value) or sequence of (geometry,value).
         :param samplegeodict:
-          GeoDict with at least xmin,xmax,ymin,ymax,xdim,ydim values set.
+          GeoDict with at least xmin,xmax,ymin,ymax,dx,dy values set.
         :param burnValue:
           Optional value which will be used to set the value of the pixels if there is no value in the geometry field.
         :param fillValue:
@@ -536,22 +520,22 @@ class Grid2D(Grid):
         
                                    
         xmin,xmax,ymin,ymax = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
-        xdim,ydim = (samplegeodict.xdim,samplegeodict.ydim)
+        dx,dy = (samplegeodict.dx,samplegeodict.dy)
 
-        xvar = np.arange(xmin,xmax+(xdim*0.1),xdim)
-        yvar = np.arange(ymin,ymax+(ydim*0.1),ydim)
-        ncols = len(xvar)
-        nrows = len(yvar)
+        xvar = np.arange(xmin,xmax+(dx*0.1),dx)
+        yvar = np.arange(ymin,ymax+(dy*0.1),dy)
+        nx = len(xvar)
+        ny = len(yvar)
         
         #the rasterize function assumes a pixel registered data set, where we are grid registered.  In order to make this work
         #we need to adjust the edges of our grid out by half a cell width in each direction.  
-        txmin = xmin - xdim/2.0
-        tymax = ymax + ydim/2.0
+        txmin = xmin - dx/2.0
+        tymax = ymax + dy/2.0
         
-        outshape = (nrows,ncols)
-        transform = Affine.from_gdal(txmin,xdim,0.0,tymax,0.0,-ydim)
+        outshape = (ny,nx)
+        transform = Affine.from_gdal(txmin,dx,0.0,tymax,0.0,-dy)
         img = features.rasterize(shapes,out_shape=outshape,fill=fillValue,transform=transform,all_touched=allTouched,default_value=burnValue)
-        geodict = GeoDict({'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'xdim':xdim,'ydim':ydim,'nrows':nrows,'ncols':ncols})
+        geodict = GeoDict({'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'dx':dx,'dy':dy,'ny':ny,'nx':nx})
         return cls(img,geodict)
         
         

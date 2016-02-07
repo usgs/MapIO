@@ -30,7 +30,7 @@ from rasterio import features
 from shapely.geometry import MultiPoint,Polygon,mapping
         
 def test_basics():
-    geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'xdim':1.0,'ydim':1.0,'nrows':4,'ncols':4})
+    geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'dx':1.0,'dy':1.0,'ny':4,'nx':4})
     data = np.arange(0,16).reshape(4,4)
     grid = Grid2D(data,geodict)
     print('Testing basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...')
@@ -62,26 +62,26 @@ def test_basics():
     print('Passed basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...')
     
 def test_resample():
-    geodict = GeoDict({'xmin':0.5,'xmax':4.5,'ymin':0.5,'ymax':4.5,'xdim':1.0,'ydim':1.0,'nrows':5,'ncols':5})
+    geodict = GeoDict({'xmin':0.5,'xmax':4.5,'ymin':0.5,'ymax':4.5,'dx':1.0,'dy':1.0,'ny':5,'nx':5})
     data = np.arange(0,25).reshape(5,5)
 
     print('Testing data trimming without resampling...')
     grid = Grid2D(data,geodict)
-    sdict = GeoDict({'xmin':2.0,'xmax':3.0,'ymin':2.0,'ymax':3.0,'xdim':1.0,'ydim':1.0,'nrows':2,'ncols':2})
+    sdict = GeoDict({'xmin':2.0,'xmax':4.0,'ymin':2.0,'ymax':4.0,'dx':1.0,'dy':1.0,'ny':3,'nx':3})
     grid.trim(sdict,resample=False)
-    output = np.array([[6,7,8],[11,12,13],[16,17,18]])
+    output = np.array([[1,2,3],[6,7,8],[11,12,13]])
     np.testing.assert_almost_equal(grid.getData(),output)
     print('Passed data trimming without resampling...')
 
     print('Testing data trimming with resampling...')
     grid = Grid2D(data,geodict)
-    grid.trim(sdict,resample=True,preserve='dims')
-    output = np.array([[9.0,10.0],[14.0,15.0]])
+    grid.trim(sdict,resample=True)
+    output = np.array([[4.0,5.0,6.0],[9.0,10.0,11.0],[14.0,15.0,16.0]])
     np.testing.assert_almost_equal(grid.getData(),output)
     print('Passed data trimming with resampling...')
 
 def test_interpolate():
-    geodict = GeoDict({'xmin':0.5,'xmax':6.5,'ymin':1.5,'ymax':6.5,'xdim':1.0,'ydim':1.0,'nrows':6,'ncols':7})
+    geodict = GeoDict({'xmin':0.5,'xmax':6.5,'ymin':1.5,'ymax':6.5,'dx':1.0,'dy':1.0,'ny':6,'nx':7})
     data = np.arange(14,56).reshape(6,7)
     
     for method in ['nearest','linear','cubic']:
@@ -89,8 +89,8 @@ def test_interpolate():
         grid = Grid2D(data,geodict)
         sampledict = GeoDict({'xmin':3.0,'xmax':4.0,
                               'ymin':3.0,'ymax':4.0,
-                              'xdim':1.0,'ydim':1.0,
-                              'nrows':2,'ncols':2},preserve='dims')
+                              'dx':1.0,'dy':1.0,
+                              'ny':2,'nx':2})
         grid.interpolateToGrid(sampledict,method=method)
         if method == 'nearest':
             output = np.array([[30.0,31.0],[37.0,38.0]])
@@ -104,7 +104,7 @@ def test_interpolate():
         print('Passed interpolate with method "%s".' % method)
 
 def test_rasterize():
-    samplegeodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'xdim':1.0,'ydim':1.0,'nrows':2,'ncols':2},preserve='dims')
+    samplegeodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'dx':1.0,'dy':1.0,'ny':2,'nx':2},adjust='bounds')
     print('Testing rasterizeFromGeometry() trying to get binary output...')
     points = MultiPoint([(0.25,3.5,5.0),
                          (1.75,3.75,6.0),
@@ -144,7 +144,7 @@ def test_rasterize():
 
 def test_copy():
     data = np.arange(0,16).astype(np.float32).reshape(4,4)
-    geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'xdim':1.0,'ydim':1.0,'nrows':4,'ncols':4})
+    geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'dx':1.0,'dy':1.0,'ny':4,'nx':4})
     grid1 = Grid2D(data,geodict)
     grid2 = grid1.copyFromGrid(grid1)
     grid1._data[0,0] = np.nan
@@ -153,7 +153,7 @@ def test_copy():
 
 def test_setData():
     data = np.arange(0,16).astype(np.float32).reshape(4,4)
-    geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'xdim':1.0,'ydim':1.0,'nrows':4,'ncols':4})
+    geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'dx':1.0,'dy':1.0,'ny':4,'nx':4})
     grid1 = Grid2D(data,geodict)
     x = np.ones((4,4))
     try:
@@ -178,7 +178,7 @@ def test_setData():
     
 if __name__ == '__main__':
     test_interpolate()
-    test_rasterize()
+    #test_rasterize()
     test_basics()
     test_resample()
     test_copy()
