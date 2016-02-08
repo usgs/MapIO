@@ -93,19 +93,19 @@ class DataSet(object):
         raise NotImplementedError('getBounds method not implemented in base class')
 
     @abc.abstractmethod
-    def trim(self,geodict,resample=False,method='linear',preserve='dims'):
+    def trim(self,geodict,resample=False,method='linear',preserve='res'):
         """
         Trim data to a smaller set of bounds, resampling if requested.  If not resampling,
         data will be trimmed to smallest grid boundary possible.
         
         :param geodict:
-           GeoDict used to specify subset bounds and resolution (if resample is selected)
+           GeoDict object used to specify subset bounds and resolution (if resample is selected)
         :param resample:
            Boolean indicating whether the data should be resampled to *exactly* match input bounds.
         :param method:
            If resampling, method used, one of ('linear','nearest','cubic','quintic')
-        :keyword preserve:
-            String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
+        :param preserve:
+            String (one of 'res','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         """
         raise NotImplementedError('trim method not implemented in base class')
 
@@ -132,8 +132,8 @@ class DataSet(object):
         Given a geodict specifying a grid extent and resolution, resample current data set to match.
         
         :param geodict: 
-            geodict dictionary from a grid whose extents are inside the extent of this grid.
-        :keyword method: 
+            geodict object from a grid whose extents are inside the extent of this grid.
+        :param method: 
             Optional interpolation method - ['linear', 'cubic','quintic','nearest']
         :raises DataSetException: 
            If the Grid object upon which this function is being called is not completely contained by the grid to which this Grid is being resampled.

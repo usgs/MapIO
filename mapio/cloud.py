@@ -6,8 +6,8 @@ from __future__ import print_function
 #third party imports
 import numpy as np
 
-from dataset import DataSet,DataSetException
-from gridbase import Grid
+from .dataset import DataSet,DataSetException
+from .gridbase import Grid
 from openquake.hazardlib.geo import geodetic
 
 
@@ -47,21 +47,3 @@ class Cloud(DataSet):
 
     def interpolateToGrid(self,geodict,method='linear'):
         raise NotImplementedError('interpolateToGrid not implemented yet for the Cloud class.')
-        
-        
-            
-def _test():
-    npoints = 1000
-    lon = np.random.random_integers(-180000,180000,size=npoints)/1000.0
-    lat = np.random.random_integers(-90000,90000,size=npoints)/1000.0
-    data = np.random.rand(npoints)
-    cloud = Cloud(lon,lat,data)
-    print('Bounds of whole globe (basically)')
-    print(cloud.getBounds())
-    bounds = (-120.0,-70,20.0,55.0)
-    cloud.trim(bounds)
-    print('Bounds after trimming to %s' % str(bounds))
-    print(cloud.getBounds())
-
-if __name__ == '__main__':
-    _test()

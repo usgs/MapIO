@@ -2,16 +2,16 @@
 #python 3 compatibility
 from __future__ import print_function
 
-from gridbase import Grid
-from dataset import DataSetException
-from grid2d import Grid2D
+from .gridbase import Grid
+from .dataset import DataSetException
+from .grid2d import Grid2D
 import abc
 from collections import OrderedDict
 
 
 
 class MultiGrid(Grid):
-    reqfields = set(['xmin','xmax','ymin','ymax','xdim','ydim','ncols','nrows'])
+    reqfields = set(['xmin','xmax','ymin','ymax','dx','dy','nx','ny'])
     def __init__(self,layers,descriptions=None):
         """
         Construct a semi-abstract MultiGrid object, which can contain many 2D layers of gridded data, all at the 
@@ -82,7 +82,7 @@ class MultiGrid(Grid):
           If the data layer dimensions don't match the geodict.
         """
         nr,nc = data.shape
-        if nr != self._geodict['nrows'] or nc != self._geodict['ncols']:
+        if nr != self._geodict['ny'] or nc != self._geodict['nx']:
             raise DataSetException("Data layer dimensions don't match those already in the grid")
         self._layers[name] = Grid2D(data,self._geodict.copy())
         self._descriptions[name] = desc
@@ -151,8 +151,8 @@ class MultiGrid(Grid):
            Boolean indicating whether the data should be resampled to *exactly* match input bounds.
         :param method:
            If resampling, method used, one of ('linear','nearest','cubic','quintic')
-        :keyword preserve:
-            String (one of 'dims','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
+        :param preserve:
+            String (one of 'dims','shape') indicating whether dx/dy of input geodict should be preserved or ny/nx.
         """
         for (layername,layer) in self._layers.items():
             layer.trim(geodict,resample=resample,method=method,preserve=preserve)
@@ -219,10 +219,11 @@ class MultiGrid(Grid):
         
         :param geodict: 
             geodict dictionary from another grid whose extents are inside the extent of this grid.
-        :keyword method: 
+        :param method: 
             Optional interpolation method - ['linear', 'cubic','quintic','nearest']
         :raises DataSetException: 
-           If the Grid object upon which this function is being called is not completely contained by the grid to which this Grid is being resampled.
+           If the Grid object upon which this function is being called is not completely contained by the 
+           grid to which this Grid is being resampled.
         :raises DataSetException: 
            If the resulting interpolated grid shape does not match input geodict.
 

@@ -14,10 +14,10 @@ import os.path
 import h5py
 from scipy.io import netcdf 
 import numpy as np
-from multiple import MultiGrid
-from shake import ShakeGrid
-from grid2d import Grid2D
-from dataset import DataSetException
+from .multiple import MultiGrid
+from .shake import ShakeGrid
+from .grid2d import Grid2D
+from .dataset import DataSetException
 
 
 
@@ -28,7 +28,7 @@ class MultiHazardGrid(MultiGrid):
         :param layers: 
           OrderedDict containing earthquake-induced hazard data layers (keys are 'pga', etc., values are 2D arrays of data).
         :param geodict: 
-          Dictionary specifying the spatial extent,resolution and shape of the data.
+          GeoDict object specifying the spatial extent,resolution and shape of the data.
         :param origin: 
           Dictionary with elements:
             - id String of event ID (i.e., 'us2015abcd')
@@ -80,13 +80,13 @@ class MultiHazardGrid(MultiGrid):
         geodict['xmax'] = xvar[-1]
         geodict['ymin'] = yvar[0]
         geodict['ymax'] = yvar[-1]
-        geodict['nrows'] = len(yvar)
-        geodict['ncols'] = len(xvar)
-        geodict['xdim'] = xvar[1]-xvar[0]
-        geodict['ydim'] = yvar[1]-yvar[0]
+        geodict['ny'] = len(yvar)
+        geodict['nx'] = len(xvar)
+        geodict['dx'] = xvar[1]-xvar[0]
+        geodict['dy'] = yvar[1]-yvar[0]
         f.close()
 
-        return geodict
+        return GeoDict(geodict)
         
     def _saveDict(self,group,mydict):
         """
@@ -165,8 +165,8 @@ class MultiHazardGrid(MultiGrid):
         metadata = f.create_group('metadata')
         self._saveDict(metadata,self._metadata)
 
-        xvar = np.linspace(self._geodict['xmin'],self._geodict['xmax'],self._geodict['ncols'])
-        yvar = np.linspace(self._geodict['ymin'],self._geodict['ymax'],self._geodict['nrows'])
+        xvar = np.linspace(self._geodict.xmin,self._geodict.xmax,self._geodict.nx)
+        yvar = np.linspace(self._geodict.ymin,self._geodict.ymax,self._geodict.ny)
         x = f.create_dataset('x',data=xvar,compression='gzip',shape=xvar.shape,dtype=str(xvar.dtype))
         x.attrs['CLASS'] = 'DIMENSION_SCALE'
         x.attrs['NAME'] = 'x'
@@ -230,10 +230,10 @@ class MultiHazardGrid(MultiGrid):
         geodict['xmax'] = xvar[-1]
         geodict['ymin'] = yvar[0]
         geodict['ymax'] = yvar[-1]
-        geodict['nrows'] = len(yvar)
-        geodict['ncols'] = len(xvar)
-        geodict['xdim'] = xvar[1]-xvar[0]
-        geodict['ydim'] = yvar[1]-yvar[0]
+        geodict['ny'] = len(yvar)
+        geodict['nx'] = len(xvar)
+        geodict['dx'] = xvar[1]-xvar[0]
+        geodict['dy'] = yvar[1]-yvar[0]
         layers = collections.OrderedDict()
         dictDict = {}
         for key in f.keys():
