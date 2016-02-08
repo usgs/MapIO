@@ -57,7 +57,7 @@ class GeoDict(object):
             nx = np.ceil(((txmax-xmin)/dx)+1)
             ny = np.ceil(((ymax-ymin)/dy)+1)
         xmax2 = xmin + (nx-1)*dx
-        ymin2 = ymax - (ny-1)*dx
+        ymin2 = ymax - (ny-1)*dy
         return cls({'xmin':xmin,'xmax':xmax2,
                     'ymin':ymin2,'ymax':ymax,
                     'dx':dx,'dy':dy,

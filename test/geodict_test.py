@@ -107,6 +107,12 @@ def test():
     gd8 = GeoDict.createDictFromCenter(xmin,ymin,dx,dy,xspan,yspan)
     print('Created dictionary (from center point) is valid.')
 
+    print('Testing a geodict with dx/dy values that are NOT the same...')
+    xmin,xmax,ymin,ymax = (-121.06166611109568, -116.03000055557099, 32.130001111172838, 36.294998888827159)
+    dx,dy = (0.009999722214505959, 0.009999444413578534)
+    td = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,dx,dy)
+    print('Passed testing a geodict with dx/dy values that are NOT the same...')
+
     #test getBoundsWithin
     #use global grid, and then a shakemap grid that we can get
     print('Testing getBoundsWithin...')
