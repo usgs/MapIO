@@ -41,8 +41,6 @@ class GDALGrid(Grid2D):
            File name of ESRI grid file.
         :returns:
            - GeoDict object specifying spatial extent, resolution, and shape of grid inside ESRI grid file.
-           - xvar array specifying X coordinates of data columns
-           - yvar array specifying Y coordinates of data rows
         :raises DataSetException:
           When the file contains a grid with more than one band.
           When the file geodict is internally inconsistent.
@@ -65,14 +63,11 @@ class GDALGrid(Grid2D):
                 geodict['ymin'] = geodict['ymax'] - (geodict['ny']-1)*geodict['dy']
 
                 gd = GeoDict(geodict)
-        xvar = np.arange(gd.xmin,gd.xmax+gd.dx,gd.dx)
-        yvar = np.arange(gd.ymin,gd.ymax+gd.dy,gd.dy)
-        xvar2,dx2 = np.linspace(gd.xmin,gd.xmax,num=gd.nx,retstep=True)
-        yvar2,dy2 = np.linspace(gd.ymin,gd.ymax,num=gd.ny,retstep=True)
-        return (gd,xvar,yvar)
+
+        return gd
     
     @classmethod
-    def _subsetRegions(self,src,sampledict,fgeodict,xvar,yvar,firstColumnDuplicated):
+    def _subsetRegions(self,src,sampledict,fgeodict,firstColumnDuplicated):
         """Internal method used to do subsampling of data for all three GMT formats.
         :param zvar:
           A numpy array-like thing (CDF/HDF variable, or actual numpy array)
@@ -80,10 +75,6 @@ class GDALGrid(Grid2D):
           GeoDict object with bounds and row/col information.
         :param fgeodict:
           GeoDict object with the file information.
-        :param xvar:
-          Numpy array specifying X coordinates of data columns
-        :param yvar:
-          Numpy array specifying Y coordinates of data rows
         :param firstColumnDuplicated:
           Boolean - is this a file where the last column of data is the same as the first (for grids that span entire globe).
         :returns:
@@ -202,7 +193,7 @@ class GDALGrid(Grid2D):
           A tuple of (data,geodict) where data is a 2D numpy array of all data found inside bounds, and 
           geodict gives the geo-referencing information for the data.
         """
-        fgeodict,xvar,yvar = cls.getFileGeoDict(filename)
+        fgeodict = cls.getFileGeoDict(filename)
         data = None
         with rasterio.drivers():
             with rasterio.open(filename) as src:
@@ -217,7 +208,7 @@ class GDALGrid(Grid2D):
                     else:
                         geodict = GeoDict(tgeodict)
                 else:
-                    data,geodict = cls._subsetRegions(src,sampledict,fgeodict,xvar,yvar,firstColumnDuplicated)
+                    data,geodict = cls._subsetRegions(src,sampledict,fgeodict,firstColumnDuplicated)
         #Put NaN's back in where nodata value was
         nodata = src.get_nodatavals()[0]
         if nodata is not None and data.dtype in [np.float32,np.float64]: #NaNs only valid for floating point data
@@ -349,7 +340,7 @@ class GDALGrid(Grid2D):
           * When sample bounds are outside (or too close to outside) the bounds of the grid and doPadding=False.
           * When the input file type is not recognized.
         """
-        filegeodict,xvar,yvar = cls.getFileGeoDict(filename)
+        filegeodict = cls.getFileGeoDict(filename)
         #verify that if not resampling, the dimensions of the sampling geodict must match the file.
         if resample == False and samplegeodict is not None:
             ddx = np.abs(filegeodict.dx - samplegeodict.dx)
