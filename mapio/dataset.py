@@ -93,7 +93,7 @@ class DataSet(object):
         raise NotImplementedError('getBounds method not implemented in base class')
 
     @abc.abstractmethod
-    def trim(self,geodict,resample=False,method='linear',preserve='res'):
+    def trim(self,geodict,resample=False,method='linear'):
         """
         Trim data to a smaller set of bounds, resampling if requested.  If not resampling,
         data will be trimmed to smallest grid boundary possible.
@@ -104,8 +104,6 @@ class DataSet(object):
            Boolean indicating whether the data should be resampled to *exactly* match input bounds.
         :param method:
            If resampling, method used, one of ('linear','nearest','cubic','quintic')
-        :param preserve:
-            String (one of 'res','shape') indicating whether xdim/ydim of input geodict should be preserved or nrows/ncols.
         """
         raise NotImplementedError('trim method not implemented in base class')
 

@@ -766,14 +766,12 @@ class GMTGrid(Grid2D):
     
             
     @classmethod
-    def load(cls,gmtfilename,samplegeodict=None,preserve='dims',resample=False,method='linear',doPadding=False,padValue=np.nan):
+    def load(cls,gmtfilename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan):
         """Create a GMTGrid object from a (possibly subsetted, resampled, or padded) GMT grid file.
         :param gmtfilename:
           Name of input file.
         :param samplegeodict:
           GeoDict used to specify subset bounds and resolution (if resample is selected)
-        :param preserve:
-          String (one of 'dims','shape') indicating whether dx/dy of input geodict should be preserved or ny/nx.
         :param resample:
           Boolean used to indicate whether grid should be resampled from the file based on samplegeodict.
         :param method:
