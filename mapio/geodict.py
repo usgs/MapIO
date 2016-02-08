@@ -86,8 +86,8 @@ class GeoDict(object):
         #these should all be on the host grid
         newxmin = fxmin + fleftcol*fdx
         newxmax = fxmin + frightcol*fdx
-        newymin = fymax - fbottomrow*fdx
-        newymax = fymax - ftoprow*fdx
+        newymin = fymax - fbottomrow*fdy
+        newymax = fymax - ftoprow*fdy
 
         nx = round((newxmax-newxmin)/fdx + 1)
         ny = round((newymax-newymin)/fdy + 1)
