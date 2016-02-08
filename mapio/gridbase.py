@@ -87,57 +87,6 @@ class Grid(DataSet):
         if not reqfields.issubset(set(geodict.keys())):
             return False
         return True
-
-    @classmethod
-    def fixGeoDict(cls,bounds,dx,dy,ny,nx,preserve='dims'):
-        """
-        Return a full geodict, with either input dimensions preserved or input shape/bounds preserved.
-
-        :param bounds:
-          Tuple of (xmin,xmax,ymin,ymax).  May be changed when preserve='dims'.
-        :param dx:
-          Width of cells in same units as bounds.  Will be overwritten when preserve='shape'.
-        :param dy:
-          Height of cells in same units as bounds.  Will be overwritten when preserve='shape'.
-        :param ny:
-          Number of rows.  Will be overwritten when preserve='dims'.
-        :param nx:
-          Number of columns.  Will be overwritten when preserve='dims'.
-        :param preserve:
-          One of 'dims' or 'shape'.  Setting this to 'dims' will keep input dx/dy values, 
-          and potentially modify the bounds and/or ny/nx.
-        """
-        xmin,xmax,ymin,ymax = bounds
-        mcross = False
-        eps = 1e-12
-        if xmin > xmax:
-            xmax += 360
-            mcross = True
-        if preserve == 'dims':
-            nx = int((xmax-xmin)/dx + eps) + 1
-            xmax = xmin + (nx - 1)*dx
-            xvar = np.arange(xmin,xmax+(dx*0.1),dx)
-            nx = len(xvar)
-            if mcross:
-                xmax -= 360
-
-            ny = int((ymax-ymin)/dy + eps) + 1
-            ymax = ymin + (ny - 1)*dy
-            yvar = np.arange(ymin,ymax+(dy*0.1),dy)
-            ny = len(yvar)
-
-        elif preserve == 'shape': #preserve rows and columns
-            xvar,dx = np.linspace(xmin,xmax,num=nx,retstep=True)
-            yvar,dy = np.linspace(ymin,ymax,num=ny,retstep=True)
-            xmin = xvar[0]
-            xmax = xvar[-1]
-            ymin = yvar[0]
-            ymax = yvar[-1]
-        else:
-            raise Exception('%s not supported' % preserve)
-
-        geodict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'dx':dx,'dy':dy,'ny':ny,'nx':nx}
-        return geodict
     
     @abc.abstractmethod
     def blockmean(self,geodict):

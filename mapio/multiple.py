@@ -140,7 +140,7 @@ class MultiGrid(Grid):
         """
         return (self._geodict['xmin'],self._geodict['xmax'],self._geodict['ymin'],self._geodict['ymax'])
 
-    def trim(self,geodict,resample=False,method='linear',preserve='dims'):
+    def trim(self,geodict,resample=False,method='linear'):
         """
         Trim all data layers to a smaller set of bounds, resampling if requested.  If not resampling,
         data will be trimmed to smallest grid boundary possible.
@@ -151,11 +151,9 @@ class MultiGrid(Grid):
            Boolean indicating whether the data should be resampled to *exactly* match input bounds.
         :param method:
            If resampling, method used, one of ('linear','nearest','cubic','quintic')
-        :param preserve:
-            String (one of 'dims','shape') indicating whether dx/dy of input geodict should be preserved or ny/nx.
         """
         for (layername,layer) in self._layers.items():
-            layer.trim(geodict,resample=resample,method=method,preserve=preserve)
+            layer.trim(geodict,resample=resample,method=method)
         self._geodict = layer.getGeoDict().copy()
 
     def getLayerNames(self):
