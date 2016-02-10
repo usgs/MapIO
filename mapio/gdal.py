@@ -118,7 +118,7 @@ class GDALGrid(Grid2D):
             txmax2 = gxmin + dx*np.ceil((txmax - gxmin)/dx)
             tymin2 = gymin + dy*np.floor((tymin - gymin)/dy)
             tymax2 = gymin + dy*np.ceil((tymax - gymin)/dy)
-            if xmin > xmax:
+            if txmin2 > txmax2:
                 #cut user's request into two regions - one from the minimum to the
                 #meridian, then another from the meridian to the maximum.
                 #new create sections algorithm
