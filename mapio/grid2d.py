@@ -8,6 +8,7 @@ import abc
 import textwrap
 import glob
 import os
+import sys
 
 #third party imports
 from .gridbase import Grid
@@ -20,13 +21,6 @@ import shapely
 from affine import Affine
 from rasterio import features
 from shapely.geometry import MultiPoint,Polygon,mapping
-
-
-
-def testGeoJSON(obj):
-    if hasattr(obj,'has_key') and obj.has_key('geometry') and obj.has_key('properties'):
-        return True
-    return False
 
 class Grid2D(Grid):
     reqfields = set(['xmin','xmax','ymin','ymax','dx','dy','nx','ny'])
@@ -225,34 +219,54 @@ class Grid2D(Grid):
         """
         return (self._geodict.xmin,self._geodict.xmax,self._geodict.ymin,self._geodict.ymax)
 
-    def trim(self,geodict,resample=False,method='linear'):
+    def cut(self,xmin,xmax,ymin,ymax):
+        """Cut out a section of Grid and return it.
+
+        :param xmin: Longitude coordinate of upper left pixel, must be aligned with Grid.
+        :param xmax: Longitude coordinate of lower right pixel, must be aligned with Grid.
+        :param ymin: Latitude coordinate of upper left pixel, must be aligned with Grid.
+        :param ymax: Latitude coordinate of lower right pixel, must be aligned with Grid.
         """
-        Trim data to a smaller set of bounds, resampling if requested.  If not resampling,
-        data will be trimmed to largest grid boundary possible that fits inside input bounds.
+        td = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,self._geodict.dx,self._geodict.dy,inside=True)
+        if not td.isAligned(self._geodict):
+            raise DataSetException('Input bounds must align with this grid.')
+        if not self._geodict.contains(td):
+            raise DataSetException('Input bounds must be completely contained by this grid.')
+        uly,ulx = self._geodict.getRowCol(ymax,xmin)
+        lry,lrx = self._geodict.getRowCol(ymin,xmax)
+        data = self._data[uly:lry+1,ulx:lrx+1]
+        grid = Grid2D(data,td)
+        return grid
+    
+    # def trim(self,geodict,resample=False,method='linear'):
+    #     """
+    #     Trim data to a smaller set of bounds, resampling if requested.  If not resampling,
+    #     data will be trimmed to largest grid boundary possible that fits inside input bounds.
         
-        :param geodict:
-           GeoDict used to specify subset bounds and resolution (if resample is selected)
-        :param resample:
-           Boolean indicating whether the data should be resampled to *exactly* match input bounds.
-        :param method:
-           If resampling, method used, one of ('linear','nearest','cubic','quintic')
-        """
-        xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
-        gxmin,gxmax,gymin,gymax = self.getBounds()
-        fdx,fdy = (self._geodict.dx,self._geodict.dy)
-        #if any of the input bounds are outside the bounds of the grid, cut off those edges
-        xmin = max(xmin,gxmin)
-        xmax = min(xmax,gxmax)
-        ymin = max(ymin,gymin)
-        ymax = min(ymax,gymax)
-        if not resample:
-            sampledict = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,fdx,fdy,inside=True)
-            iuly,iulx = self._geodict.getRowCol(sampledict.ymax,sampledict.xmin)
-            ilry,ilrx = self._geodict.getRowCol(sampledict.ymin,sampledict.xmax)
-            self._data = self._data[iuly:ilry+1,iulx:ilrx+1]
-            self._geodict = sampledict
-        else:
-            self.interpolateToGrid(geodict,method=method)
+    #     :param geodict:
+    #        GeoDict used to specify subset bounds and resolution (if resample is selected)
+    #     :param resample:
+    #        Boolean indicating whether the data should be resampled to *exactly* match input bounds.
+    #     :param method:
+    #        If resampling, method used, one of ('linear','nearest','cubic','quintic')
+    #     """
+    #     xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
+    #     gxmin,gxmax,gymin,gymax = self.getBounds()
+    #     fdx,fdy = (self._geodict.dx,self._geodict.dy)
+    #     #if any of the input bounds are outside the bounds of the grid, cut off those edges
+    #     xmin = max(xmin,gxmin)
+    #     xmax = min(xmax,gxmax)
+    #     ymin = max(ymin,gymin)
+    #     ymax = min(ymax,gymax)
+    #     if not resample:
+    #         sampledict = self._geodict.getBoundsWithin(geodict)
+    #         #sampledict = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,fdx,fdy,inside=True)
+    #         iuly,iulx = self._geodict.getRowCol(sampledict.ymax,sampledict.xmin)
+    #         ilry,ilrx = self._geodict.getRowCol(sampledict.ymin,sampledict.xmax)
+    #         self._data = self._data[iuly:ilry+1,iulx:ilrx+1]
+    #         self._geodict = sampledict
+    #     else:
+    #         self.interpolateToGrid(geodict,method=method)
 
     def getValue(self,lat,lon,method='nearest',default=None): #return nearest neighbor value
         """Return numpy array at given latitude and longitude (using nearest neighbor).
@@ -445,22 +459,27 @@ class Grid2D(Grid):
         self._geodict = GeoDict(gdict)
 
     @classmethod
-    def rasterizeFromGeometry(cls,shapes,samplegeodict,burnValue=1.0,fillValue=np.nan,allTouched=True,attribute=None):
+    def rasterizeFromGeometry(cls,shapes,geodict,burnValue=1.0,fillValue=np.nan,
+                              mustContainCenter=False,attribute=None):
         """
-        Create a Grid2D object from vector shapes, where the presence of a shape (point, line, polygon) inside a cell turns that cell "on".
+        Create a Grid2D object from vector shapes, where the presence of a shape 
+        (point, line, polygon) inside a cell turns that cell "on".
+        
         :param shapes:
           One of:
             - One shapely geometry object (Point, Polygon, etc.) or a sequence of such objects
             - One GeoJSON like object or sequence of such objects. (http://geojson.org/)
             - A tuple of (geometry,value) or sequence of (geometry,value).
-        :param samplegeodict:
-          GeoDict with at least xmin,xmax,ymin,ymax,dx,dy values set.
+        :param geodict:
+          GeoDict object which defines the grid onto which the shape values should be "burned".
         :param burnValue:
-          Optional value which will be used to set the value of the pixels if there is no value in the geometry field.
+          Optional value which will be used to set the value of the pixels if there is no 
+          value in the geometry field.
         :param fillValue:
           Optional value which will be used to fill the cells not touched by any geometry.
-        :param allTouched:
-          Optional boolean which indicates whether the geometry must touch the center of the cell or merely be inside the cell in order to set the value.
+        :param mustContainCenter:
+          Optional boolean which indicates whether the geometry must touch
+          the center of the cell or merely be inside the cell in order to set the value.
         :raises DataSetException:
           When geometry input is not a subclass of shapely.geometry.base.BaseGeometry.
         :returns:
@@ -477,6 +496,12 @@ class Grid2D(Grid):
         #geometries. `geometry` can either be an object that implements
         #the geo interface or GeoJSON-like object.
 
+        #create list of allowable types
+        if sys.version_info.major == 2:
+            types = (int,float,long)
+        else:
+            types = (int,float)
+        
         #figure out whether this is a single shape or a sequence of shapes
         isGeoJSON = False
         isGeometry = False
@@ -493,9 +518,9 @@ class Grid2D(Grid):
         elif len(shapes) and isinstance(shapes[0],shapely.geometry.base.BaseGeometry):
             isOk = True
             isShape = True
-        elif isinstance(shapes,dict) and shapes.has_key('geometry') and shapes.has_key('properties'):
+        elif isinstance(shapes,dict) and 'geometry' in shapes and 'properties' in shapes:
             isOk = True
-        elif len(shapes) and isinstance(shapes[0],dict) and shapes[0].has_key('geometry') and shapes[0].has_key('properties'):
+        elif len(shapes) and isinstance(shapes[0],dict) and 'geometry' in shapes[0] and 'properties' in shapes[0]:
             isOk = True
         else:
             pass
@@ -508,10 +533,10 @@ class Grid2D(Grid):
                 geometry = shape['geometry']
                 props = shape['properties']
                 if attribute is not None:
-                    if not props.has_key(attribute):
+                    if not attribute in props:
                         raise DataSetException('Input shapes do not have attribute "%s".' % attribute)
                     value = props[attribute]
-                    if not isinstance(value (int,float,long)):
+                    if not isinstance(value,types):
                         raise DataSetException('value from input shapes object is not a number')
                 else:
                     value = burnValue
@@ -519,8 +544,8 @@ class Grid2D(Grid):
             shapes = shapes2
         
                                    
-        xmin,xmax,ymin,ymax = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
-        dx,dy = (samplegeodict.dx,samplegeodict.dy)
+        xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
+        dx,dy = (geodict.dx,geodict.dy)
 
         xvar = np.arange(xmin,xmax+(dx*0.1),dx)
         yvar = np.arange(ymin,ymax+(dy*0.1),dy)
@@ -534,8 +559,9 @@ class Grid2D(Grid):
         
         outshape = (ny,nx)
         transform = Affine.from_gdal(txmin,dx,0.0,tymax,0.0,-dy)
+        allTouched = not mustContainCenter
         img = features.rasterize(shapes,out_shape=outshape,fill=fillValue,transform=transform,all_touched=allTouched,default_value=burnValue)
-        geodict = GeoDict({'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'dx':dx,'dy':dy,'ny':ny,'nx':nx})
+        #geodict = GeoDict({'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'dx':dx,'dy':dy,'ny':ny,'nx':nx})
         return cls(img,geodict)
         
         

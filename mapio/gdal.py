@@ -114,10 +114,16 @@ class GDALGrid(Grid2D):
             #and the user wants txmin = 2.0 and txmax of 4.0, the pixel coordinates
             #(erring on the side of including more data), would be at txmin = 1.5 and 
             #txmax = 4.5.
-            txmin2 = gxmin + dx*np.floor((txmin - gxmin)/dx)
-            txmax2 = gxmin + dx*np.ceil((txmax - gxmin)/dx)
-            tymin2 = gymin + dy*np.floor((tymin - gymin)/dy)
-            tymax2 = gymin + dy*np.ceil((tymax - gymin)/dy)
+            if not fgeodict.isAligned(sampledict):
+                txmin2 = gxmin + dx*np.floor((txmin - gxmin)/dx)
+                txmax2 = gxmin + dx*np.ceil((txmax - gxmin)/dx)
+                tymin2 = gymin + dy*np.floor((tymin - gymin)/dy)
+                tymax2 = gymin + dy*np.ceil((tymax - gymin)/dy)
+            else:
+                txmin2 = xmin
+                txmax2 = xmax
+                tymin2 = ymin
+                tymax2 = ymax
             if txmin2 > txmax2:
                 #cut user's request into two regions - one from the minimum to the
                 #meridian, then another from the meridian to the maximum.
@@ -341,6 +347,9 @@ class GDALGrid(Grid2D):
           * When the input file type is not recognized.
         """
         filegeodict = cls.getFileGeoDict(filename)
+        if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
+            msg = 'Input samplegeodict must at least intersect with the bounds of %s' % filename
+            raise DataSetException(msg)
         #verify that if not resampling, the dimensions of the sampling geodict must match the file.
         if resample == False and samplegeodict is not None:
             ddx = np.abs(filegeodict.dx - samplegeodict.dx)

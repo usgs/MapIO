@@ -125,11 +125,75 @@ def test():
     xSmaller = sampledict.xmin > grussia['xmin'] and sampledict.xmax < grussia['xmax']
     ySmaller = sampledict.ymin > grussia['ymin'] and sampledict.ymax < grussia['ymax']
     assert xSmaller and ySmaller
+    assert gd5.isAligned(sampledict)
     print('getBoundsWithin returned correct result.')
+
+    print('Testing isAligned() method...')
+    gd = GeoDict({'xmin':0.5,'xmax':3.5,
+                  'ymin':0.5,'ymax':3.5,
+                  'dx':1.0,'dy':1.0,
+                  'nx':4,'ny':4})
+
+    inside_aligned = GeoDict({'xmin':1.5,'xmax':2.5,
+                              'ymin':1.5,'ymax':2.5,
+                              'dx':1.0,'dy':1.0,
+                              'nx':2,'ny':2})
+    inside_not_aligned = GeoDict({'xmin':2.0,'xmax':3.0,
+                                  'ymin':2.0,'ymax':3.0,
+                                  'dx':1.0,'dy':1.0,
+                                  'nx':2,'ny':2})
+    assert gd.isAligned(inside_aligned)
+    assert not gd.isAligned(inside_not_aligned)
+    print('Passed isAligned() method...')
+
+    print('Testing geodict intersects method...')
+    gd1 = GeoDict({'xmin':0.5,'xmax':3.5,
+                   'ymin':0.5,'ymax':3.5,
+                   'dx':1.0,'dy':1.0,
+                   'nx':4,'ny':4})
+
+    print('Testing geodict intersects method...')
+    gd2 = GeoDict({'xmin':2.5,'xmax':5.5,
+                   'ymin':2.5,'ymax':5.5,
+                   'dx':1.0,'dy':1.0,
+                   'nx':4,'ny':4})
+    gd3 = GeoDict({'xmin':4.5,'xmax':7.5,
+                   'ymin':4.5,'ymax':7.5,
+                   'dx':1.0,'dy':1.0,
+                   'nx':4,'ny':4})
+    gd4 = GeoDict({'xmin':1.5,'xmax':2.5,
+                   'ymin':1.5,'ymax':2.5,
+                   'dx':1.0,'dy':1.0,
+                   'nx':2,'ny':2})
+    assert gd1.intersects(gd2)
+    assert not gd1.intersects(gd3)
+    print('Passed intersects method...')
+
+    print('Testing geodict doesNotContain method...')
+    assert gd1.doesNotContain(gd3)
+    assert not gd1.doesNotContain(gd4)
+    
+    print('Passed doesNotContain method...')
+
+    print('Testing geodict contains method...')
+    
+    assert gd1.contains(gd4)
+    assert not gd1.contains(gd3)
+    print('Passed contains method...')
+
+    print('Testing to see if getIntersection() method works...')
+    gd5 = GeoDict({'xmin':0.5,'xmax':6.5,
+                   'ymin':0.5,'ymax':8.5,
+                   'dx':1.0,'dy':1.0,
+                   'nx':7,'ny':9})
+    gd6 = GeoDict({'xmin':3.0,'xmax':8.0,
+                   'ymin':5.0,'ymax':10.0,
+                   'dx':1.0,'dy':1.0,
+                   'nx':6,'ny':6})
     
 if __name__ == '__main__':
     test()
-    #test_fail()
+
 
         
 
