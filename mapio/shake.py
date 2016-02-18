@@ -22,7 +22,7 @@ from .dataset import DataSetException
 from .grid2d import Grid2D
 from .geodict import GeoDict
 import numpy as np
-
+import pandas as pd
 
 
 GRIDKEYS = {'event_id':'string',
@@ -62,7 +62,9 @@ FIELDKEYS['psa30'] = ('pctg','%.2f')
 FIELDKEYS['stdpga'] = ('ln(pctg)','%.2f')
 FIELDKEYS['urat'] = ('','%.2f')
 FIELDKEYS['svel'] = ('ms','%.2f')
-          
+FIELDKEYS['lat'] = ('dd','%.4f')
+FIELDKEYS['lon'] = ('dd','%.4f')
+
 
 TIMEFMT = '%Y-%m-%dT%H:%M:%S'
 
@@ -187,13 +189,21 @@ def readShakeFile(fileobj,adjust=None):
     ny = specdict['nlat']
     layers = OrderedDict()
 
+    #use pandas read_csv to read in the actual data - this should be faster than numpy's loadtxt
+    columns = fields[:]
+    columns.insert(0,'lat')
+    columns.insert(0,'lon')
+    dframe = pd.read_csv(fileobj,sep='\s+',names=columns,header=None,comment='<')
+    for field in fields:
+        layers[field] = dframe[field].as_matrix().reshape(ny,nx)
+    
     #use the numpy loadtxt function to read in the actual data
     #we're cheating by telling numpy.loadtxt that the last two lines of the XML file are comments
-    data = np.loadtxt(fileobj,comments='<').astype('float32')
-    data = data[:,2:] #throw away lat/lon columns
-    for i in range(0,len(fields)):
-        field = fields[i]
-        layers[field] = data[:,i].reshape(ny,nx)
+    # data = np.loadtxt(fileobj,comments='<').astype('float32')
+    # data = data[:,2:] #throw away lat/lon columns
+    # for i in range(0,len(fields)):
+    #     field = fields[i]
+    #     layers[field] = data[:,i].reshape(ny,nx)
 
     #create the geodict from the grid_spec element
     geodict = GeoDict({'xmin':specdict['lon_min'],
@@ -443,6 +453,30 @@ class ShakeGrid(MultiGrid):
             idx += 1
         f.write(b'<grid_data>\n')
         lat,lon = Grid().getLatLonMesh(self._geodict)
+
+        #let's see if we can use pandas to write data out as well
+        #this was really slow, mostly because we had to make strings out 
+        #of each column in order to get column-specific formatting.
+        #return to this someday and re-investigate.
+        
+        # ldict = OrderedDict()
+        # for lname,lgrid in self._layers.items():
+        #     ldict[lname] = lgrid.getData().flatten()
+            
+        # df = pd.DataFrame.from_dict(ldict)
+        # df['lat'] = lat.flatten()
+        # df['lon'] = lon.flatten()
+        # cols = df.columns.tolist()
+        # cols.remove('lat')
+        # cols.remove('lon')
+        # cols.insert(0,'lat')
+        # cols.insert(0,'lon')
+        # df = df[cols]
+        # for field,fieldtpl in FIELDKEYS.items():
+        #     fieldfmt = fieldtpl[1]
+        #     df[field].map(lambda x: fieldfmt % x)
+        # df.to_csv(f,sep=' ')
+        
         nfields = 2 + len(self._layers)
         data = np.zeros((self._geodict.ny*self._geodict.nx,nfields))
         data[:,0] = lat.flatten()
