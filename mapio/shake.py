@@ -321,27 +321,27 @@ class ShakeGrid(MultiGrid):
 
 
         #read the file using the available function
-        layers,geodict,eventDict,shakeDict,uncertaintyDict = readShakeFile(shakefile,adjust=adjust)
+        layers,fgeodict,eventDict,shakeDict,uncertaintyDict = readShakeFile(shakefile,adjust=adjust)
             
         if not isFileObj:
             shakefile.close()
 
         if samplegeodict is None:
-            pass #everything we need has already been retrieved
+            geodict = fgeodict
         else:
             bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
             isOutside = False
-            xmin = geodict.xmin
-            xmax = geodict.xmax
-            ymin = geodict.ymin
-            ymax = geodict.ymax
+            xmin = fgeodict.xmin
+            xmax = fgeodict.xmax
+            ymin = fgeodict.ymin
+            ymax = fgeodict.ymax
             if bounds[0] < xmin or bounds[1] > xmax or bounds[2] < ymin or bounds[3] > ymax:
                 isOutside = True
             if isOutside and resample and not doPadding:
                 raise DataSetException('Cannot resample data given input bounds, unless doPadding is set to True.')
 
             if doPadding:
-                leftpad,rightpad,bottompad,toppad,geodict = super(MultiGrid,cls)._getPadding(geodict,samplegeodict,padValue)
+                leftpad,rightpad,bottompad,toppad,geodict = super(MultiGrid,cls)._getPadding(fgeodict,samplegeodict,padValue)
                 for (layername,layerdata) in layers.items():
                     #pad left side
                     layerdata = np.hstack((leftpad,layerdata))
@@ -353,15 +353,21 @@ class ShakeGrid(MultiGrid):
                     layerdata = np.vstack((toppad,layerdata))
                     grid = Grid2D(layerdata,geodict)
                     if resample: #should I just do an interpolateToGrid() here?
-                        grid.trim(samplegeodict,resample=resample,method=method)
+                        grid.interpolateToGrid(samplegeodict,method=method)
                     layers[layername] = grid.getData()
                 geodict = grid.getGeoDict().copy()
             else:
+                tgeodict = fgeodict.getIntersection(samplegeodict)
+                geodict = fgeodict.getBoundsWithin(tgeodict)
                 for (layername,layerdata) in layers.items():
-                    grid = Grid2D(layerdata,geodict)
-                    grid.trim(samplegeodict,resample=resample,method=method)
-                    layers[layername] = grid.getData()
-                geodict = grid.getGeoDict().copy()
+                    newgrid = Grid2D(layerdata,fgeodict)
+                    if resample:
+                        newgrid.interpolateToGrid(samplegeodict,method=method)
+                    else:
+                        newgrid = newgrid.cut(geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
+                    layers[layername] = newgrid.getData()
+                if resample:
+                    geodict = samplegeodict
             
         return cls(layers,geodict,eventDict,shakeDict,uncertaintyDict)
     

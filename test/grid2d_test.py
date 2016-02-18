@@ -61,23 +61,34 @@ def test_basics():
     assert irow == 2 and icol == 2
     print('Passed basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...')
     
-def test_resample():
+def test_cut():
     geodict = GeoDict({'xmin':0.5,'xmax':4.5,'ymin':0.5,'ymax':4.5,'dx':1.0,'dy':1.0,'ny':5,'nx':5})
     data = np.arange(0,25).reshape(5,5)
 
-    print('Testing data trimming without resampling...')
+    print('Testing data extraction...')
     grid = Grid2D(data,geodict)
-    sdict = GeoDict({'xmin':2.0,'xmax':4.0,'ymin':2.0,'ymax':4.0,'dx':1.0,'dy':1.0,'ny':3,'nx':3})
-    grid.trim(sdict,resample=False)
-    output = np.array([[1,2,3],[6,7,8],[11,12,13]])
-    np.testing.assert_almost_equal(grid.getData(),output)
-    print('Passed data trimming without resampling...')
+    xmin,xmax,ymin,ymax = (2.5,3.5,2.5,3.5)
+    newgrid = grid.cut(xmin,xmax,ymin,ymax)
+    output = np.array([[7,8],[12,13]])
+    np.testing.assert_almost_equal(newgrid.getData(),output)
+    print('Passed data extraction...')
 
     print('Testing data trimming with resampling...')
+    #make a more complicated test using getboundswithin
+    data = np.arange(0,84).reshape(7,12)
+    geodict = GeoDict({'xmin':-180,'xmax':150,
+                       'ymin':-90,'ymax':90,
+                       'dx':30,'dy':30,
+                       'nx':12,'ny':7})
     grid = Grid2D(data,geodict)
-    grid.trim(sdict,resample=True)
-    output = np.array([[4.0,5.0,6.0],[9.0,10.0,11.0],[14.0,15.0,16.0]])
-    np.testing.assert_almost_equal(grid.getData(),output)
+    sampledict = GeoDict.createDictFromBox(-75,45,-45,75,geodict.dx,geodict.dy)
+    cutdict = geodict.getBoundsWithin(sampledict)
+    newgrid = grid.cut(cutdict.xmin,cutdict.xmax,cutdict.ymin,cutdict.ymax)
+    output = np.array([[16,17,18,19],
+                       [28,29,30,31],
+                       [40,41,42,43],
+                       [52,53,54,55]])
+    np.testing.assert_almost_equal(newgrid.getData(),output)
     print('Passed data trimming with resampling...')
 
 def test_interpolate():
@@ -104,43 +115,35 @@ def test_interpolate():
         print('Passed interpolate with method "%s".' % method)
 
 def test_rasterize():
-    samplegeodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'dx':1.0,'dy':1.0,'ny':2,'nx':2},adjust='bounds')
-    print('Testing rasterizeFromGeometry() trying to get binary output...')
-    points = MultiPoint([(0.25,3.5,5.0),
-                         (1.75,3.75,6.0),
-                         (1.0,2.5,10.0),
-                         (3.25,2.5,17.0),
-                         (1.5,1.5,1.0),
-                         (3.25,0.5,86.0)])
-    
-    grid = Grid2D.rasterizeFromGeometry(points,samplegeodict,burnValue=1.0,fillValue=0.0)
-    output = np.array([[1.0,1.0,0.0,0.0],
-                       [0.0,1.0,0.0,1.0],
-                       [0.0,1.0,0.0,0.0],
-                       [0.0,0.0,0.0,1.0]])
+    geodict = GeoDict({'xmin':0.5,'xmax':3.5,
+                       'ymin':0.5,'ymax':3.5,
+                       'dx':1.0,'dy':1.0,
+                       'ny':4,'nx':4})
+    print('Testing rasterizeFromGeometry() burning in values from a polygon sequence...')
+    #Define two simple polygons and assign them to shapes
+    poly1 = [(0.25,3.75),(1.25,3.25),(1.25,2.25)]
+    poly2 = [(2.25,3.75),(3.25,3.75),(3.75,2.75),(3.75,1.50),(3.25,0.75),(2.25,2.25)]
+    shape1 = {'properties':{'value':5},'geometry':mapping(Polygon(poly1))}
+    shape2 = {'properties':{'value':7},'geometry':mapping(Polygon(poly2))}
+    shapes = [shape1,shape2]
+    print('Testing burning in values where polygons need not contain pixel centers...')
+    grid = Grid2D.rasterizeFromGeometry(shapes,geodict,fillValue=0,attribute='value',mustContainCenter=False)
+    output = np.array([[5,5,7,7],
+                       [5,5,7,7],
+                       [0,0,7,7],
+                       [0,0,0,7]])
     np.testing.assert_almost_equal(grid.getData(),output)
-    print('Passed rasterizeFromGeometry() trying to get binary output.')
+    print('Passed burning in values where polygons need not contain pixel centers.')
 
-    try:
-        print('Testing rasterizeFromGeometry() burning in values from a polygon sequence...')
-        #Define two simple polygons and assign them to shapes
-        poly1 = [(0.25,3.75),(1.25,3.25),(1.25,2.25)]
-        poly2 = [(2.25,3.75),(3.25,3.75),(3.75,2.75),(3.75,1.50),(3.25,0.75),(2.25,2.25)]
-        shape1 = {'properties':{'value':5},'geometry':mapping(Polygon(poly1))}
-        shape2 = {'properties':{'value':7},'geometry':mapping(Polygon(poly2))}
-        shapes = [shape1,shape2]
-        
-        grid = Grid2D.rasterizeFromGeometry(shapes,samplegeodict,fillValue=0,attribute='value')
-        output = np.array([[5,5,7,7],
-                           [5,5,7,7],
-                           [0,0,7,7],
-                           [0,0,0,7]])
-        np.testing.assert_almost_equal(grid.getData(),output)
-        print('Testing rasterizeFromGeometry() burning in values from a polygon shapefile...')
-    except:
-        shpfiles = glob.glob('test.*')
-        for shpfile in shpfiles:
-            os.remove(shpfile)
+    print('Testing burning in values where polygons must contain pixel centers...')
+    grid2 = Grid2D.rasterizeFromGeometry(shapes,geodict,fillValue=0,attribute='value',mustContainCenter=True)
+    output = np.array([[5,0,7,0],
+                       [0,0,7,7],
+                       [0,0,0,7],
+                       [0,0,0,0]])
+    np.testing.assert_almost_equal(grid2.getData(),output)
+    print('Passed burning in values where polygons must contain pixel centers.')
+
 
 def test_copy():
     data = np.arange(0,16).astype(np.float32).reshape(4,4)
@@ -177,10 +180,10 @@ def test_setData():
     
     
 if __name__ == '__main__':
+    test_rasterize()
     test_interpolate()
-    #test_rasterize()
     test_basics()
-    test_resample()
+    test_cut()
     test_copy()
     test_setData()
         

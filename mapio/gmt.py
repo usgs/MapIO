@@ -787,6 +787,9 @@ class GMTGrid(Grid2D):
           * When the input file type is not recognized.
         """
         filegeodict = cls.getFileGeoDict(gmtfilename)
+        if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
+            msg = 'Input samplegeodict must at least intersect with the bounds of %s' % gmtfilename
+            raise DataSetException(msg)
          #verify that if not resampling, the dimensions of the sampling geodict must match the file.
         if resample == False and samplegeodict is not None:
             ddx = np.abs(filegeodict.dx - samplegeodict.dx)
