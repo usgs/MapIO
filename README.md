@@ -23,6 +23,8 @@ This library depends on:
  * scipy: <a href="http://scipy.org/scipylib/index.html">http://scipy.org/scipylib/index.html</a>
  * h5py: <a href="http://www.h5py.org/">http://www.h5py.org/</a>
  * rasterio: <a href="https://github.com/mapbox/rasterio">https://github.com/mapbox/rasterio</a>
+ * pandas: <a href="http://pandas.pydata.org/">http://pandas.pydata.org/</a>
+
  
 These packages are all either installed automatically by the Anaconda scientific Python distribution, or easily installed using the conda command.  The final dependency:
 

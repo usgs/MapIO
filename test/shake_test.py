@@ -9,6 +9,8 @@ from datetime import datetime
 from collections import OrderedDict
 import re
 import sys
+import tempfile
+import time
 if sys.version_info.major == 2:
     import StringIO
 else:
@@ -30,24 +32,20 @@ from mapio.grid2d import Grid2D
 from mapio.geodict import GeoDict
 import numpy as np
         
-def test_trim(shakefile):
-    geodict = getShakeDict(shakefile)
-    #bring in the shakemap by a half dimension (quarter on each side)
-    lonrange = geodict['xmax'] - geodict['xmin']
-    latrange = geodict['ymax'] - geodict['ymin']
-    newxmin = geodict['xmin'] + lonrange/4.0
-    newxmax = geodict['xmax'] - lonrange/4.0
-    newymin = geodict['ymin'] + latrange/4.0
-    newymax = geodict['ymax'] - latrange/4.0
-    newbounds = (newxmin,newxmax,newymin,newymax)
-    grid = ShakeGrid.load(shakefile)
-    grid.trim(newbounds)
-
 def test_read(xmlfile):
+    t,fname = tempfile.mkstemp()
+    os.close(t)
     try:
-        shakegrid = ShakeGrid.load(xmlfile)
+        shakegrid = ShakeGrid.load(xmlfile,adjust='res')
+        t1 = time.time()
+        shakegrid.save(fname)
+        t2 = time.time()
+        print('Saving shakemap took %.2f seconds' % (t2-t1))
     except Exception as error:
         print('Failed to read grid.xml format file "%s". Error "%s".' % (xmlfile,str(error)))
+    finally:
+        if os.path.isfile(fname):
+            os.remove(fname)
     
 def test_save():
     try:
@@ -187,6 +185,6 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         shakefile = sys.argv[1]
         test_read(shakefile)
-        test_trim(shakefile)
+        
     test_save()
     
