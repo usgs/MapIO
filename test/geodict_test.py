@@ -21,7 +21,7 @@ def test():
     #http://earthquake.usgs.gov/realtime/product/shakemap/ak12496371/ak/1453829475592/download/grid.xml
 
     print('Testing various dictionaries for consistency...')
-
+    
     print('Testing consistent dictionary...')
     #this should pass, and will serve as the comparison from now on
     gdict = {'xmin':-160.340600,'xmax':-146.340600,
@@ -169,6 +169,18 @@ def test():
     assert not gd1.intersects(gd3)
     print('Passed intersects method...')
 
+    print('Testing geodict intersects method with real geographic data...')
+    gda = GeoDict({'ymax': 83.62083333333263, 'nx': 43201, 
+                   'ny': 20835, 'dx': 0.00833333333333, 
+                   'dy': 0.00833333333333, 'xmin': -179.99583333333334, 
+                   'ymin': -89.99583333326461, 'xmax': -179.99583333347732})
+    gdb = GeoDict({'ymax': 28.729166666619193, 'nx': 300, 
+                   'ny': 264, 'dx': 0.00833333333333, 
+                   'dy': 0.00833333333333, 'xmin': 84.08749999989436, 
+                   'ymin': 26.537499999953404, 'xmax': 86.57916666656007})
+    assert gda.intersects(gdb)
+    print('Passed geodict intersects method with real geographic data.')
+
     print('Testing geodict doesNotContain method...')
     assert gd1.doesNotContain(gd3)
     assert not gd1.doesNotContain(gd4)
@@ -181,15 +193,16 @@ def test():
     assert not gd1.contains(gd3)
     print('Passed contains method...')
 
-    print('Testing to see if getIntersection() method works...')
-    gd5 = GeoDict({'xmin':0.5,'xmax':6.5,
-                   'ymin':0.5,'ymax':8.5,
-                   'dx':1.0,'dy':1.0,
-                   'nx':7,'ny':9})
-    gd6 = GeoDict({'xmin':3.0,'xmax':8.0,
-                   'ymin':5.0,'ymax':10.0,
-                   'dx':1.0,'dy':1.0,
-                   'nx':6,'ny':6})
+    # print('Testing to see if getIntersection() method works...')
+    # gd5 = GeoDict({'xmin':0.5,'xmax':6.5,
+    #                'ymin':0.5,'ymax':8.5,
+    #                'dx':1.0,'dy':1.0,
+    #                'nx':7,'ny':9})
+    # gd6 = GeoDict({'xmin':3.0,'xmax':8.0,
+    #                'ymin':5.0,'ymax':10.0,
+    #                'dx':1.0,'dy':1.0,
+    #                'nx':6,'ny':6})
+    # print('Passed test of getIntersection() method')
     
 if __name__ == '__main__':
     test()

@@ -380,6 +380,28 @@ class ShakeGrid(MultiGrid):
                     geodict = samplegeodict
             
         return cls(layers,geodict,eventDict,shakeDict,uncertaintyDict)
+
+    def interpolateToGrid(self,geodict,method='linear'):
+        """
+        Given a geodict specifying another grid extent and resolution, resample all layers in ShakeGrid to match.
+        
+        :param geodict: 
+        geodict dictionary from another grid whose extents are inside the extent of this ShakeGrid.
+        :param method: 
+        Optional interpolation method - ['linear', 'cubic','nearest']
+        :raises DataSetException: 
+          If the GeoDict object upon which this function is being called is not completely contained 
+          by the grid to which this ShakeGrid is being resampled.
+        :raises DataSetException: 
+           If the method is not one of ['nearest','linear','cubic']
+           If the resulting interpolated grid shape does not match input geodict.
+        This function modifies the internal griddata and geodict object variables.
+        """
+        for layername,layergrid in self._layers.items():
+            layergrid.interpolateToGrid(geodict,method=method)
+            self._layers[layername] = layergrid
+        self._geodict = layergrid.getGeoDict().copy()
+
     
     def save(self,filename,version=1):
         """Save a ShakeGrid object to the grid.xml format.
