@@ -60,6 +60,9 @@ class GDALGrid(Grid2D):
                 geodict['ny'] = src.height
                 geodict['nx'] = src.width
                 geodict['xmax'] = geodict['xmin'] + (geodict['nx']-1)*geodict['dx']
+                if geodict['xmax'] == geodict['xmin']:
+                    pass
+                                              
                 geodict['ymin'] = geodict['ymax'] - (geodict['ny']-1)*geodict['dy']
 
                 gd = GeoDict(geodict)
@@ -82,9 +85,13 @@ class GDALGrid(Grid2D):
         """
         txmin,txmax,tymin,tymax = (sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax)
         trows,tcols = (sampledict.ny,sampledict.nx)
+        if fgeodict.xmin > fgeodict.xmax:
+            fxmax = fgeodict.xmax + 360
+        else:
+            fxmax = fgeodict.xmax
         #we're not doing anything fancy with the data here, just cutting out what we need
         xmin = max(fgeodict.xmin,txmin)
-        xmax = min(fgeodict.xmax,txmax)
+        xmax = min(fxmax,txmax)
         ymin = max(fgeodict.ymin,tymin)
         ymax = min(fgeodict.ymax,tymax)
         

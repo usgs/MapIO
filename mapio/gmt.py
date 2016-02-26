@@ -460,8 +460,12 @@ class GMTGrid(Grid2D):
         isScanLine = len(zvar.shape) == 1
         txmin,txmax,tymin,tymax = (sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax)
         #we're not doing anything fancy with the data here, just cutting out what we need
+        if fgeodict.xmin > fgeodict.xmax:
+            fxmax = fgeodict.xmax + 360
+        else:
+            fxmax = fgeodict.xmax
         xmin = max(fgeodict.xmin,txmin)
-        xmax = min(fgeodict.xmax,txmax)
+        xmax = min(fxmax,txmax)
         ymin = max(fgeodict.ymin,tymin)
         ymax = min(fgeodict.ymax,tymax)
         #these are the bounds of the whole file

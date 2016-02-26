@@ -254,9 +254,14 @@ class GeoDict(object):
           True if input geodict intersects with this GeoDict,
           False if not.
         """
+        if self.xmin > self.xmax:
+            c,d = (self.xmax+360,self.ymin)
+        else:
+            c,d = (self.xmax,self.ymin)
+        
         a,b = (self.xmin,self.ymax)
         e,f = (geodict.xmin,geodict.ymax)
-        c,d = (self.xmax,self.ymin)
+        
         g,h = (geodict.xmax,geodict.ymin)
         inside_x = (e >= a and e < c) or (a >= e and a < c)
         inside_y = (h >= d and h < b) or (d >= h and d < f)
