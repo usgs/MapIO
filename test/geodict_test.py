@@ -146,6 +146,26 @@ def test():
     assert not gd.isAligned(inside_not_aligned)
     print('Passed isAligned() method...')
 
+    print('Testing getAligned method...')
+    popdict = GeoDict({'dx': 0.00833333333333,
+                       'dy': 0.00833333333333,
+                       'nx': 43200,
+                       'ny': 20880,
+                       'xmax': 179.99583333318935,
+                       'xmin': -179.99583333333334,
+                       'ymax': 83.99583333326376,
+                       'ymin': -89.99583333333334})
+    sampledict = GeoDict({'dx': 0.008333333333333333,
+                          'dy': 0.008336693548387094,
+                          'nx': 601,
+                          'ny': 497,
+                          'xmax': -116.046,
+                          'xmin': -121.046,
+                          'ymax': 36.2785,
+                          'ymin': 32.1435})
+    aligndict = popdict.getAligned(sampledict)
+    assert popdict.isAligned(aligndict)
+    
     print('Testing geodict intersects method...')
     gd1 = GeoDict({'xmin':0.5,'xmax':3.5,
                    'ymin':0.5,'ymax':3.5,

@@ -96,6 +96,66 @@ class GeoDict(object):
         ymax = cy + yspan/2.0
         return cls.createDictFromBox(xmin,xmax,ymin,ymax,dx,dy)
 
+    def getAligned(self,geodict,inside=False):
+        """Return a geodict that is close to the input geodict bounds but aligned with this GeoDict.
+
+        :param geodict:
+          Input GeoDict object, whose bounds will be used, but dx/dy and nx/ny ignored.
+        :param inside:
+          Boolean indicating whether the aligned geodict should be inside or outside input geodict.
+        :returns:
+          GeoDict object which is guaranteed to be grid-aligned with this GeoDict.
+        """
+        dx = self.dx
+        dy = self.dy
+        #how many columns are there between the host and input geodict left edges?
+        if inside:
+            falsenx = np.ceil((geodict.xmin - self.xmin)/dx)
+        else:
+            falsenx = np.floor((geodict.xmin - self.xmin)/dx)
+        #use that number of rows to calculate what aligned xmin should be
+        newxmin = self.xmin + falsenx*dx
+        #how many columns are there between the host and input geodict right edges?
+        if inside:
+            falsenx = np.floor((geodict.xmax - self.xmax)/dx)
+        else:
+            falsenx = np.ceil((geodict.xmax - self.xmax)/dx)
+        #use that number of rows to calculate what aligned xmax should be
+        newxmax = self.xmax + falsenx*dx
+
+        #if we wound up going past 180, correct x values to be within -180->180.
+        if newxmin > 180:
+            newxmin -= 360
+        if newxmax > 180:
+            newxmax -= 360
+
+        #how many columns are there between the host and input geodict bottom edges?
+        if inside:
+            falseny = np.ceil((geodict.ymin - self.ymin)/dy)
+        else:
+            falseny = np.floor((geodict.ymin - self.ymin)/dy)
+        #use that number of rows to calculate what aligned ymin should be
+        newymin = self.ymin + falseny*dy
+        #how many columns are there between the host and input geodict top edges?
+        if inside:
+            falseny = np.floor((geodict.ymax - self.ymax)/dy)
+        else:
+            falseny = np.ceil((geodict.ymax - self.ymax)/dy)
+        #use that number of rows to calculate what aligned ymax should be
+        newymax = self.ymax + falseny*dy
+
+        
+        nx = int(np.round((newxmax-newxmin)/dx + 1))
+        ny = int(np.round((newymax-newymin)/dy + 1))
+
+        gd = GeoDict({'xmin':newxmin,'xmax':newxmax,
+                     'ymin':newymin,'ymax':newymax,
+                     'dx':dx,'dy':dy,
+                     'nx':nx,'ny':ny})
+        return gd
+        
+        
+    
     def getIntersection(self,geodict):
         """Return a geodict defining intersected area, retaining resolution of the input geodict.
 
