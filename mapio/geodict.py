@@ -423,6 +423,16 @@ class GeoDict(object):
         :returns: 
            Tuple of latitude and longitude.
         """
+        seqtypes = (list,tuple,np.ndarray)
+        if isinstance(row,seqtypes): #is this a sequence type thing?
+            row = np.array(row)
+            col = np.array(col)
+        else: #or a scalar - if so, make it an array
+            row = np.array([row])
+            col = np.array([col])
+        
+        row = np.array(row)
+        col = np.array(col)
         ulx = self._xmin
         uly = self._ymax
         dx = self._dx
@@ -446,6 +456,13 @@ class GeoDict(object):
         :returns: 
            Tuple of row and column.
         """
+        seqtypes = (list,tuple,np.ndarray)
+        if isinstance(lat,seqtypes): #is this a sequence type thing?
+            lat = np.array(lat)
+            lon = np.array(lon)
+        else: #or a scalar - if so, make it an array
+            lat = np.array([lat])
+            lon = np.array([lon])
         if intMethod not in ['round','floor','ceil']:
             raise DataSetException('intMethod %s is not supported.' % intMethod)
         

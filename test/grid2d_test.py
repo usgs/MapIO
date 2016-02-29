@@ -59,6 +59,16 @@ def test_basics():
     irow,icol = grid.getRowCol(1.0,3.0,returnFloat=False)
 
     assert irow == 2 and icol == 2
+
+    #test getting values in and outside of the grid bounds
+    lat = np.array([0.0,0.5,2.5,4.0])
+    lon = np.array([0.0,0.5,2.5,4.0])
+    default = np.nan
+    output = np.array([np.nan,12,6,np.nan])
+    value = grid.getValue(lat,lon,default=default)
+
+    np.testing.assert_almost_equal(value,output)
+    
     print('Passed basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...')
     
 def test_cut():

@@ -287,14 +287,17 @@ class Grid2D(Grid):
         else:
             row,col = self.getRowCol(lat,lon,returnFloat=True)
         ny,nx = self._data.shape
-        if (row < 0).any() or (row > ny-1).any() or (col < 0).any() or (col > nx-1).any():
+        outidx = np.where((row < 0) | (row > ny-1) | (col < 0) | (col > nx-1))[0]
+        inidx = np.where((row >= 0) & (row <= ny-1) & (col >= 0) & (col <= nx-1))[0]
+        value = np.ones_like(lat)
+        if len(outidx):
             if default is None:
-                msg = 'One of more of your lat/lon values is outside Grid boundaries: %s' % (str(self.getRange()))
+                msg = 'One of more of your lat/lon values is outside Grid boundaries: %s' % (str(self.getBounds()))
                 raise DataSetException(msg)
-            value = np.ones_like(lat)*default
-            return value
+            value[outidx] = default
         if method == 'nearest':
-            return self._data[row,col]
+            value[inidx] = self._data[row[inidx],col[inidx]]
+            return value
         else:
             raise NotImplementedError('getValue method "%s" not implemented yet' % method)
 
