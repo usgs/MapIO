@@ -63,13 +63,11 @@ class GeoDict(object):
         else:
             txmax = xmax
         if inside:
-            nx = np.floor(((txmax-xmin)/dx)+1)
-            ny = np.floor(((ymax-ymin)/dy)+1)
-            xmax2 = xmin + (nx-1)*dx
-            ymin2 = ymax - (ny-1)*dx
+            nx = np.floor(((txmax-xmin+GeoDict.EPS)/dx)+1)
+            ny = np.floor(((ymax-ymin+GeoDict.EPS)/dy)+1)
         else:
-            nx = np.ceil(((txmax-xmin)/dx)+1)
-            ny = np.ceil(((ymax-ymin)/dy)+1)
+            nx = np.ceil(((txmax-xmin-GeoDict.EPS)/dx)+1)
+            ny = np.ceil(((ymax-ymin-GeoDict.EPS)/dy)+1)
         xmax2 = xmin + (nx-1)*dx
         ymin2 = ymax - (ny-1)*dy
         return cls({'xmin':xmin,'xmax':xmax2,
