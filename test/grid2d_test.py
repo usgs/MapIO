@@ -28,7 +28,29 @@ import shapely
 from affine import Affine
 from rasterio import features
 from shapely.geometry import MultiPoint,Polygon,mapping
-        
+
+def test_subdivide():
+    print('Testing subdivide method...')
+    data = np.arange(0,4).reshape((2,2))
+    geodict = GeoDict({'xmin':0.0,'xmax':1.0,
+                       'ymin':0.0,'ymax':1.0,
+                       'dx':1.0,'dy':1.0,
+                       'ny':2,'nx':2})
+    hostgrid = Grid2D(data,geodict)
+    finedict = GeoDict({'xmin':0.0-(1.0/3.0),'xmax':1.0+(1.0/3.0),
+                        'ymin':0.0-(1.0/3.0),'ymax':1.0+(1.0/3.0),
+                        'dx':1.0/3.0,'dy':1.0/3.0,
+                        'ny':6,'nx':6})
+    finegrid = hostgrid.subdivide(finedict)
+    output = np.array([[ 0.,  0.,  0.,  1.,  1.,  1.],
+                       [ 0.,  0.,  0.,  1.,  1.,  1.],
+                       [ 0.,  0.,  0.,  1.,  1.,  1.],
+                       [ 2.,  2.,  2.,  3.,  3.,  3.],
+                       [ 2.,  2.,  2.,  3.,  3.,  3.],
+                       [ 2.,  2.,  2.,  3.,  3.,  3.]])
+    np.testing.assert_almost_equal(finegrid.getData(),output)
+    print('Passed subdivide method test.')
+
 def test_basics():
     geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'dx':1.0,'dy':1.0,'ny':4,'nx':4})
     data = np.arange(0,16).reshape(4,4)
@@ -190,6 +212,7 @@ def test_setData():
     
     
 if __name__ == '__main__':
+    test_subdivide()
     test_rasterize()
     test_interpolate()
     test_basics()

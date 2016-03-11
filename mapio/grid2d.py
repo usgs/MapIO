@@ -219,6 +219,55 @@ class Grid2D(Grid):
         """
         return (self._geodict.xmin,self._geodict.xmax,self._geodict.ymin,self._geodict.ymax)
 
+    def subdivide(self,finerdict):
+        """Subdivide the cells of the host grid into finer-resolution cells.
+        What to do when grid cells do not align?
+        :param finerdict:
+          GeoDict object defining a grid with a finer resolution than the host grid.
+        :returns:
+          Grid2D instance with host grid values subdivided onto finer grid.
+        :raises DataSetException:
+          When finerdict is not a) finer resolution or b) does not intersect.x
+        """
+        if finerdict.dx >= self._geodict.dx or finerdict.dy >= self._geodict.dy:
+            raise DataSetException('subdivide() input GeoDict must be finer resolution than host grid.')
+        if not finerdict.intersects(self._geodict):
+            raise DataSetException('subdivide() input GeoDict must intersect host grid.')
+
+        #things are simple if the host grid cell dx/dy are a multiple of finer grid dx/dy and are
+        #aligned in the sense that every host grid cell edge matches an edge of finer grid cell.
+        resXMultiple = self._geodict.dx/finerdict.dx == int(self._geodict.dx/finerdict.dx)
+        resYMultiple = self._geodict.dy/finerdict.dy == int(self._geodict.dy/finerdict.dy)
+        #this stuff below may not be right...?
+        dxmin = (self._geodict.xmin-finerdict.xmin)/finerdict.dx
+        isXAligned = np.isclose(dxmin,int(dxmin))
+        dymin = (self._geodict.ymin-finerdict.ymin)/finerdict.dy
+        isYAligned = np.isclose(dymin,int(dymin))
+        isAligned = resXMultiple and resYMultiple and isXAligned and isYAligned
+        finedata = np.ones((finerdict.ny,finerdict.nx),dtype=self._data.dtype)*np.nan
+        if isAligned:
+            for i in range(0,self._geodict.ny):
+                for j in range(0,self._geodict.nx):
+                    cellvalue = self._data[i,j]
+                    #what is the longitude of the first finer cell inside the host cell?
+                    clat,clon = self.getLatLon(i,j) #coordinates of center of host cell
+                    #get the left edge of the cell
+                    fleftlon = clon - (self._geodict.dx/2) + finerdict.dx/2
+                    ftoplat = clat + (self._geodict.dy/2) - finerdict.dy/2
+                    frightlon = clon + (self._geodict.dx/2) - finerdict.dx/2
+                    fbottomlat = clat - (self._geodict.dy/2) + finerdict.dy/2
+                    itop,jleft = finerdict.getRowCol(ftoplat,fleftlon)
+                    ibottom,jright = finerdict.getRowCol(fbottomlat,frightlon)
+                    finedata[itop:ibottom+1,jleft:jright+1] = cellvalue
+        
+            finegrid = Grid2D(finedata,finerdict)
+            return finegrid
+                    
+        else:
+            raise NotImplementedError('Have not implemented this method for cases where grids are not aligned.')        
+            
+        
+    
     def cut(self,xmin,xmax,ymin,ymax):
         """Cut out a section of Grid and return it.
 
