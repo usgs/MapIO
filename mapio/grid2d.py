@@ -219,6 +219,122 @@ class Grid2D(Grid):
         """
         return (self._geodict.xmin,self._geodict.xmax,self._geodict.ymin,self._geodict.ymax)
 
+    def subdivide(self,finerdict,cellFill='max'):
+        """Subdivide the cells of the host grid into finer-resolution cells.
+        What to do when grid cells do not align?
+        :param finerdict:
+          GeoDict object defining a grid with a finer resolution than the host grid.
+        :param cellFill:
+          String defining how to fill cells that span more than one host grid cell. 
+          Choices are: 
+            'max': Choose maximum value of host grid cells.
+            'min': Choose minimum value of host grid cells.
+            'mean': Choose mean value of host grid cells.
+        :returns:
+          Grid2D instance with host grid values subdivided onto finer grid.
+        :raises DataSetException:
+          When finerdict is not a) finer resolution or b) does not intersect.x or cellFill is not valid.
+        """
+        fillvals = ['min','max','mean']
+        if cellFill not in fillvals:
+            raise DataSetException('cellFill input must be one of %s.' % fillvals)
+        if finerdict.dx >= self._geodict.dx or finerdict.dy >= self._geodict.dy:
+            raise DataSetException('subdivide() input GeoDict must be finer resolution than host grid.')
+        if not finerdict.intersects(self._geodict):
+            raise DataSetException('subdivide() input GeoDict must intersect host grid.')
+
+        #things are simple if the host grid cell dx/dy are a multiple of finer grid dx/dy and are
+        #aligned in the sense that every host grid cell edge matches an edge of finer grid cell.
+        resXMultiple = self._geodict.dx/finerdict.dx == int(self._geodict.dx/finerdict.dx)
+        resYMultiple = self._geodict.dy/finerdict.dy == int(self._geodict.dy/finerdict.dy)
+        #this stuff below may not be right...?
+        dxmin = (self._geodict.xmin-finerdict.xmin)/finerdict.dx
+        isXAligned = np.isclose(dxmin,int(dxmin))
+        dymin = (self._geodict.ymin-finerdict.ymin)/finerdict.dy
+        isYAligned = np.isclose(dymin,int(dymin))
+        isAligned = resXMultiple and resYMultiple and isXAligned and isYAligned
+        finedata = np.ones((finerdict.ny,finerdict.nx),dtype=self._data.dtype)*np.nan
+        if isAligned:
+            for i in range(0,self._geodict.ny):
+                for j in range(0,self._geodict.nx):
+                    cellvalue = self._data[i,j]
+                    #what is the longitude of the first finer cell inside the host cell?
+                    clat,clon = self.getLatLon(i,j) #coordinates of center of host cell
+                    #get the left edge of the cell
+                    fleftlon = clon - (self._geodict.dx/2) + finerdict.dx/2
+                    ftoplat = clat + (self._geodict.dy/2) - finerdict.dy/2
+                    frightlon = clon + (self._geodict.dx/2) - finerdict.dx/2
+                    fbottomlat = clat - (self._geodict.dy/2) + finerdict.dy/2
+                    itop,jleft = finerdict.getRowCol(ftoplat,fleftlon)
+                    ibottom,jright = finerdict.getRowCol(fbottomlat,frightlon)
+                    finedata[itop:ibottom+1,jleft:jright+1] = cellvalue
+        else:
+            for i in range(0,self._geodict.ny):
+                for j in range(0,self._geodict.nx):
+                    cellvalue = self._data[i,j]
+                    #get the indices of all cells that are 
+                    #completely contained inside this one.
+                    clat,clon = self.getLatLon(i,j) #coordinates of center of host cell
+                    #what is the longitude of of our first approximated left edge fine
+                    #cell that is contained by host cell?
+                    fleftlon = clon - self._geodict.dx/2.0 + finerdict.dx/2
+                    frightlon = clon + self._geodict.dx/2.0 - finerdict.dx/2
+                    jleft = int(np.ceil((fleftlon - finerdict.xmin)/finerdict.dx))
+                    jright = int(np.floor((frightlon - finerdict.xmin)/finerdict.dx))
+
+                    #what is the latitude of of our first approximated bottom edge fine
+                    #cell that is contained by host cell?
+                    fbottomlat = clat - self._geodict.dy/2.0 + finerdict.dy/2
+                    ftoplat = clat + self._geodict.dy/2.0 - finerdict.dy/2
+                    ibottom = int(np.floor((finerdict.ymax - fbottomlat)/finerdict.dy))
+                    itop = int(np.ceil((finerdict.ymax - ftoplat)/finerdict.dy))
+                    #ibottom = int(np.ceil((fbottomlat - finerdict.ymin)/finerdict.dy))
+                    #itop = int(np.floor((ftoplat - finerdict.ymin)/finerdict.dy))
+
+                    finedata[itop:ibottom+1,jleft:jright+1] = cellvalue
+                    #now what do I do about cells that aren't completely contained?
+        
+            #we have to now find all rows/columns where there are NaN values and deal with them
+            #accordingly - let's look at output rows first, looking for a row that is all NaN
+            #and doesn't have an all NaN row above or below it.
+            colidx = finerdict.nx//2
+            while colidx > -1:
+                col = finedata[:,colidx]
+                if not np.isnan(col).all():
+                    nanrows = np.where(np.isnan(col))
+                    break
+                colidx -= 1
+            for i in nanrows[0]:
+                if i == 0 or i == finerdict.ny-1:
+                    continue
+                if cellFill == 'min':
+                    finedata[i,:] = np.minimum(finedata[i-1,:],finedata[i+1,:])
+                elif cellFill == 'max':
+                    finedata[i,:] = np.maximum(finedata[i-1,:],finedata[i+1,:])
+                else: #cellFill == 'mean':
+                    finedata[i,:] = (finedata[i-1,:] + finedata[i+1,:])/2.0
+            #now look at output columns
+            rowidx = finerdict.ny//2
+            while rowidx > -1:
+                row = finedata[rowidx,:]
+                if not np.isnan(row).all():
+                    nancols = np.where(np.isnan(row))
+                    break
+                rowidx -= 1
+            for j in nancols[0]:
+                if j == 0 or j == finerdict.nx-1:
+                    continue
+                if cellFill == 'min':
+                    finedata[:,j] = np.minimum(finedata[:,j-1],finedata[:,j+1])
+                elif cellFill == 'max':
+                    finedata[:,j] = np.maximum(finedata[:,j-1],finedata[:,j+1])
+                else: #cellFill == 'mean':
+                    finedata[:,j] = (finedata[:,j-1] + finedata[:,j+1])/2.0
+
+
+        finegrid = Grid2D(finedata,finerdict)
+        return finegrid
+    
     def cut(self,xmin,xmax,ymin,ymax):
         """Cut out a section of Grid and return it.
 
