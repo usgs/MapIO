@@ -30,7 +30,7 @@ from rasterio import features
 from shapely.geometry import MultiPoint,Polygon,mapping
 
 def test_subdivide():
-    print('Testing subdivide method...')
+    print('Testing subdivide method - aligned grids...')
     data = np.arange(0,4).reshape((2,2))
     geodict = GeoDict({'xmin':0.0,'xmax':1.0,
                        'ymin':0.0,'ymax':1.0,
@@ -49,7 +49,55 @@ def test_subdivide():
                        [ 2.,  2.,  2.,  3.,  3.,  3.],
                        [ 2.,  2.,  2.,  3.,  3.,  3.]])
     np.testing.assert_almost_equal(finegrid.getData(),output)
-    print('Passed subdivide method test.')
+    print('Passed subdivide method test - aligned grids.')
+
+    print('Testing subdivide method - non-aligned grids...')
+    data = np.arange(0,9).reshape((3,3))
+    geodict = GeoDict({'xmin':0.0,'xmax':10.0,
+                       'ymin':0.0,'ymax':10.0,
+                       'dx':5.0,'dy':5.0,
+                       'ny':3,'nx':3})
+    hostgrid = Grid2D(data,geodict)
+    finedict = GeoDict({'xmin':-2.5,'xmax':11.5,
+                        'ymin':-1.5,'ymax':10.5,
+                        'dx':2.0,'dy':2.0,
+                        'nx':8,'ny':7})
+    N = np.nan
+    print('Testing subdivide with min parameter...')
+    finegrid = hostgrid.subdivide(finedict,cellFill='min')
+    output = np.array([[ N,   0.,   0.,   1.,   1.,   1.,   2.,   2.],
+                       [ N,   0.,   0.,   1.,   1.,   1.,   2.,   2.],
+                       [ N,   3.,   3.,   4.,   4.,   4.,   5.,   5.],
+                       [ N,   3.,   3.,   4.,   4.,   4.,   5.,   5.],
+                       [ N,   3.,   3.,   4.,   4.,   4.,   5.,   5.],
+                       [ N,   6.,   6.,   7.,   7.,   7.,   8.,   8.],
+                       [ N,   6.,   6.,   7.,   7.,   7.,   8.,   8.]])
+    np.testing.assert_almost_equal(finegrid.getData(),output)
+    print('Passed subdivide with min parameter...')
+    print('Testing subdivide with max parameter...')
+    finegrid = hostgrid.subdivide(finedict,cellFill='max')
+    output = np.array([[ N,   0.,   0.,   1.,   1.,   2.,   2.,   2.],
+                       [ N,   0.,   0.,   1.,   1.,   2.,   2.,   2.],
+                       [ N,   3.,   3.,   4.,   4.,   5.,   5.,   5.],
+                       [ N,   3.,   3.,   4.,   4.,   5.,   5.,   5.],
+                       [ N,   6.,   6.,   7.,   7.,   8.,   8.,   8.],
+                       [ N,   6.,   6.,   7.,   7.,   8.,   8.,   8.],
+                       [ N,   6.,   6.,   7.,   7.,   8.,   8.,   8.]])
+    np.testing.assert_almost_equal(finegrid.getData(),output)
+    print('Passed subdivide with max parameter...')
+    print('Testing subdivide with mean parameter...')
+    finegrid = hostgrid.subdivide(finedict,cellFill='mean')
+    output = np.array([[ N,   0.,   0.,   1.,   1.,   1.5,   2.,   2.],
+                       [ N,   0.,   0.,   1.,   1.,   1.5,   2.,   2.],
+                       [ N,   3.,   3.,   4.,   4.,   4.5,   5.,   5.],
+                       [ N,   3.,   3.,   4.,   4.,   4.5,   5.,   5.],
+                       [ N,   4.5,  4.5,  5.5,  5.5,  6.0,   6.5,  6.5],
+                       [ N,   6.,   6.,   7.,   7.,   7.5,   8.,   8.],
+                       [ N,   6.,   6.,   7.,   7.,   7.5,   8.,   8.]])
+    np.testing.assert_almost_equal(finegrid.getData(),output)
+    print('Passed subdivide with mean parameter...')
+    print('Passed subdivide method test - non-aligned grids.')
+    
 
 def test_basics():
     geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'dx':1.0,'dy':1.0,'ny':4,'nx':4})
