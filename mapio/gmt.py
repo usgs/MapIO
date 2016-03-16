@@ -871,7 +871,7 @@ class GMTGrid(Grid2D):
                 gd = samplegeodict.asDict()
                 gd['xmax'] += 360
                 samplegeodict = GeoDict(gd)
-            grid.interpolateToGrid(samplegeodict,method=method)
+            grid = grid.interpolateToGrid(samplegeodict,method=method)
             data = grid.getData()
             geodict = grid.getGeoDict()
         return cls(data,geodict)

@@ -426,7 +426,7 @@ class GDALGrid(Grid2D):
             grid = Grid2D(data,geodict)
             if samplegeodict.xmin > samplegeodict.xmax:
                 samplegeodict.xmax += 360
-            grid.interpolateToGrid(samplegeodict,method=method)
+            grid = grid.interpolateToGrid(samplegeodict,method=method)
             data = grid.getData()
             geodict = grid.getGeoDict()
         return cls(data,geodict)

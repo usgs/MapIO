@@ -363,7 +363,7 @@ class ShakeGrid(MultiGrid):
                     layerdata = np.vstack((toppad,layerdata))
                     grid = Grid2D(layerdata,geodict)
                     if resample: #should I just do an interpolateToGrid() here?
-                        grid.interpolateToGrid(samplegeodict,method=method)
+                        grid = grid.interpolateToGrid(samplegeodict,method=method)
                     layers[layername] = grid.getData()
                 geodict = grid.getGeoDict().copy()
             else:
@@ -372,7 +372,7 @@ class ShakeGrid(MultiGrid):
                 for (layername,layerdata) in layers.items():
                     newgrid = Grid2D(layerdata,fgeodict)
                     if resample:
-                        newgrid.interpolateToGrid(samplegeodict,method=method)
+                        newgrid = newgrid.interpolateToGrid(samplegeodict,method=method)
                     else:
                         newgrid = newgrid.cut(geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
                     layers[layername] = newgrid.getData()
@@ -397,10 +397,33 @@ class ShakeGrid(MultiGrid):
            If the resulting interpolated grid shape does not match input geodict.
         This function modifies the internal griddata and geodict object variables.
         """
-        for layername,layergrid in self._layers.items():
-            layergrid.interpolateToGrid(geodict,method=method)
-            self._layers[layername] = layergrid
-        self._geodict = layergrid.getGeoDict().copy()
+        shakemap = super.interpolateToGrid(geodict,method=method)
+        shakemap._setEventDict(self.getEventDict())
+        shakemap._setShakeDict(self.getShakeDict())
+        shakemap._setUncertaintyDict(self.self._uncertaintyDict)
+        return shakemap
+
+    def subdivide(self,finerdict,cellFill='max'):
+        """Subdivide the cells of the host grid into finer-resolution cells.
+
+        :param finerdict:
+          GeoDict object defining a grid with a finer resolution than the host grid.
+        :param cellFill:
+          String defining how to fill cells that span more than one host grid cell. 
+          Choices are: 
+            'max': Choose maximum value of host grid cells.
+            'min': Choose minimum value of host grid cells.
+            'mean': Choose mean value of host grid cells.
+        :returns:
+          ShakeGrid instance with host grid values subdivided onto finer grid.
+        :raises DataSetException:
+          When finerdict is not a) finer resolution or b) does not intersect.x or cellFill is not valid.
+        """
+        shakemap = super.subdivide(finerdict,cellFill=cellFill)
+        shakemap._setEventDict(self.getEventDict())
+        shakemap._setShakeDict(self.getShakeDict())
+        shakemap._setUncertaintyDict(self.self._uncertaintyDict)
+        return shakemap
 
     
     def save(self,filename,version=1):

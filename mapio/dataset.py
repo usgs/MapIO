@@ -133,6 +133,8 @@ class DataSet(object):
             geodict object from a grid whose extents are inside the extent of this grid.
         :param method: 
             Optional interpolation method - ['linear', 'cubic','quintic','nearest']
+        :returns:
+          Interpolated grid.
         :raises DataSetException: 
            If the Grid object upon which this function is being called is not completely contained by the grid to which this Grid is being resampled.
         :raises DataSetException: 
