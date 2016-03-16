@@ -38,8 +38,8 @@ class GeoDict(object):
         self._ymax = float(geodict['ymax'])
         self._dx = float(geodict['dx'])
         self._dy = float(geodict['dy'])
-        self._ny = geodict['ny']
-        self._nx = geodict['nx']
+        self._ny = int(geodict['ny'])
+        self._nx = int(geodict['nx'])
         self.validate(adjust=adjust)
 
     @classmethod
