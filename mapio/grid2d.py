@@ -342,6 +342,7 @@ class Grid2D(Grid):
         :param xmax: Longitude coordinate of lower right pixel, must be aligned with Grid.
         :param ymin: Latitude coordinate of upper left pixel, must be aligned with Grid.
         :param ymax: Latitude coordinate of lower right pixel, must be aligned with Grid.
+        :param align: Boolean indicating whether input boundaries should be modified to align with host grid.
         """
         td1 = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,self._geodict.dx,self._geodict.dy,inside=True)
         td = None
