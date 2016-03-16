@@ -221,7 +221,7 @@ class Grid2D(Grid):
 
     def subdivide(self,finerdict,cellFill='max'):
         """Subdivide the cells of the host grid into finer-resolution cells.
-        What to do when grid cells do not align?
+
         :param finerdict:
           GeoDict object defining a grid with a finer resolution than the host grid.
         :param cellFill:
@@ -335,7 +335,7 @@ class Grid2D(Grid):
         finegrid = Grid2D(finedata,finerdict)
         return finegrid
     
-    def cut(self,xmin,xmax,ymin,ymax):
+    def cut(self,xmin,xmax,ymin,ymax,align=False):
         """Cut out a section of Grid and return it.
 
         :param xmin: Longitude coordinate of upper left pixel, must be aligned with Grid.
@@ -343,9 +343,15 @@ class Grid2D(Grid):
         :param ymin: Latitude coordinate of upper left pixel, must be aligned with Grid.
         :param ymax: Latitude coordinate of lower right pixel, must be aligned with Grid.
         """
-        td = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,self._geodict.dx,self._geodict.dy,inside=True)
-        if not td.isAligned(self._geodict):
-            raise DataSetException('Input bounds must align with this grid.')
+        td1 = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,self._geodict.dx,self._geodict.dy,inside=True)
+        td = None
+        if not td1.isAligned(self._geodict):
+            if not align:
+                raise DataSetException('Input bounds must align with this grid.')
+            else:
+                td = td1.getAligned(self_geodict)
+        else:
+            td = td1.copy()
         if not self._geodict.contains(td):
             raise DataSetException('Input bounds must be completely contained by this grid.')
         uly,ulx = self._geodict.getRowCol(ymax,xmin)
@@ -354,36 +360,6 @@ class Grid2D(Grid):
         grid = Grid2D(data,td)
         return grid
     
-    # def trim(self,geodict,resample=False,method='linear'):
-    #     """
-    #     Trim data to a smaller set of bounds, resampling if requested.  If not resampling,
-    #     data will be trimmed to largest grid boundary possible that fits inside input bounds.
-        
-    #     :param geodict:
-    #        GeoDict used to specify subset bounds and resolution (if resample is selected)
-    #     :param resample:
-    #        Boolean indicating whether the data should be resampled to *exactly* match input bounds.
-    #     :param method:
-    #        If resampling, method used, one of ('linear','nearest','cubic','quintic')
-    #     """
-    #     xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
-    #     gxmin,gxmax,gymin,gymax = self.getBounds()
-    #     fdx,fdy = (self._geodict.dx,self._geodict.dy)
-    #     #if any of the input bounds are outside the bounds of the grid, cut off those edges
-    #     xmin = max(xmin,gxmin)
-    #     xmax = min(xmax,gxmax)
-    #     ymin = max(ymin,gymin)
-    #     ymax = min(ymax,gymax)
-    #     if not resample:
-    #         sampledict = self._geodict.getBoundsWithin(geodict)
-    #         #sampledict = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,fdx,fdy,inside=True)
-    #         iuly,iulx = self._geodict.getRowCol(sampledict.ymax,sampledict.xmin)
-    #         ilry,ilrx = self._geodict.getRowCol(sampledict.ymin,sampledict.xmax)
-    #         self._data = self._data[iuly:ilry+1,iulx:ilrx+1]
-    #         self._geodict = sampledict
-    #     else:
-    #         self.interpolateToGrid(geodict,method=method)
-
     def getValue(self,lat,lon,method='nearest',default=None): #return nearest neighbor value
         """Return numpy array at given latitude and longitude (using nearest neighbor).
         
@@ -523,11 +499,13 @@ class Grid2D(Grid):
         baserows,basecols = self._geodict.ny,self._geodict.nx
         basex = np.arange(0,basecols) #base grid PIXEL coordinates
         basey = np.arange(0,baserows)
+        newdata = None
         if method in ['linear','cubic']:
             if not np.isnan(self._data).any():
                 #at the time of this writing, interp2d does not support NaN values at all.
                 f = interpolate.interp2d(basex,basey,self._data,kind=method)
-                self._data = f(xi,yi)
+                #self._data = f(xi,yi)
+                newdata = f(xi,yi)
             else:
                 #is Nan values are present, use griddata (slower by ~2 orders of magnitude but supports NaN).
                 xi,yi = np.meshgrid(xi,yi)
@@ -543,8 +521,10 @@ class Grid2D(Grid):
                 xold = np.zeros((len(basex),2))
                 xold[:,0] = basex
                 xold[:,1] = basey
-                self._data = interpolate.griddata(xold,self._data.flatten(),xnew,method=method)
-                self._data = self._data.reshape((newrows,newcols))
+                #self._data = interpolate.griddata(xold,self._data.flatten(),xnew,method=method)
+                #self._data = self._data.reshape((newrows,newcols))
+                newdata = interpolate.griddata(xold,self._data.flatten(),xnew,method=method)
+                newdata = newdata.reshape((newrows,newcols))
         else:
             x,y = np.meshgrid(basex,basey)
             #in Python2, list doesn't do anything
@@ -555,12 +535,15 @@ class Grid2D(Grid):
             newcols = geodict.nx
             xi = np.tile(xi,(newrows,1))
             yi = np.tile(yi.reshape(newrows,1),(1,newcols))
-            self._data = f(list(zip(xi.flatten(),yi.flatten())))
-            self._data = self._data.reshape(xi.shape)
+            #self._data = f(list(zip(xi.flatten(),yi.flatten())))
+            #self._data = self._data.reshape(xi.shape)
+            newdata = f(list(zip(xi.flatten(),yi.flatten())))
+            newdata = newdata.reshape(xi.shape)
                                                   
             
         ny,nx = geodict.ny,geodict.nx
-        dims = self._data.shape
+        #dims = self._data.shape
+        dims = newdata.shape
         ny_new = dims[0]
         nx_new = dims[1]
         if ny_new != ny or nx_new != nx:
@@ -575,7 +558,9 @@ class Grid2D(Grid):
                  'ymax':geodict.ymax,
                  'dx':geodict.dx,
                  'dy':geodict.dy}
-        self._geodict = GeoDict(gdict)
+        #self._geodict = GeoDict(gdict)
+        newdict = GeoDict(gdict)
+        return Grid2D(newdata,newdict)
 
     @classmethod
     def rasterizeFromGeometry(cls,shapes,geodict,burnValue=1.0,fillValue=np.nan,

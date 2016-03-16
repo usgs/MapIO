@@ -11,7 +11,6 @@ from collections import OrderedDict
 
 
 class MultiGrid(Grid):
-    reqfields = set(['xmin','xmax','ymin','ymax','dx','dy','nx','ny'])
     def __init__(self,layers,descriptions=None):
         """
         Construct a semi-abstract MultiGrid object, which can contain many 2D layers of gridded data, all at the 
@@ -23,8 +22,6 @@ class MultiGrid(Grid):
            list of layer descriptions, or None
         :raises DataSetException:
           When:
-           - input layer geodicts does not contain required keys
-           - input layer geodicts do not match each other.
            - length of descriptions (when not None) does not match length of layers
            - input layers is not an OrderedDict
         """
@@ -36,14 +33,13 @@ class MultiGrid(Grid):
             raise DataSetException('List of descriptions does not match length of layers.')
 
         lnames = layers.keys()
+        self._layers = OrderedDict()
+        self._descriptions = OrderedDict()
         for i in range(0,len(lnames)):
             layername = lnames[i]
             layer = layers[layername]
             desc = descriptions[i]
             geodict = layer.getGeoDict()
-            if not set(geodict.keys()).issuperset(self.reqfields):
-                missing = self.reqfields - set(geodict.keys())
-                raise DataSetException('Missing required keys "%s"' % str(missing))
             self._layers[layername] = layer
             self._descriptions[layername] = desc
 
@@ -211,6 +207,27 @@ class MultiGrid(Grid):
         layernames = self._layers.keys()
         return self._layers[layernames[0]].getRowCol(lat,lon,returnFloat=returnFloat)
 
+    def subdivide(self,finerdict,cellFill='max'):
+        """Subdivide the cells of the host grid into finer-resolution cells.
+
+        :param finerdict:
+          GeoDict object defining a grid with a finer resolution than the host grid.
+        :param cellFill:
+          String defining how to fill cells that span more than one host grid cell. 
+          Choices are: 
+            'max': Choose maximum value of host grid cells.
+            'min': Choose minimum value of host grid cells.
+            'mean': Choose mean value of host grid cells.
+        :returns:
+          MultiGrid instance with host grid values subdivided onto finer grid.
+        :raises DataSetException:
+          When finerdict is not a) finer resolution or b) does not intersect.x or cellFill is not valid.
+        """
+        layers = OrderedDict()
+        for (layername,layer) in self._layers.items():
+            layers[layername] = layer.subdivide(finerdict,cellFill=cellFill)
+        return MultiGrid(layers)
+    
     def interpolateToGrid(self,geodict,method='linear'):
         """
         Given a geodict specifying another grid extent and resolution, resample all grids to match.
@@ -227,8 +244,11 @@ class MultiGrid(Grid):
 
         This function modifies the internal griddata and geodict object variables.
         """
+        layers = OrderedDict()
         for (layername,layer) in self._layers.items():
-            layer.interpolateToGrid(geodict,method=method)
-        self._geodict = layer.getGeoDict().copy()
+            #layer.interpolateToGrid(geodict,method=method)
+            layers[layername] = layer.interpolateToGrid(geodict,method=method)
+        #self._geodict = layer.getGeoDict().copy()
+        return MultiGrid(layers)
 
     

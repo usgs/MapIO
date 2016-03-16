@@ -182,7 +182,7 @@ def test_interpolate():
                               'ymin':3.0,'ymax':4.0,
                               'dx':1.0,'dy':1.0,
                               'ny':2,'nx':2})
-        grid.interpolateToGrid(sampledict,method=method)
+        grid = grid.interpolateToGrid(sampledict,method=method)
         if method == 'nearest':
             output = np.array([[30.0,31.0],[37.0,38.0]])
         elif method == 'linear':
