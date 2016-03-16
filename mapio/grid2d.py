@@ -405,7 +405,7 @@ class Grid2D(Grid):
         ny,nx = self._data.shape
         outidx = np.where((row < 0) | (row > ny-1) | (col < 0) | (col > nx-1))[0]
         inidx = np.where((row >= 0) & (row <= ny-1) & (col >= 0) & (col <= nx-1))[0]
-        value = np.ones_like(lat)
+        value = np.ones_like(row).astype(self._data.dtype)
         if len(outidx):
             if default is None:
                 msg = 'One of more of your lat/lon values is outside Grid boundaries: %s' % (str(self.getBounds()))
@@ -681,6 +681,11 @@ class Grid2D(Grid):
         allTouched = not mustContainCenter
         img = features.rasterize(shapes,out_shape=outshape,fill=fillValue,transform=transform,all_touched=allTouched,default_value=burnValue)
         #geodict = GeoDict({'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax,'dx':dx,'dy':dy,'ny':ny,'nx':nx})
+        # gd = geodict.asDict()
+        # ny,nx = img.shape
+        # gd['nx'] = nx
+        # gd['ny'] = ny
+        # geodict = GeoDict(gd,adjust='bounds')
         return cls(img,geodict)
         
         

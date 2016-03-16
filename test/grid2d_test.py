@@ -101,7 +101,7 @@ def test_subdivide():
 
 def test_basics():
     geodict = GeoDict({'xmin':0.5,'xmax':3.5,'ymin':0.5,'ymax':3.5,'dx':1.0,'dy':1.0,'ny':4,'nx':4})
-    data = np.arange(0,16).reshape(4,4)
+    data = np.arange(0,16).reshape(4,4).astype(np.float32)
     grid = Grid2D(data,geodict)
     print('Testing basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...')
     np.testing.assert_almost_equal(grid.getData(),data)
