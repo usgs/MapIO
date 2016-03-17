@@ -350,13 +350,13 @@ class Grid2D(Grid):
             if not align:
                 raise DataSetException('Input bounds must align with this grid.')
             else:
-                td = td1.getAligned(self_geodict)
+                td = self._geodict.getAligned(td1,inside=True)
         else:
             td = td1.copy()
         if not self._geodict.contains(td):
             raise DataSetException('Input bounds must be completely contained by this grid.')
-        uly,ulx = self._geodict.getRowCol(ymax,xmin)
-        lry,lrx = self._geodict.getRowCol(ymin,xmax)
+        uly,ulx = self._geodict.getRowCol(td.ymax,td.xmin)
+        lry,lrx = self._geodict.getRowCol(td.ymin,td.xmax)
         data = self._data[uly:lry+1,ulx:lrx+1]
         grid = Grid2D(data,td)
         return grid

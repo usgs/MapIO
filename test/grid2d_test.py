@@ -171,6 +171,25 @@ def test_cut():
     np.testing.assert_almost_equal(newgrid.getData(),output)
     print('Passed data trimming with resampling...')
 
+    print('Test cut with self-alignment...')
+    geodict = GeoDict({'xmin':0.5,'xmax':4.5,
+                       'ymin':0.5,'ymax':6.5,
+                       'dx':1.0,'dy':1.0,
+                       'nx':5,'ny':7})
+    data = np.arange(0,35).astype(np.float32).reshape(7,5)
+    grid = Grid2D(data,geodict)
+    cutxmin = 1.7
+    cutxmax = 3.7
+    cutymin = 1.7
+    cutymax = 5.7
+    cutgrid = grid.cut(cutxmin,cutxmax,cutymin,cutymax,align=True)
+    output = np.array([[7,8],
+                       [12,13],
+                       [17,18],
+                       [22,23]])
+    np.testing.assert_almost_equal(cutgrid.getData(),output)
+    print('Passed cut with self-alignment.')
+
 def test_interpolate():
     geodict = GeoDict({'xmin':0.5,'xmax':6.5,'ymin':1.5,'ymax':6.5,'dx':1.0,'dy':1.0,'ny':6,'nx':7})
     data = np.arange(14,56).reshape(6,7)
