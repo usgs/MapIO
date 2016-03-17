@@ -397,10 +397,16 @@ class ShakeGrid(MultiGrid):
            If the resulting interpolated grid shape does not match input geodict.
         This function modifies the internal griddata and geodict object variables.
         """
-        shakemap = super.interpolateToGrid(geodict,method=method)
-        shakemap._setEventDict(self.getEventDict())
-        shakemap._setShakeDict(self.getShakeDict())
-        shakemap._setUncertaintyDict(self.self._uncertaintyDict)
+        multi = super(ShakeGrid,self).interpolateToGrid(geodict,method=method)
+        layers = OrderedDict()
+        geodict = multi.getGeoDict()
+        #I need to get the layer data here...
+        for layername in multi.getLayerNames():
+            layers[layername] = multi.getLayer(layername).getData()
+        eventdict = self.getEventDict()
+        shakedict = self.getShakeDict()
+        uncdict = self._uncertaintyDict
+        shakemap = ShakeGrid(layers,geodict,eventdict,shakedict,uncdict)
         return shakemap
 
     def subdivide(self,finerdict,cellFill='max'):

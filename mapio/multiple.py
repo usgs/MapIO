@@ -8,8 +8,6 @@ from .grid2d import Grid2D
 import abc
 from collections import OrderedDict
 
-
-
 class MultiGrid(Grid):
     def __init__(self,layers,descriptions=None):
         """
@@ -32,7 +30,7 @@ class MultiGrid(Grid):
         if len(descriptions) != len(layers):
             raise DataSetException('List of descriptions does not match length of layers.')
 
-        lnames = layers.keys()
+        lnames = list(layers.keys())
         self._layers = OrderedDict()
         self._descriptions = OrderedDict()
         for i in range(0,len(lnames)):
@@ -42,7 +40,9 @@ class MultiGrid(Grid):
             geodict = layer.getGeoDict()
             self._layers[layername] = layer
             self._descriptions[layername] = desc
+        self._geodict = geodict
 
+            
     @abc.abstractmethod
     def save(self,filename):
         """
