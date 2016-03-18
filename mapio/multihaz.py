@@ -18,6 +18,7 @@ from .multiple import MultiGrid
 from .shake import ShakeGrid
 from .grid2d import Grid2D
 from .dataset import DataSetException
+from .geodict import GeoDict
 
 
 
@@ -55,10 +56,8 @@ class MultiHazardGrid(MultiGrid):
         self._layers = collections.OrderedDict()
         self._geodict = geodict
         for (layerkey,layerdata) in layers.items():
-            try:
-                self._layers[layerkey] = Grid2D(data=layerdata,geodict=geodict)
-            except:
-                pass
+            self._layers[layerkey] = Grid2D(data=layerdata,geodict=geodict)
+            
         self.setHeader(header)
         self.setOrigin(origin)
         self.setMetadata(metadata)
@@ -234,6 +233,7 @@ class MultiHazardGrid(MultiGrid):
         geodict['nx'] = len(xvar)
         geodict['dx'] = xvar[1]-xvar[0]
         geodict['dy'] = yvar[1]-yvar[0]
+        gd = GeoDict(geodict)
         layers = collections.OrderedDict()
         dictDict = {}
         for key in f.keys():
@@ -244,7 +244,7 @@ class MultiHazardGrid(MultiGrid):
                 layers[key] = f[key][:]
 
         f.close()
-        cls(layers,geodict,origin,header,metadata=metadata)
+        return cls(layers,gd,origin,header,metadata=metadata)
 
     def setHeader(self,header):
         """
