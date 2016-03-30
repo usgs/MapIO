@@ -36,6 +36,12 @@ def test(cityfile=None):
     assert bounds[0] > xmin and bounds[1] < xmax and bounds[2] > ymin and bounds[3] < ymax
     print('Passed limiting cities using California bounds.')
 
+    print('Test limiting cities using a 4 by 4 grid...')
+    gcities = bcities.limitByGrid(nx=2,ny=4,cities_per_grid = 10)
+    assert len(gcities) <= 2*4*10
+    print('Passed limiting cities using California bounds.')
+    
+       
     print('Test getting cities by name (Los Angeles)...')
     cityofangels = bcities.limitByName('Los Angeles').limitByPopulation(1000000)
     assert len(cityofangels) == 1
