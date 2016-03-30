@@ -3,7 +3,11 @@ from xml.dom.minidom import parse
 import numpy as np
 import zipfile
 import tempfile
-import urllib.request as request
+import sys
+if sys.version_info.major == 3:
+    import urllib.request as request
+else:
+    import urllib2 as request
 import io
 import os.path
 
@@ -13,7 +17,12 @@ from .dataset import DataSetException,DataSetWarning
 
 GEONAME_URL = 'http://download.geonames.org/export/dump/cities1000.zip'
 
-def fetchGeoNames():
+def _fetchGeoNames():
+    """
+    Internal method to retrieve a cities1000.txt file from GeoNames.
+    :returns:
+      Path to local cities1000.txt file.
+    """
     fh = request.urlopen(GEONAME_URL)
     data = fh.read()
     fh.close()
@@ -83,7 +92,7 @@ class Cities(object):
         CAPFLAG2 = 'PPLA'
         delete_folder = False
         if cityfile is None:
-            cityfile = fetchGeoNames()
+            cityfile = _fetchGeoNames()
             delete_folder = True
 
         mydict = {'name':[],
@@ -120,7 +129,8 @@ class Cities(object):
         """Load data from a csv file
         :param csvfile:
           CSV file containing city data, must have at least columns name,lat,lon.
-        
+        :returns:
+          Cities instance
         """
         df = pd.read_csv(csvfile)
         return cls(df)
@@ -137,7 +147,7 @@ class Cities(object):
         xmin,xmax,ymin,ymax = bounds
         newdf = newdf.loc[(newdf['lat'] > ymin) & (newdf['lat'] <= ymax) & 
                           (newdf['lon'] > xmin) & (newdf['lon'] <= xmax)]
-        return Cities(newdf)
+        return type(self)(newdf)
 
     def limitByRadius(self,lat,lon,radius):
         """Search for cities within a radius (km) around a central point.
@@ -156,7 +166,7 @@ class Cities(object):
         newdf['dist'] = dist
         newdf = newdf[newdf['dist'] <= radius]
         del newdf['dist']
-        return Cities(newdf)
+        return type(self)(newdf)
 
     def limitByPopulation(self,pop,minpop=0):
         """Search for cities above a certain population threshold.
@@ -176,7 +186,7 @@ class Cities(object):
             raise DataSetException('Minimum population must be less than population threshold.')
         newdf = self._dataframe.copy()
         newdf = newdf[newdf['pop'] >= pop]
-        return Cities(newdf)
+        return type(self)(newdf)
 
     def limitByGrid(self,nx=2,ny=2,cities_per_grid=20):
         """Create a smaller Cities dataset by gridding cities, then limiting cities in
@@ -192,28 +202,31 @@ class Cities(object):
         :returns:
           New Cities instance containing cities limited by number in each grid cell.
         """
-        if 'pop' not in dataframe.columns:
+        if 'pop' not in self._dataframe.columns:
             raise DataSetException('Cities instance does not contain population information')
-        newdf = self._dataframe.copy()
         xmin = self._dataframe['lon'].min()
         xmax = self._dataframe['lon'].max()
         ymin = self._dataframe['lat'].min()
         ymax = self._dataframe['lat'].max()
         dx = (xmax-xmin)/nx
         dy = (ymax-ymin)/ny
-        newdf = pd.DataFrame(self._dataframe.index,self._dataframe.columns)        
+        newdf = None
         #start from the bottom left of our grid, and trim our cities.
+        
         for i in range(0,ny):
             cellymin = ymin + (i*dy)
             cellymax = cellymin + dy
             for j in range(0,nx):
-                cellxmin = xmin + (i*dx)
+                cellxmin = xmin + (j*dx)
                 cellxmax = cellxmin + dx
-                tcities = self.searchByBounds((cellxmin,cellxmax,cellymin,cellymax))
-                tdf = tcities.dataframe.sort(columns='pop',ascending=False)
+                tcities = self.limitByBounds((cellxmin,cellxmax,cellymin,cellymax))
+                tdf = tcities._dataframe.sort_values(by='pop',ascending=False)
                 tdf = tdf[0:cities_per_grid]
-                newdf = newdf + tdf
-        return Cities(newdf)
+                if newdf is None:
+                    newdf = tdf.copy()
+                else:
+                    newdf = newdf.append(tdf)
+        return type(self)(newdf)
 
     def limitByName(self,cityname):
         """Find all cities that match a given cityname (or regular expression).
@@ -223,7 +236,7 @@ class Cities(object):
           Cities instance containing cities with names that match the input name/regular expression.
         """
         newdf = self._dataframe[self._dataframe.name.str.contains(cityname)]
-        return Cities(newdf)
+        return type(self)(newdf)
 
     def getDataFrame(self):
         """Return a copy of the internal pandas DataFrame containing city data.
