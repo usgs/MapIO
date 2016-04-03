@@ -10,6 +10,7 @@ from .dataset import DataSetException,DataSetWarning
 import matplotlib.font_manager
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 XOFFSET = 4 #how many pixels between the city dot and the city text
 
@@ -69,7 +70,11 @@ class BasemapCities(MapCities):
             raise DataSetException('Font %s not in supported list.' % fontname)
         #TODO: - check placement column
         newdf = self._dataframe.copy()
-        newdf = newdf.sort_values(by='pop',ascending=False)
+        #older versions of pandas use a different sort function
+        if pd.__version__ < '0.17.0':
+            newdf = newdf.sort(columns='pop',ascending=False)
+        else:
+            newdf = newdf.sort_values(by='pop',ascending=False)
 
         lefts,rights,bottoms,tops = self._getCityBoundingBoxes(newdf,fontname,fontsize,ax)
         ikeep = ~np.isnan(lefts)

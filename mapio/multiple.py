@@ -134,7 +134,7 @@ class MultiGrid(Grid):
         :returns:
           Tuple of (lonmin,lonmax,latmin,latmax)
         """
-        return (self._geodict['xmin'],self._geodict['xmax'],self._geodict['ymin'],self._geodict['ymax'])
+        return (self._geodict.xmin,self._geodict.xmax,self._geodict.ymin,self._geodict.ymax)
 
     def trim(self,geodict,resample=False,method='linear'):
         """

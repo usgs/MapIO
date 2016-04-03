@@ -55,6 +55,12 @@ def test():
         np.testing.assert_almost_equal(mgrid2.getLayer('layer1').getData(),output)
     print('Passed MultiGrid interpolate test.')
 
+    print('Testing bounds retrieval...')
+    b1 = np.array(mgrid.getBounds())
+    b2 = np.array((geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax))
+    np.testing.assert_almost_equal(b1,b2)
+    print('Passed bounds retrieval...')
+    
     print('Testing MultiGrid subdivide test...')
     data = np.arange(0,9).reshape((3,3))
     geodict = GeoDict({'xmin':0.0,'xmax':10.0,
