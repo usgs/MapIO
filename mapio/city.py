@@ -215,12 +215,16 @@ class Cities(object):
         
         for i in range(0,ny):
             cellymin = ymin + (i*dy)
-            cellymax = cellymin + dy
+            cellymax = cellymin + dy1
             for j in range(0,nx):
                 cellxmin = xmin + (j*dx)
                 cellxmax = cellxmin + dx
                 tcities = self.limitByBounds((cellxmin,cellxmax,cellymin,cellymax))
-                tdf = tcities._dataframe.sort_values(by='pop',ascending=False)
+                #older versions of pandas use a different sort function
+                if pd.__version__ < '0.17.0':
+                    tdf = tcities._dataframe.sort(columns='pop',ascending=False)
+                else:
+                    tdf = tcities._dataframe.sort_values(by='pop',ascending=False)
                 tdf = tdf[0:cities_per_grid]
                 if newdf is None:
                     newdf = tdf.copy()
