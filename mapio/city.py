@@ -215,7 +215,7 @@ class Cities(object):
         
         for i in range(0,ny):
             cellymin = ymin + (i*dy)
-            cellymax = cellymin + dy1
+            cellymax = cellymin + dy
             for j in range(0,nx):
                 cellxmin = xmin + (j*dx)
                 cellxmax = cellxmin + dx
