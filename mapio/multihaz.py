@@ -97,6 +97,7 @@ class MultiHazardGrid(MultiGrid):
             - str,unicode,int,float,long,list,tuple,np.ndarray,dict,datetime.datetime,collections.OrderedDict
         """
         ALLOWED = [str,int,float,
+                   type(None),
                    list,tuple,np.ndarray,
                    dict,datetime.datetime,
                    collections.OrderedDict]

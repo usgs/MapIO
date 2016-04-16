@@ -116,7 +116,7 @@ class BasemapCities(MapCities):
         newdf['right'] = rights[ikeep]
         return type(self)(newdf)
 
-    def renderToMap(self,ax,fontname='Bitstream Vera Sans',fontsize=10.0):
+    def renderToMap(self,ax,fontname='Bitstream Vera Sans',fontsize=10.0,zorder=10):
         """Render cities on Basemap axes.
 
         :param ax:
@@ -125,6 +125,8 @@ class BasemapCities(MapCities):
           String name of font.
         :param fontsize:
           Font size in points.
+        :param zorder:
+          Matplotlib plotting order - higher zorder is on top. 
         """
         if 'x' not in self._dataframe.columns and 'y' not in self._dataframe.columns:
             raise DataSetException('Cities object has not had project() called yet.')
@@ -185,7 +187,7 @@ class BasemapCities(MapCities):
         plt.close(newfig)
         return (lefts,rights,bottoms,tops)
 
-    def _renderRow(self,row,ax,fontname,fontsize):
+    def _renderRow(self,row,ax,fontname,fontsize,zorder=10):
         """Internal method to consistently render city names.
         :param row:
           pandas dataframe row.
@@ -195,6 +197,8 @@ class BasemapCities(MapCities):
           String name of desired font.
         :param fontsize:
           Font size in points.
+        :param zorder:
+          Matplotlib plotting order - higher zorder is on top. 
         :returns:
           Matplotlib Text instance.
         """
@@ -222,7 +226,7 @@ class BasemapCities(MapCities):
         tx = row['x'] + data_x_offset
         ty = row['y']
         th = ax.text(tx,ty,row['name'],fontname=fontname,
-                      fontsize=fontsize,ha=ha,va=va)
+                      fontsize=fontsize,ha=ha,va=va,zorder=zorder)
         return th
         
     
