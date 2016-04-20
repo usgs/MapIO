@@ -5,6 +5,7 @@ from __future__ import print_function
 #stdlib imports
 import os.path
 import sys
+import tempfile
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -58,6 +59,14 @@ def test(cityfile=None):
     df = bigcities.getDataFrame()
     assert df['pop'].max() >= popthresh
     print('Test limiting cities above population above 50,000.')
+
+    print('Test saving cities and reading them back in...')
+    foo,tmpfile = tempfile.mkstemp()
+    os.close(foo)
+    bigcities.save(tmpfile)
+    newcities = Cities.loadFromCSV(tmpfile)
+    assert len(bigcities) == len(newcities)
+    print('Passed saving cities and reading them back in.')
     
 if __name__ == '__main__':
     if len(sys.argv) > 1:
