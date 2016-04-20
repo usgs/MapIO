@@ -135,6 +135,16 @@ class Cities(object):
         df = pd.read_csv(csvfile)
         return cls(df)
 
+    def save(self,filename):
+        """Save City internal dataframe to CSV file.
+        
+        :param filename:
+          Output filename to save data to.
+        :returns:
+          None
+        """
+        self._dataframe.to_csv(filename)
+
     def limitByBounds(self,bounds):
         """Search for cities within a bounding box (xmin,xmax,ymin,ymax).
         :param bounds: 
