@@ -338,7 +338,10 @@ class GeoDict(object):
           True if input geodict is completely outside this GeoDict,
           False if not.
         """
-        inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
+        if self.xmax > self.xmin:
+            inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
+        else:
+            inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax+360
         inside_y = geodict.ymin >= self._ymin and geodict.ymax <= self._ymax
         if inside_x and inside_y:
             return True

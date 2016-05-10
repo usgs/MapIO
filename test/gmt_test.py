@@ -7,6 +7,7 @@ from __future__ import print_function
 import struct
 import os.path
 import sys
+import struct
 
 #third party imports
 import numpy as np
@@ -80,6 +81,11 @@ def createSampleGrid(M,N):
     gd = GeoDict(geodict)
     gmtgrid = GMTGrid(data,gd)
     return gmtgrid
+
+def test_format_check():
+     f = open('test.grd','wb')
+     
+     f.close()
 
 def test_save():
     try:

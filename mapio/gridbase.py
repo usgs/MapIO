@@ -45,10 +45,10 @@ class Grid(DataSet):
         dx,dy = (geodict.dx,geodict.dy)
         ny,nx = (geodict.ny,geodict.nx)
 
-        padleftcols = np.ceil((gxmin - pxmin)/dx)
-        padrightcols = np.ceil((pxmax - gxmax)/dx)
-        padbottomrows = np.ceil((gymin - pymin)/dy)
-        padtoprows = np.ceil((pymax - gymax)/dy)
+        padleftcols = int(np.ceil((gxmin - pxmin)/dx))
+        padrightcols = int(np.ceil((pxmax - gxmax)/dx))
+        padbottomrows = int(np.ceil((gymin - pymin)/dy))
+        padtoprows = int(np.ceil((pymax - gymax)/dy))
 
         #if any of these are negative, set them to zero
         if padleftcols < 0:
