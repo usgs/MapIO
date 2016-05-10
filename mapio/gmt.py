@@ -62,6 +62,14 @@ def sub2ind(shape,subtpl):
     return ind
 
 def indexArray(array,shp,i1,i2,j1,j2):
+    if not isinstance(j1,int) and len(j1):
+        j1 = j1[0]
+    if not isinstance(j2,int) and len(j2):
+        j2 = j2[0]
+    if not isinstance(i1,int) and len(i1):
+        i1 = i1[0]
+    if not isinstance(i2,int) and len(i2):
+        i2 = i2[0]
     if len(array.shape) == 1:
         ny = i2-i1
         nx = j2-j1
@@ -184,30 +192,33 @@ class GMTGrid(Grid2D):
             isThree = False
         f = open(grdfile,'rb')
         #check to see if it's HDF or CDF
-        f.seek(1,0)
-        if isThree:
-            hdfsig = f.read(3).decode('utf-8')
-        else:
-            hdfsig = ''.join(struct.unpack('ccc',f.read(3)))
         ftype = 'unknown'
-        if hdfsig == 'HDF':
-            ftype = 'hdf'
-        else:
-            f.seek(0,0)
+        try:
+            f.seek(1,0)
             if isThree:
-                cdfsig = f.read(3).decode('utf-8')
+                hdfsig = f.read(3).decode('utf-8')
             else:
-                cdfsig = ''.join(struct.unpack('ccc',f.read(3)))
-            if cdfsig == 'CDF':
-                ftype = 'netcdf'
+                hdfsig = ''.join(struct.unpack('ccc',f.read(3)))
+            
+            if hdfsig == 'HDF':
+                ftype = 'hdf'
             else:
                 f.seek(0,0)
-                nx = struct.unpack('I',f.read(4))[0]
-                f.seek(8,0)
-                offset = struct.unpack('I',f.read(4))[0]
-                if (offset == 0 or offset == 1) and nx > 0:
-                    ftype = 'native'
-                    
+                if isThree:
+                    cdfsig = f.read(3).decode('utf-8')
+                else:
+                    cdfsig = ''.join(struct.unpack('ccc',f.read(3)))
+                if cdfsig == 'CDF':
+                    ftype = 'netcdf'
+                else:
+                    f.seek(0,0)
+                    nx = struct.unpack('I',f.read(4))[0]
+                    f.seek(8,0)
+                    offset = struct.unpack('I',f.read(4))[0]
+                    if (offset == 0 or offset == 1) and nx > 0:
+                        ftype = 'native'
+        except:
+            pass            
         f.close()
         return ftype
 

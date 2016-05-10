@@ -266,7 +266,11 @@ class Grid2D(Grid):
                     frightlon = clon + (self._geodict.dx/2) - finerdict.dx/2
                     fbottomlat = clat - (self._geodict.dy/2) + finerdict.dy/2
                     itop,jleft = finerdict.getRowCol(ftoplat,fleftlon)
+                    itop = itop[0]
+                    jleft = jleft[0]
                     ibottom,jright = finerdict.getRowCol(fbottomlat,frightlon)
+                    ibottom = ibottom[0]
+                    jright = jright[0]
                     finedata[itop:ibottom+1,jleft:jright+1] = cellvalue
         else:
             for i in range(0,self._geodict.ny):
@@ -357,7 +361,7 @@ class Grid2D(Grid):
             raise DataSetException('Input bounds must be completely contained by this grid.')
         uly,ulx = self._geodict.getRowCol(td.ymax,td.xmin)
         lry,lrx = self._geodict.getRowCol(td.ymin,td.xmax)
-        data = self._data[uly:lry+1,ulx:lrx+1]
+        data = self._data[uly[0]:lry[0]+1,ulx[0]:lrx[0]+1]
         grid = Grid2D(data,td)
         return grid
     
