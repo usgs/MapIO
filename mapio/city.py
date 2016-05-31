@@ -114,7 +114,9 @@ class Cities(object):
             mydict['ccode'].append(parts[8].strip())
             mydict['lat'].append(float(parts[4].strip()))
             mydict['lon'].append(float(parts[5].strip()))
-            mydict['iscap'].append((parts[7].strip() == CAPFLAG1 or parts[7] == CAPFLAG2))
+            capfield = parts[7].strip()
+            iscap = (capfield == CAPFLAG1) or (capfield == CAPFLAG2)
+            mydict['iscap'].append(iscap)
             mydict['pop'].append(int(parts[14].strip()))
         f.close()
         if delete_folder:
@@ -144,6 +146,33 @@ class Cities(object):
           None
         """
         self._dataframe.to_csv(filename)
+
+    def sortByColumns(self,columns,ascending=True):
+        """Sort list of cities by input column names.
+
+        :param columns:
+          String name or list of names of any of the columns that are in the internal
+          dataframe.  See getColumns().   Only the required set of columns (see __init__ method)
+          are guaranteed to be present, but subclasses of Cities may add more.
+        :param ascending:
+          Boolean indicating which direction values should be sorted.
+        :raises DataSetException:
+          When column(s) are not in the list of dataframe columns.
+        """
+        if column not in self._dataframe.columns:
+            raise DataSetException('Column not in list of DataFrame columns')
+        if pd.__version__ < '0.17.0':
+             self._dataframe = self._dataframe.sort(columns=columns,ascending=ascending)
+        else:
+            self._dataframe = self._dataframe.sort_values(by=columns,ascending=ascending)
+
+    def getColumns(self):
+        """Return list of column names in internal data frame.
+
+        :returns:
+          List of column names in internal data frame.
+        """
+        return list(self._dataframe.columns)
 
     def limitByBounds(self,bounds):
         """Search for cities within a bounding box (xmin,xmax,ymin,ymax).

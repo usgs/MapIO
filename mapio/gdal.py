@@ -389,10 +389,14 @@ class GDALGrid(Grid2D):
                 isOutside = False
                 #make a bounding box that is PADFACTOR number of rows/cols greater than what the user asked for
                 rbounds = [bounds[0]-dx*PADFACTOR,bounds[1]+dx*PADFACTOR,bounds[2]-dy*PADFACTOR,bounds[3]+dy*PADFACTOR]
+                rxmin,rxmax,rymin,rymax = rbounds
+                fxmin,fxmax,fymin,fymax = fbounds
                 #compare that bounding box to the file bounding box
                 if not hasMeridianWrap:
-                    if fbounds[0] > rbounds[0] or fbounds[1] < rbounds[1] or fbounds[2] > rbounds[2] or fbounds[3] < rbounds[3]:
-                        isOutside = True
+                    if fxmin > fxmax: #this is normal
+                        fxmax = fxmax + 360
+                    if fxmin > rxmin or fxmax < rxmax or fymin > rymin or fymax < rymax:
+                            isOutside = True
                 else:
                     if fbounds[2] > rbounds[2] or fbounds[3] < rbounds[3]:
                         isOutside = True
