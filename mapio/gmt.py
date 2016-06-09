@@ -276,6 +276,13 @@ class GMTGrid(Grid2D):
         offset = struct.unpack('I',f.read(4))[0]
         geodict['xmin'] = struct.unpack('d',f.read(8))[0]
         geodict['xmax'] = struct.unpack('d',f.read(8))[0]
+
+        #GMT grids can have longitudes from 0-360, we're correcting for that here
+        if geodict['xmax'] > 180:
+            geodict['xmax'] = geodict['xmax'] - 360
+        if geodict['xmax'] > 180:
+            geodict['xmin'] = geodict['xmin'] - 360
+            
         geodict['ymin'] = struct.unpack('d',f.read(8))[0]
         geodict['ymax'] = struct.unpack('d',f.read(8))[0]
         zmin = struct.unpack('d',f.read(8))[0]
@@ -412,6 +419,11 @@ class GMTGrid(Grid2D):
             yvarname = 'lat'
         if xvarname is not None:
             xvar = cdf.variables[xvarname].data.copy()
+
+            #GMT grids can have longitudes from 0-360, we're correcting for that here
+            if (xvar > 180).any():
+                xvar = xvar - 360
+                
             yvar = cdf.variables[yvarname].data.copy()
             geodict['nx'] = len(xvar)
             geodict['ny'] = len(yvar)
@@ -630,6 +642,11 @@ class GMTGrid(Grid2D):
         if xvarname is not None:
             xvar = f[xvarname][:]
             yvar = f[yvarname][:]
+
+            #GMT grids can have longitudes from 0-360, we're correcting for that here
+            if (xvar > 180).any():
+                xvar = xvar - 360
+            
             geodict['ny'] = len(yvar)
             geodict['nx'] = len(xvar)
             geodict['xmin'] = xvar[0]
