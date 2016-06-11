@@ -82,7 +82,10 @@ def _readElement(element,keys):
         if dtype == 'datetime':
             eldict[key] = datetime.strptime(element.getAttribute(key)[0:19],TIMEFMT)
         elif dtype == 'int':
-            eldict[key] = int(element.getAttribute(key))
+            try:
+                eldict[key] = int(element.getAttribute(key))
+            except ValueError:
+                eldict[key] = int(float(element.getAttribute(key)))
         elif dtype == 'float':
             eldict[key] = float(element.getAttribute(key))
         else:
