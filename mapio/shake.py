@@ -553,7 +553,12 @@ class ShakeGrid(MultiGrid):
         :returns:
           True if key matches expected dtype, False if not.
         """
-        if dtype == 'string' and (not isinstance(key,str) and not isinstance(key,unicode)):
+        #In Python 3 str type is now unicode by default, no such thing as unicode any more.
+        if sys.version_info.major == 2:
+            strtypes = (str,unicode)
+        else:
+            strtypes = (str,)
+        if dtype == 'string' and (not isinstance(key,strtypes)):
             return False
         if dtype == 'int' and not isinstance(key,int):
             return False
