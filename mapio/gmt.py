@@ -421,7 +421,10 @@ class GMTGrid(Grid2D):
             xvar = cdf.variables[xvarname].data.copy()
 
             #GMT grids can have longitudes from 0-360, we're correcting for that here
-            if (xvar > 180).any():
+            #however, sometimes GMT (or at least netcdf) allows an array for longitude centers
+            #where the max value exceeds +180.0.  Here we're also trapping for that situation, 
+            #and hopefully not catastrophically breaking a bunch of other stuff.
+            if (xvar > 180.01).any():
                 xvar = xvar - 360
                 
             yvar = cdf.variables[yvarname].data.copy()
@@ -644,7 +647,10 @@ class GMTGrid(Grid2D):
             yvar = f[yvarname][:]
 
             #GMT grids can have longitudes from 0-360, we're correcting for that here
-            if (xvar > 180).any():
+            #however, sometimes GMT (or at least hdf) allows an array for longitude centers
+            #where the max value exceeds +180.0.  Here we're also trapping for that situation, 
+            #and hopefully not catastrophically breaking a bunch of other stuff.
+            if (xvar > 180.01).any():
                 xvar = xvar - 360
             
             geodict['ny'] = len(yvar)
