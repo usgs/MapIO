@@ -8,6 +8,7 @@ import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from mpl_toolkits.basemap import Basemap
 
 #hack the path so that I can debug these functions if I need to
@@ -17,7 +18,9 @@ sys.path.insert(0,mapiodir) #put this at the front of the system path, ignoring 
 
 from mapio.dataset import DataSetException
 from mapio.basemapcity import BasemapCities
-    
+
+matplotlib.use('Agg')
+
 def test():
     cityfile = os.path.join(homedir,'data','cities1000.txt')
     print('Test loading geonames cities file from the web...')
