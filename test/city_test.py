@@ -19,9 +19,11 @@ sys.path.insert(0,mapiodir) #put this at the front of the system path, ignoring 
 from mapio.dataset import DataSetException
 from mapio.city import Cities
 
-def test(cityfile=None):
+def test():
+    cityfile = os.path.join(homedir,'data','cities1000.txt')
     print('Test loading geonames cities file from the web...')
-    cities = Cities.loadFromGeoNames(cityfile=cityfile) #load from the web
+    cities = Cities.loadFromGeoNames(cityfile=cityfile) #load from a local file
+    assert len(cities) == 145315
     print('Passed loading geonames cities file from the web.')
 
     print('Test getting city names and coordinates...')
@@ -69,8 +71,4 @@ def test(cityfile=None):
     print('Passed saving cities and reading them back in.')
     
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        cfile = sys.argv[1]
-        test(cityfile=cfile)
-    else:
-        test()
+    test()

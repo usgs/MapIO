@@ -137,6 +137,14 @@ class Cities(object):
         df = pd.read_csv(csvfile)
         return cls(df)
 
+    def len(self):
+        """Get the number of cities contained in this object.
+
+        :returns:
+          Number of cities contained in this object.
+        """
+        return len(df)
+    
     def save(self,filename):
         """Save City internal dataframe to CSV file.
         

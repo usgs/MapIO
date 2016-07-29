@@ -9,6 +9,8 @@ import collections
 import datetime
 import time
 import os.path
+import shutil
+import tempfile
 
 #third party imports
 import h5py
@@ -26,13 +28,8 @@ from mapio.shake import ShakeGrid
 from mapio.grid2d import Grid2D
 from mapio.dataset import DataSetException
 
-
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print('To test this function, add an argument specifying a ShakeMap grid.xml file.')
-        sys.exit(1)
-        
-    shakefile = sys.argv[1]
+def test():
+    shakefile = os.path.join(homedir,'data','northridge.xml')
     t1 = datetime.datetime.now()
     sgrid = ShakeGrid.load(shakefile,adjust='res')
     t2 = datetime.datetime.now()
@@ -61,14 +58,25 @@ if __name__ == '__main__':
 
     tdict = {'name':'fred','family':{'wife':'wilma','daughter':'pebbles'}}
     mgrid = MultiHazardGrid(layers,sgrid.getGeoDict(),origin,header,metadata={'flintstones':tdict})
-    mgrid.save('test.hdf')
-    t3 = datetime.datetime.now()
-    mgrid2 = MultiHazardGrid.load('test.hdf')
-    t4 = datetime.datetime.now()
-    xmlmb = os.path.getsize(shakefile)/float(1e6)
-    hdfmb = os.path.getsize('test.hdf')/float(1e6)
-    xmltime = (t2-t1).seconds + (t2-t1).microseconds/float(1e6)
-    hdftime = (t4-t3).seconds + (t4-t3).microseconds/float(1e6)
-    print('Input XML file size: %.2f MB (loading time %.3f seconds)' % (xmlmb,xmltime))
-    print('Output HDF file size: %.2f MB (loading time %.3f seconds)' % (hdfmb,hdftime))
-    os.remove('test.hdf')    
+    tdir = tempfile.mkdtemp()
+    testfile = os.path.join(tdir,'test.hdf')
+    try:
+        mgrid.save(testfile)
+        t3 = datetime.datetime.now()
+        mgrid2 = MultiHazardGrid.load(testfile)
+        t4 = datetime.datetime.now()
+        xmlmb = os.path.getsize(shakefile)/float(1e6)
+        hdfmb = os.path.getsize(testfile)/float(1e6)
+        xmltime = (t2-t1).seconds + (t2-t1).microseconds/float(1e6)
+        hdftime = (t4-t3).seconds + (t4-t3).microseconds/float(1e6)
+        print('Input XML file size: %.2f MB (loading time %.3f seconds)' % (xmlmb,xmltime))
+        print('Output HDF file size: %.2f MB (loading time %.3f seconds)' % (hdfmb,hdftime))
+    except DataSetException as obj:
+        pass
+    finally:
+        if os.path.isdir(tdir):
+            shutil.rmtree(tdir)
+
+if __name__ == '__main__':
+    test()
+    
