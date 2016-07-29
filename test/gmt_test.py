@@ -8,6 +8,8 @@ import struct
 import os.path
 import sys
 import struct
+import tempfile
+import shutil
 
 #third party imports
 import numpy as np
@@ -82,51 +84,52 @@ def createSampleGrid(M,N):
     gmtgrid = GMTGrid(data,gd)
     return gmtgrid
 
-def test_format_check():
-     f = open('test.grd','wb')
-     
-     f.close()
-
 def test_save():
+    tdir = tempfile.mkdtemp()
+    testfile = os.path.join(tdir,'test.grd')
     try:
         print('Testing saving and loading to/from NetCDF3...')
         #make a sample data set
         gmtgrid = createSampleGrid(4,4)
 
         #save it as netcdf3
-        gmtgrid.save('test.grd',format='netcdf')
-        gmtgrid2 = GMTGrid.load('test.grd')
+        gmtgrid.save(testfile,format='netcdf')
+        gmtgrid2 = GMTGrid.load(testfile)
         np.testing.assert_almost_equal(gmtgrid._data,gmtgrid2._data)
         print('Passed saving and loading to/from NetCDF3.')
 
         print('Testing saving and loading to/from NetCDF4 (HDF)...')
         #save it as HDF
-        gmtgrid.save('test.grd',format='hdf')
-        gmtgrid3 = GMTGrid.load('test.grd')
+        gmtgrid.save(testfile,format='hdf')
+        gmtgrid3 = GMTGrid.load(testfile)
         np.testing.assert_almost_equal(gmtgrid._data,gmtgrid3._data)
         print('Passed saving and loading to/from NetCDF4 (HDF)...')
 
         print('Testing saving and loading to/from GMT native)...')
-        gmtgrid.save('test.grd',format='native')
-        gmtgrid4 = GMTGrid.load('test.grd')
+        gmtgrid.save(testfile,format='native')
+        gmtgrid4 = GMTGrid.load(testfile)
         np.testing.assert_almost_equal(gmtgrid._data,gmtgrid4._data)
         print('Passed saving and loading to/from GMT native...')
-    except AssertionError as error:
-        print('Failed padding test:\n %s' % error)
-    os.remove('test.grd')
+    except DataSetException as obj:
+        print('Failure other than AssertionError: "%s"' % str(obj))
+    finally:
+        if os.path.isdir(tdir):
+            shutil.rmtree(tdir)
 
 def test_pad():
+    tdir = tempfile.mkdtemp()
+    testfile = os.path.join(tdir,'test.grd')
     try:
         for fmt in ['netcdf','hdf','native']:
             print('Test padding data with null values (format %s)...' % fmt)
             gmtgrid = createSampleGrid(4,4)
-            gmtgrid.save('test.grd',format=fmt)
+            gmtgrid.save(testfile,format=fmt)
 
             newdict = GeoDict({'xmin':-0.5,'xmax':4.5,
                                'ymin':-0.5,'ymax':4.5,
                                'dx':1.0,'dy':1.0,
                                'ny':6,'nx':6})
-            gmtgrid2 = GMTGrid.load('test.grd',samplegeodict=newdict,doPadding=True)
+            gmtgrid2 = GMTGrid.load(testfile,samplegeodict=newdict,doPadding=True)
             output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan],
                                [np.nan,0.0,1.0,2.0,3.0,np.nan],
                                [np.nan,4.0,5.0,6.0,7.0,np.nan],
@@ -135,11 +138,15 @@ def test_pad():
                                [np.nan,np.nan,np.nan,np.nan,np.nan,np.nan]])
             np.testing.assert_almost_equal(gmtgrid2._data,output)
             print('Passed padding data with format %s.' % fmt)
-    except AssertionError as error:
-        print('Failed padding test:\n %s' % error)
-    os.remove('test.grd')
+    except DataSetException as obj:
+        print('Failure other than AssertionError: "%s"' % str(obj))
+    finally:
+        if os.path.isdir(tdir):
+            shutil.rmtree(tdir)
 
 def test_subset():
+    tdir = tempfile.mkdtemp()
+    testfile = os.path.join(tdir,'test.grd')
     try:
         for fmt in ['netcdf','hdf','native']:
             print('Testing subsetting of non-square grid (format %s)...' % fmt)
@@ -149,24 +156,27 @@ def test_subset():
                                'dx':1.0,'dy':1.0,
                                'ny':6,'nx':4})
             gmtgrid = GMTGrid(data,geodict)
-            gmtgrid.save('test.grd',format=fmt)
+            gmtgrid.save(testfile,format=fmt)
             newdict = GeoDict({'xmin':1.5,'xmax':2.5,
                                'ymin':1.5,'ymax':3.5,
                                'dx':1.0,'dy':1.0,
                                'ny':3,'nx':2})
-            gmtgrid3 = GMTGrid.load('test.grd',samplegeodict=newdict)
+            gmtgrid3 = GMTGrid.load(testfile,samplegeodict=newdict)
             output = np.array([[9,10],
                                [13,14],
                                [17,18]])
             np.testing.assert_almost_equal(gmtgrid3._data,output)
             print('Passed subsetting of non-square grid (format %s)...' % fmt)
         
-    except AssertionError as error:
-        print('Failed subset test:\n %s' % error)
-
-    os.remove('test.grd')
+    except DataSetException as obj:
+        print('Failure other than AssertionError: "%s"' % str(obj))
+    finally:
+        if os.path.isdir(tdir):
+            shutil.rmtree(tdir)
 
 def test_resample():
+    tdir = tempfile.mkdtemp()
+    testfile = os.path.join(tdir,'test.grd')
     try:
         for fmt in ['netcdf','hdf','native']:
             print('Test resampling data without padding (format %s)...' % fmt)
@@ -176,7 +186,7 @@ def test_resample():
                                'dx':1.0,'dy':1.0,
                                'ny':9,'nx':7})
             gmtgrid = GMTGrid(data,geodict)
-            gmtgrid.save('test.grd',format=fmt)
+            gmtgrid.save(testfile,format=fmt)
 
             bounds = (3.0,4.0,3.0,4.0)
             dx,dy = (1.0,1.0)
@@ -185,7 +195,7 @@ def test_resample():
                                'ymin':3.0,'ymax':4.0,
                                'dx':1.0,'dy':1.0,
                                'ny':2,'nx':2})
-            gmtgrid3 = GMTGrid.load('test.grd',samplegeodict=newdict,resample=True)
+            gmtgrid3 = GMTGrid.load(testfile,samplegeodict=newdict,resample=True)
             output = np.array([[34,35],
                                [41,42]])
             np.testing.assert_almost_equal(gmtgrid3._data,output)
@@ -193,7 +203,7 @@ def test_resample():
 
             print('Test resampling data with padding (format %s)...' % fmt)
             gmtgrid = createSampleGrid(4,4)
-            gmtgrid.save('test.grd',format=fmt)
+            gmtgrid.save(testfile,format=fmt)
             newdict = {'xmin':0.0,'xmax':4.0,'ymin':0.0,'ymax':4.0,'dx':1.0,'dy':1.0}
             bounds = (0.0,4.0,0.0,4.0)
             dx,dy = (1.0,1.0)
@@ -202,7 +212,7 @@ def test_resample():
                                'ymin':0.0,'ymax':4.0,
                                'dx':1.0,'dy':1.0,
                                'ny':5,'nx':5})
-            gmtgrid3 = GMTGrid.load('test.grd',samplegeodict=newdict,resample=True,doPadding=True)
+            gmtgrid3 = GMTGrid.load(testfile,samplegeodict=newdict,resample=True,doPadding=True)
             output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan],
                                [np.nan,2.5,3.5,4.5,np.nan],
                                [np.nan,6.5,7.5,8.5,np.nan],
@@ -210,12 +220,15 @@ def test_resample():
                                [np.nan,np.nan,np.nan,np.nan,np.nan]])
             np.testing.assert_almost_equal(gmtgrid3._data,output)
             print('Passed resampling data with padding (format %s)...' % fmt)
-    except AssertionError as error:
-        print('Failed resample test:\n %s' % error)
-
-    os.remove('test.grd')
+    except DataSetException as obj:
+        print('Failure other than AssertionError: "%s"' % str(obj))
+    finally:
+        if os.path.isdir(tdir):
+            shutil.rmtree(tdir)
     
 def test_meridian():
+    tdir = tempfile.mkdtemp()
+    testfile = os.path.join(tdir,'test.grd')
     try:
         for fmt in ['netcdf','hdf','native']:
             print('Testing resampling of global grid where sample crosses 180/-180 meridian (format %s)...' % fmt)
@@ -225,13 +238,13 @@ def test_meridian():
                                'dx':30,'dy':30,
                                'ny':7,'nx':12})
             gmtgrid = GMTGrid(data,geodict)
-            gmtgrid.save('test.grd',format=fmt)
+            gmtgrid.save(testfile,format=fmt)
 
             sampledict = GeoDict({'xmin':105,'xmax':-105,
                                   'ymin':-15.0,'ymax':15.0,
                                   'dx':30.0,'dy':30.0,
                                   'ny':2,'nx':6})
-            gmtgrid5 = GMTGrid.load('test.grd',samplegeodict=sampledict,resample=True,doPadding=True)
+            gmtgrid5 = GMTGrid.load(testfile,samplegeodict=sampledict,resample=True,doPadding=True)
 
             output = np.array([[ 39.5,40.5,35.5,30.5,31.5,32.5],
                                [ 51.5,52.5,47.5,42.5,43.5,44.5]])
@@ -247,13 +260,13 @@ def test_meridian():
                                'dx':30,'dy':30,
                                'ny':7,'nx':13})
             gmtgrid = GMTGrid(data,geodict)
-            gmtgrid.save('test.grd')
+            gmtgrid.save(testfile)
 
             sampledict = GeoDict({'xmin':105,'xmax':-105,
                                   'ymin':-15.0,'ymax':15.0,
                                   'dx':30.0,'dy':30.0,
                                   'ny':2,'nx':6})
-            gmtgrid5 = GMTGrid.load('test.grd',samplegeodict=sampledict,resample=True,doPadding=True)
+            gmtgrid5 = GMTGrid.load(testfile,samplegeodict=sampledict,resample=True,doPadding=True)
 
             output = np.array([[ 39.5,40.5,35.5,30.5,31.5,32.5],
                                [ 51.5,52.5,47.5,42.5,43.5,44.5]])
@@ -261,9 +274,11 @@ def test_meridian():
             np.testing.assert_almost_equal(gmtgrid5._data,output)
             print('Passed resampling of global grid where sample crosses 180/-180 meridian and first column is duplicated by last (format %s)...' % fmt)
         
-    except AssertionError as error:
-        print('Failed meridian test:\n %s' % error)
-    os.remove('test.grd')
+    except DataSetException as obj:
+        print('Failure other than AssertionError: "%s"' % str(obj))
+    finally:
+        if os.path.isdir(tdir):
+            shutil.rmtree(tdir)
 
 def test_index():
     data = np.arange(0,42).reshape(6,7)
@@ -274,12 +289,14 @@ def test_index():
     np.testing.assert_almost_equal(res1,res2)
 
 def test_xrange():
+    tdir = tempfile.mkdtemp()
+    testfile = os.path.join(tdir,'test.grd')
     #there is a type of GMT netcdf file where the data is in scanline order
     #we don't care enough to support this in the save() method, but we do need a test for it.  Sigh.
     try:
         print('Testing loading whole x_range style grid...')
-        data = createSampleXRange(6,4,'test.grd')
-        gmtgrid = GMTGrid.load('test.grd')
+        data = createSampleXRange(6,4,testfile)
+        gmtgrid = GMTGrid.load(testfile)
         np.testing.assert_almost_equal(data,gmtgrid.getData())
         print('Passed loading whole x_range style grid...')
 
@@ -289,7 +306,7 @@ def test_xrange():
                            'ymin':1.5,'ymax':3.5,
                            'dx':1.0,'dy':1.0,
                            'ny':3,'nx':2})
-        gmtgrid3 = GMTGrid.load('test.grd',samplegeodict=newdict)
+        gmtgrid3 = GMTGrid.load(testfile,samplegeodict=newdict)
         output = np.array([[9,10],
                            [13,14],
                            [17,18]])
@@ -297,31 +314,22 @@ def test_xrange():
         print('Passed loading partial x_range style grid...')
 
         print('Testing x_range style grid where we cross meridian...')
-        data = createSampleXRange(7,12,'test.grd',(-180.,150.,-90.,90.),dx=30.,dy=30.)
+        data = createSampleXRange(7,12,testfile,(-180.,150.,-90.,90.),dx=30.,dy=30.)
         sampledict = GeoDict({'xmin':105,'xmax':-105,
                               'ymin':-15.0,'ymax':15.0,
                               'dx':30.0,'dy':30.0,
                               'ny':2,'nx':6})
-        gmtgrid5 = GMTGrid.load('test.grd',samplegeodict=sampledict,resample=True,doPadding=True)
+        gmtgrid5 = GMTGrid.load(testfile,samplegeodict=sampledict,resample=True,doPadding=True)
         print('Testing x_range style grid where we cross meridian...')
         
-    except AssertionError as error:
-        print('Failed an xrange test:\n %s' % error)
-    os.remove('test.grd')    
+    except DataSetException as obj:
+        print('Failure other than AssertionError: "%s"' % str(obj))
+    finally:
+        if os.path.isdir(tdir):
+            shutil.rmtree(tdir)
 
     
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
-        gmtfile = sys.argv[1]
-        sampledict = None
-        if len(sys.argv) == 6:
-            xmin = float(sys.argv[2])
-            xmax = float(sys.argv[3])
-            ymin = float(sys.argv[4])
-            ymax = float(sys.argv[5])
-            sampledict = {'xmin':xmin,'xmax':xmax,'ymin':ymin,'ymax':ymax}
-            grid = GMTGrid.load(gmtfile,samplegeodict=sampledict)
-    else:
         test_index()
         test_save()
         test_resample()

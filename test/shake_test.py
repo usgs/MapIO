@@ -11,6 +11,8 @@ import re
 import sys
 import tempfile
 import time
+import shutil
+
 if sys.version_info.major == 2:
     import StringIO
 else:
@@ -65,22 +67,26 @@ def test_interpolate():
     np.testing.assert_almost_equal(output,shake2.getLayer('pga').getData())
     print('Passed test of ShakeGrid interpolate() method.')
 
-def test_read(xmlfile):
-    t,fname = tempfile.mkstemp()
-    os.close(t)
+def test_read():
+    xmlfile = os.path.join(homedir,'data','northridge.xml')
+    tdir = tempfile.mkdtemp()
+    testfile = os.path.join(tdir,'test.xml')
     try:
         shakegrid = ShakeGrid.load(xmlfile,adjust='res')
         t1 = time.time()
-        shakegrid.save(fname)
+        shakegrid.save(testfile)
         t2 = time.time()
         print('Saving shakemap took %.2f seconds' % (t2-t1))
     except Exception as error:
         print('Failed to read grid.xml format file "%s". Error "%s".' % (xmlfile,str(error)))
+        assert 0 == 1
     finally:
-        if os.path.isfile(fname):
-            os.remove(fname)
+        if os.path.isdir(tdir):
+            shutil.rmtree(tdir)
     
 def test_save():
+    tdir = tempfile.mkdtemp()
+    testfile = os.path.join(tdir,'test.xml')
     try:
         print('Testing save/read functionality for shakemap grids...')
         pga = np.arange(0,16,dtype=np.float32).reshape(4,4)
@@ -116,8 +122,8 @@ def test_save():
         shake = ShakeGrid(layers,geodict,eventDict,shakeDict,uncDict)
         
         print('Testing save/read functionality...')
-        shake.save('test.xml',version=3)
-        shake2 = ShakeGrid.load('test.xml')
+        shake.save(testfile,version=3)
+        shake2 = ShakeGrid.load(testfile)
         for layer in ['pga','pgv','mmi']:
             tdata = shake2.getLayer(layer).getData()
             np.testing.assert_almost_equal(tdata,layers[layer])
@@ -125,7 +131,7 @@ def test_save():
         print('Passed save/read functionality for shakemap grids.')
 
         print('Testing getFileGeoDict method...')
-        fgeodict = ShakeGrid.getFileGeoDict('test.xml')
+        fgeodict = ShakeGrid.getFileGeoDict(testfile)
         print('Passed save/read functionality for shakemap grids.')
         
         print('Testing loading with bounds (no resampling or padding)...')
@@ -133,7 +139,8 @@ def test_save():
                               'ymin':-0.5,'ymax':3.5,
                               'dx':1.0,'dy':1.0,
                               'ny':5,'nx':5})
-        shake3 = ShakeGrid.load('test.xml',samplegeodict=sampledict,resample=False,doPadding=False,padValue=np.nan)
+        shake3 = ShakeGrid.load(testfile,samplegeodict=sampledict,
+                                resample=False,doPadding=False,padValue=np.nan)
         tdata = shake3.getLayer('pga').getData()
         np.testing.assert_almost_equal(tdata,layers['pga'])
 
@@ -144,7 +151,8 @@ def test_save():
                            'ymin':-0.5,'ymax':4.5,
                            'dx':1.0,'dy':1.0,
                            'ny':6,'nx':6})
-        shake4 = ShakeGrid.load('test.xml',samplegeodict=newdict,resample=False,doPadding=True,padValue=np.nan)
+        shake4 = ShakeGrid.load(testfile,samplegeodict=newdict,
+                                resample=False,doPadding=True,padValue=np.nan)
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan,np.nan],
                            [np.nan,0.0,1.0,2.0,3.0,np.nan],
                            [np.nan,4.0,5.0,6.0,7.0,np.nan],
@@ -168,14 +176,14 @@ def test_save():
                            'dx':1.0,'dy':1.0,
                            'ny':6,'nx':6})
         shake = ShakeGrid(layers,geodict,eventDict,shakeDict,uncDict)
-        shake.save('test.xml',version=3)
+        shake.save(testfile,version=3)
 
         print('Testing resampling, no padding...')
         littledict = GeoDict({'xmin':2.0,'xmax':4.0,
                               'ymin':2.0,'ymax':4.0,
                               'dx':1.0,'dy':1.0,
                               'ny':3,'nx':3})
-        shake5 = ShakeGrid.load('test.xml',samplegeodict=littledict,resample=True,doPadding=False,padValue=np.nan)
+        shake5 = ShakeGrid.load(testfile,samplegeodict=littledict,resample=True,doPadding=False,padValue=np.nan)
         output = np.array([[10.5,11.5,12.5],
                            [16.5,17.5,18.5],
                            [22.5,23.5,24.5]])
@@ -196,12 +204,12 @@ def test_save():
         layers['pgv'] = pgv
         layers['mmi'] = mmi
         shake = ShakeGrid(layers,geodict,eventDict,shakeDict,uncDict)
-        shake.save('test.xml',version=3)
+        shake.save(testfile,version=3)
         bigdict = GeoDict({'xmin':0.0,'xmax':4.0,
                            'ymin':0.0,'ymax':4.0,
                            'dx':1.0,'dy':1.0,
                            'ny':5,'nx':5})
-        shake6 = ShakeGrid.load('test.xml',samplegeodict=bigdict,resample=True,doPadding=True,padValue=np.nan)
+        shake6 = ShakeGrid.load(testfile,samplegeodict=bigdict,resample=True,doPadding=True,padValue=np.nan)
         tdata = shake6.getLayer('pga').getData()
         output = np.array([[np.nan,np.nan,np.nan,np.nan,np.nan],
                            [np.nan,2.5,3.5,4.5,np.nan],
@@ -210,15 +218,15 @@ def test_save():
                            [np.nan,np.nan,np.nan,np.nan,np.nan]])
         np.testing.assert_almost_equal(tdata,output)
         print('Passed resampling and padding...')
-    except AssertionError as error:
-        print('Failed a shakemap load test:\n %s' % error)
-    os.remove('test.xml')
+    except Exception as error:
+        print('Failed to read grid.xml format file "%s". Error "%s".' % (xmlfile,str(error)))
+        assert 0 == 1
+    finally:
+        if os.path.isdir(tdir):
+            shutil.rmtree(tdir)
 
 if __name__ == '__main__':
     test_interpolate()
-    if len(sys.argv) > 1:
-        shakefile = sys.argv[1]
-        test_read(shakefile)
-        
+    test_read()
     test_save()
     
