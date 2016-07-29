@@ -1,0 +1,54 @@
+language: python
+python:
+    - "3.5"
+    
+install:
+    #------------------
+    # Base requirements
+    #------------------
+    - sudo apt-get update
+    - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH="$HOME/miniconda/bin:$PATH"
+    - conda config --set always_yes yes --set changeps1 no
+    - conda update -q conda
+    - conda info -a
+    - conda install --yes --channel conda-forge numpy 
+    - conda install --yes --channel conda-forge scipy
+    - conda install --yes --channel conda-forge rasterio 
+    - conda install --yes --channel conda-forge pandas 
+    - conda install --yes --channel conda-forge basemap 
+    - conda install --yes --channel conda-forge shapely 
+    - conda install --yes --channel conda-forge h5py 
+    - conda install --yes --channel conda-forge gdal==1.11.4 
+    - conda install --yes --channel conda-forge pyproj 
+    - conda install --yes sphinx
+    - pip -v install git+git://github.com/gem/oq-hazardlib.git
+    - pip -v install git+git://github.com/snide/sphinx_rtd_theme.git
+    - conda install --yes --channel conda-forge matplotlib 
+    #-----------------------
+    # Not needed for testing
+    #-----------------------
+    #- conda install --yes --channel conda-forge jupyter 
+    #--------------------------
+    # Only required for testing
+    #--------------------------
+    - pip install flake8
+    - pip install pep8-naming
+    - pip install pytest
+    - pip install pytest-cov
+    #---------------------
+    # Install shakemap
+    #---------------------
+    #- pip install .
+    - python setup.py install
+script:
+     - export PYTHONPATH="."
+     - py.test --cov=mapio
+    #- flake8 shakemap
+after_success:
+    - pip install codecov codacy-coverage
+    - codecov
+    - coverage xml
+    - python-codacy-coverage -r coverage.xml
+    - bash <(curl -s https://codecov.io/bash)
