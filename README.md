@@ -1,3 +1,8 @@
+<a href="https://codecov.io/gh/usgs/MapIO">
+  <img src="https://codecov.io/gh/usgs/MapIO/branch/master/graph/badge.svg" alt="Codecov" />
+</a>
+
+
 Introduction
 ------------
 
