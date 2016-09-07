@@ -45,7 +45,7 @@ def test():
     ax.set_extent([xmin, xmax, ymin, ymax])
     mapcities = bcities.limitByMapCollision(ax)
     mapcities.renderToMap(ax)
-    plt.savefig('output.png')
+    #plt.savefig('output.png')
     df = mapcities.getDataFrame()
     boxes = []
     for index,row in df.iterrows():
