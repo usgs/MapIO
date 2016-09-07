@@ -13,45 +13,23 @@ install:
     - conda config --set always_yes yes --set changeps1 no
     - conda update -q conda
     - conda info -a
-    - conda install --yes --channel conda-forge numpy 
-    - conda install --yes --channel conda-forge scipy
-    - conda install --yes --channel conda-forge rasterio 
-    - conda install --yes --channel conda-forge pandas 
-    - conda install --yes --channel conda-forge basemap 
-    - conda install --yes --channel conda-forge shapely 
-    - conda install --yes --channel conda-forge h5py 
-    - conda install --yes --channel conda-forge gdal==1.11.4 
-    - conda install --yes --channel conda-forge pyproj 
-    - conda install --yes sphinx
-    - pip -v install git+git://github.com/gem/oq-hazardlib.git
-    - pip -v install git+git://github.com/snide/sphinx_rtd_theme.git
-    - conda install --yes --channel conda-forge matplotlib 
-    #-----------------------
-    # Not needed for testing
-    #-----------------------
-    #- conda install --yes --channel conda-forge jupyter 
-    #--------------------------
-    # Only required for testing
-    #--------------------------
-    - pip install flake8
-    - pip install pep8-naming
-    - pip install pytest
-    - pip install pytest-cov
+    - bash setup_env.sh
+    - source activate mapio
     #---------------------
-    # Install shakemap
+    # Install mapio
     #---------------------
     #- pip install .
     - python setup.py install
-#stuff to do before running the script
-#this hopefully will prevent invalid display error for matplotlib
 before_script:
+    # This is to take care of Invalid DISPLAY variable
     - "export DISPLAY=:99.0"
     - "sh -e /etc/init.d/xvfb start"
-    - sleep 3 # give xvfb some time to start 
+    - sleep 3 # give xvfb some time to start
 script:
-     - export PYTHONPATH="."
-     - py.test --cov=mapio
-    #- flake8 shakemap
+    - export PYTHONPATH="."
+    - echo `which py.test`
+    - py.test --mpl --cov=mapio
+    - echo `sphinx-build --version`
 after_success:
     - pip install codecov codacy-coverage
     - codecov
