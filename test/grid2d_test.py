@@ -276,9 +276,57 @@ def test_setData():
         print('setData test did not fail when it should have.')
     except DataSetException as dse:
         print('setData test failed as expected.')
+
+def get_data_range_test():
+    #a standard global grid, going from -180 to 180
+    normal_dict = GeoDict({'xmin':-180,'xmax':120,
+                           'ymin':-90,'ymax':90,
+                           'dx':60,'dy':45,
+                           'nx':6,'ny':5})
+
+    #test a simple example which does NOT cross the 180 meridian
+    sample1 = (-125,65,-20,20)
+    dict1 = Grid2D.getDataRange(normal_dict,sample1)
+    cdict1 = {'iulx1':0,'iuly1':1,
+              'ilrx1':6,'ilry1':4}
+    assert dict1 == cdict1
+
+    #test a less-simple example which DOES cross the 180 meridian
+    sample2 = (-235,-10,-20,20)
+    dict2 = Grid2D.getDataRange(normal_dict,sample2)
+    cdict2 = {'iulx1':5,'iuly1':1,
+              'ilrx1':6,'ilry1':4,
+              'iulx2':0,'iuly2':1,
+              'ilrx2':4,'ilry2':4}
+    assert dict2 == cdict2
     
-    
+    #test a less-simple example which DOES cross the 180 meridian, and xmin > xmax
+    sample3 = (125,-10,-20,20)
+    dict3 = Grid2D.getDataRange(normal_dict,sample3)
+    cdict3 = {'iulx1':5,'iuly1':1,
+              'ilrx1':6,'ilry1':4,
+              'iulx2':0,'iuly2':1,
+              'ilrx2':4,'ilry2':4}
+    assert dict3 == cdict3
+
+    #test an example where the sample bounds are from 0 to 360
+    sample4 = (160,200,-20,20)
+    dict4 = Grid2D.getDataRange(normal_dict,sample4)
+    cdict4 = {'iulx1':5,'iuly1':1,
+              'ilrx1':6,'ilry1':4,
+              'iulx2':0,'iuly2':1,
+              'ilrx2':2,'ilry2':4}
+    assert dict4 == cdict4
+ 
+    #test an example where the sample bounds are from 0 to 360
+    sample5 = (220,260,-20,20)
+    dict5 = Grid2D.getDataRange(normal_dict,sample5)
+    cdict5 = {'iulx1':0,'iuly1':1,
+              'ilrx1':3,'ilry1':4}
+    assert dict5 == cdict5
+
 if __name__ == '__main__':
+    get_data_range_test()
     test_subdivide()
     test_rasterize()
     test_interpolate()

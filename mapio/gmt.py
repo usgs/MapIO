@@ -46,6 +46,40 @@ INVERSE_NETCDF_TYPES = {'uint8':'B',
                         'float32':'f',
                         'float64':'d'}
 
+def subsetArray(data,data_range,fgeodict):
+    iulx1 = data_range['iulx1']
+    iuly1 = data_range['iuly1']
+    ilrx1 = data_range['ilrx1']
+    ilry1 = data_range['ilry1']
+    data1 = data[iuly1:ilry1,iulx1:ilrx1]
+    ymax1,xmin1 = fgeodict.getLatLon(iuly1,iulx1)
+    ymin1,xmax1 = fgeodict.getLatLon(ilry1-1,ilrx1-1)
+    if 'iulx2' in data_range:
+        iulx2 = data_range['iulx2']
+        iuly2 = data_range['iuly2']
+        ilrx2 = data_range['ilrx2']
+        ilry2 = data_range['ilry2']
+        data2 = data[iuly2:ilry2,iulx2:ilrx2]
+        data = np.hstack((data1,data2)).copy()
+        ymax2,xmin2 = fgeodict.getLatLon(iuly2,iulx2)
+        ymin2,xmax2 = fgeodict.getLatLon(ilry2-1,ilrx2-1)
+        ny,nx = data.shape
+        ymin2,xmax2 = fgeodict.getLatLon(ilry2-1,ilrx2-1)
+        xmax = xmax2
+    else:
+        data = data1.copy()
+        xmax = xmax1
+    ny,nx = data.shape
+    geodict = GeoDict({'xmin':xmin1,
+                       'xmax':xmax,
+                       'ymin':ymin1,
+                       'ymax':ymax1,
+                       'dx':fgeodict.dx,
+                       'dy':fgeodict.dy,
+                       'nx':nx,
+                       'ny':ny})
+    return (data,geodict)
+
 def sub2ind(shape,subtpl):
     """
     Convert 2D subscripts into 1D index.
@@ -241,7 +275,10 @@ class GMTGrid(Grid2D):
             geodict,xvar,yvar = cls.getHDFHeader(filename)
         else:
             raise DataSetException('Unknown file type for file "%s".' % filename)
-        return geodict
+        first_column_duplicated = False
+        if geodict.xmin == geodict.xmax-360:
+            first_column_duplicated = True
+        return (geodict,first_column_duplicated)
     
     @classmethod
     def getNativeHeader(cls,fname,fmt=None):
@@ -334,66 +371,143 @@ class GMTGrid(Grid2D):
         gd = GeoDict(geodict)
         return (gd,xvar,yvar,fmt,zscale,zoffset)
 
-            
     @classmethod
-    def readGMTNative(cls,fname,sampledict=None,firstColumnDuplicated=False,fmt=None):
+    def readFile(cls,filename,data_range):
+        """
+        Read any GMT formatted file.
+        :param filename:
+          Input GMT formatted grid file.
+        :param data_range:
+          Dictionary containing fields:
+            - iulx1 Upper left X of first (perhaps only) segment.
+            - iuly1 Upper left Y of first (perhaps only) segment.
+            - ilrx1 Lower right X of first (perhaps only) segment.
+            - ilry1 Lower right Y of first (perhaps only) segment.
+            (if bounds cross 180 meridian...)
+            - iulx2 Upper left X of second segment.
+            - iuly2 Upper left Y of second segment.
+            - ilrx2 Lower right X of second segment.
+            - ilry2 Lower right Y of second segment.
+        :returns:
+           data is a 2D numpy array of all data found inside bounds, and 
+          geodict gives the geo-referencing information for the data.
+        """
+        ftype = cls.getFileType(filename)
+        if ftype == 'netcdf':
+            data,geodict = cls.readNetCDF(filename,data_range)
+        elif ftype == 'hdf':
+            data,geodict = cls.readHDF(filename,data_range)
+        elif ftype == 'native':
+            data,geodict = cls.readGMTNative(filename,data_range)
+        return (data,geodict)
+    
+    @classmethod
+    def readNetCDF(cls,filename,data_range):
+        """Read a NetCDF formatted GMT file.
+        
+        :param filename:
+          Input GMT formatted grid file.
+        :param data_range:
+          Dictionary containing fields:
+            - iulx1 Upper left X of first (perhaps only) segment.
+            - iuly1 Upper left Y of first (perhaps only) segment.
+            - ilrx1 Lower right X of first (perhaps only) segment.
+            - ilry1 Lower right Y of first (perhaps only) segment.
+            (if bounds cross 180 meridian...)
+            - iulx2 Upper left X of second segment.
+            - iuly2 Upper left Y of second segment.
+            - ilrx2 Lower right X of second segment.
+            - ilry2 Lower right Y of second segment.
+        :returns:
+           data is a 2D numpy array of all data found inside bounds, and 
+          geodict gives the geo-referencing information for the data.
+        """
+        fgeodict,first_column_duplicated = cls.getFileGeoDict(filename)
+        dx = fgeodict.dx
+        dy = fgeodict.dy
+        gny = fgeodict.ny
+        gnx = fgeodict.nx
+        iulx1 = data_range['iulx1']
+        iuly1 = data_range['iuly1']
+        ilrx1 = data_range['ilrx1']
+        ilry1 = data_range['ilry1']
+        cdf = netcdf.netcdf_file(filename)
+        zvar = cdf.variables['z']
+        isScanLine = len(zvar.shape) == 1
+        if isScanLine:
+            data = indexArray(zvar,(gny,gnx),0,gny,0,gnx)
+        else:
+            data = np.flipud(indexArray(zvar,(gny,gnx),0,gny,0,gnx))
+        if first_column_duplicated:
+            data = data[:,0:-1]
+
+        newdata,geodict = subsetArray(data,data_range,fgeodict)
+        del data
+        del zvar
+        cdf.close()
+        
+        return (newdata,geodict)
+
+    @classmethod
+    def readGMTNative(cls,fname,data_range,fmt=None):
         """Read the data and geo-referencing information from a GMT native grid file, subsetting if requested.
+        
         http://gmt.soest.hawaii.edu/doc/5.1.2/GMT_Docs.html#native-binary-grid-files
+
         :param fname:
           File name of GMT native grid
-        :param sampledict:
-           GeoDict indicating the bounds where data should be sampled.
-        :param firstColumnDuplicated:
-           Boolean - is this a file where the last column of data is the same as the first (for grids that span entire globe).
+        :param data_range:
+          Dictionary containing fields:
+            - iulx1 Upper left X of first (perhaps only) segment.
+            - iuly1 Upper left Y of first (perhaps only) segment.
+            - ilrx1 Lower right X of first (perhaps only) segment.
+            - ilry1 Lower right Y of first (perhaps only) segment.
+            (if bounds cross 180 meridian...)
+            - iulx2 Upper left X of second segment.
+            - iuly2 Upper left Y of second segment.
+            - ilrx2 Lower right X of second segment.
+            - ilry2 Lower right Y of second segment.
         :param fmt: 
            Data width, one of: 
              - 'i' (16 bit signed integer)
              - 'l' (32 bit signed integer)
              - 'f' (32 bit float)
              - 'd' (64 bit float)
-          Strictly speaking, this is only necessary when the data file is 32 bit float or 32 bit integer, as there is
-          no *sure* way to tell from the header or data which data type is contained in the file.  If fmt is None, then
-          the code will try to guess as best it can from the data whether it is integer or floating point data. Caveat emptor!
-        :returns:
+
+          Strictly speaking, this is only necessary when the data file
+          is 32 bit float or 32 bit integer, as there is no *sure* way
+          to tell from the header or data which data type is contained
+          in the file.  If fmt is None, then the code will try to
+          guess as best it can from the data whether it is integer or
+          floating point data. Caveat emptor!
+
+          :returns:
           Tuple of data (2D numpy array of data, possibly subsetted from file) and geodict (see above).
-        :raises NotImplementedError:
-          For any bounds not None (we'll get to it eventually!)
         """
         HDRLEN = 892
         fgeodict,xvar,yvar,fmt,zscale,zoffset = cls.getNativeHeader(fname,fmt)
-        #for right now we're reading everything in then subsetting that.  Fix later with something
-        #clever like memory mapping...
+        t,first_column_duplicated = cls.getFileGeoDict(fname)
         sfmt = '%i%s' % (fgeodict.nx*fgeodict.ny,fmt)
         dwidths = {'h':2,'i':4,'f':4,'d':8}
         dwidth = dwidths[fmt]
         f = open(fname,'rb')
         f.seek(HDRLEN)
+        #TODO - do something clever with memory mapping some day so that
+        #we don't always have to read the whole file just to subset it.
+        #Currently not an issue.
         dbytes = f.read(fgeodict.nx*fgeodict.ny*dwidth)
-        if sampledict is None:
-            tgeodict = fgeodict.asDict()
-            data = np.flipud(np.array(struct.unpack(sfmt,dbytes)))
-            data.shape = (fgeodict.ny,fgeodict.nx)
-            if zscale != 1.0 or zoffset != 0.0:
-                data = (data * zscale) + zoffset
-            if firstColumnDuplicated:
-                data = data[:,0:-1]
-                tgeodict['xmax'] -= geodict['dx']
-            geodict = GeoDict(tgeodict,adjust='res')
-        else:
-            geodict = fgeodict.asDict()
-            data = np.array(struct.unpack(sfmt,dbytes))
-            data.shape = (fgeodict.ny,fgeodict.nx)
-            data = np.fliplr(data)
-            if zscale != 1.0 or zoffset != 0.0:
-                data = (data * zscale) + zoffset
-            if firstColumnDuplicated:
-                fgd = fgeodict.asDict()
-                fgd['xmax'] -= fgd['dx']
-                fgeodict = GeoDict(fgd)
-            data,geodict = cls._subsetRegions(data,sampledict,fgeodict,xvar,yvar,firstColumnDuplicated)
-        
         f.close()
-        return (data,geodict)
+
+        data = np.flipud(np.array(struct.unpack(sfmt,dbytes)))
+        data.shape = (fgeodict.ny,fgeodict.nx)
+        if zscale != 1.0 or zoffset != 0.0:
+            data = (data * zscale) + zoffset
+        if first_column_duplicated:
+            data = data[:,0:-1]
+
+        data,geodict = subsetArray(data,data_range,fgeodict)
+
+        return (data,geodict)        
 
     @classmethod
     def getNetCDFHeader(cls,filename):
@@ -590,40 +704,6 @@ class GMTGrid(Grid2D):
         return (data,gd)
     
     @classmethod
-    def readNetCDF(cls,filename,sampledict=None,firstColumnDuplicated=False):
-        """Read the data and geo-referencing information from a GMT NetCDF3 grid file, subsetting if requested.
-        :param filename:
-          File name of GMT NetCDF3 grid
-        :param sampledict:
-           GeoDict indicating the bounds where data should be sampled.
-        :returns:
-          Tuple of data (2D numpy array of data, possibly subsetted from file) and geodict (see above).
-        """
-        fgeodict,xvar,yvar = cls.getNetCDFHeader(filename)
-        cdf = netcdf.netcdf_file(filename)
-        if sampledict is None:
-            ny,nx = (fgeodict.ny,fgeodict.nx)
-            data = cdf.variables['z'].data.copy()
-            shp = cdf.variables['z'].shape
-            if len(shp) == 1: #sometimes the z array is flattened out, this should put it back
-                data.shape = (ny,nx)
-            if 'x_range' not in cdf.variables:
-                data = np.flipud(data)
-                
-            if firstColumnDuplicated:
-                data = data[:,0:-1]
-                fgd = fgeodict.asDict()
-                fgd['xmax'] -= fgd['dx']
-                fgeodict = GeoDict(fgd)
-            geodict = fgeodict.copy()
-        else:
-            data,geodict = cls._subsetRegions(cdf.variables['z'],sampledict,fgeodict,xvar,yvar,firstColumnDuplicated)
-        cdf.close()
-        return (data,geodict)
-
-    
-    
-    @classmethod
     def getHDFHeader(cls,hdffile):
         """Get the header information from a GMT NetCDF4 (HDF) file.
         :param fname:
@@ -687,31 +767,39 @@ class GMTGrid(Grid2D):
         #that those values are adjustable, and we'll preserve the shape and extent.
         gd = GeoDict(geodict,adjust='res')
         return (gd,xvar,yvar)
-        
+
     @classmethod
-    def readHDF(cls,hdffile,bounds=None,firstColumnDuplicated=False):
-        """Read the data and geo-referencing information from a GMT NetCDF4 (HDF) grid file, subsetting if requested.
-        :param hdffile:
-          File name of GMT NetCDF4 grid
-        :param bounds:
-           Tuple of (xmin,xmax,ymin,ymax)
+    def readHDF(cls,hdffile,data_range):
+        """Read a NetCDF formatted GMT file.
+        
+        :param filename:
+          Input GMT formatted grid file.
+        :param data_range:
+          Dictionary containing fields:
+            - iulx1 Upper left X of first (perhaps only) segment.
+            - iuly1 Upper left Y of first (perhaps only) segment.
+            - ilrx1 Lower right X of first (perhaps only) segment.
+            - ilry1 Lower right Y of first (perhaps only) segment.
+            (if bounds cross 180 meridian...)
+            - iulx2 Upper left X of second segment.
+            - iuly2 Upper left Y of second segment.
+            - ilrx2 Lower right X of second segment.
+            - ilry2 Lower right Y of second segment.
         :returns:
-          Tuple of data (2D numpy array of data, possibly subsetted from file) and geodict (see above).
+           data is a 2D numpy array of all data found inside bounds, and 
+          geodict gives the geo-referencing information for the data.
         """
-        #need a reproducible way of creating netcdf file in HDF format
-        geodict,xvar,yvar = cls.getHDFHeader(hdffile)
+        #fgeodict,xvar,yvar = cls.getHDFHeader(hdffile)
+        fgeodict,first_column_duplicated = cls.getFileGeoDict(hdffile)
         f = h5py.File(hdffile,'r')
         zvar = f['z']
-        if bounds is None:
-            data = np.flipud(zvar[:])
-            if firstColumnDuplicated:
-                data = data[:,0:-1]
-                geodict['xmax'] -= geodict['dx']
-        else:
-            data,geodict = cls._subsetRegions(f['z'],bounds,geodict,xvar,yvar,firstColumnDuplicated)
+        data = np.flipud(zvar[:])
+        if first_column_duplicated:
+            data = data[:,0:-1]
+        data,geodict = subsetArray(data,data_range,fgeodict)
         f.close()
         return (data,geodict)
-
+    
     def save(self,filename,format='netcdf'):
         """Save a GMTGrid object to a file.
         :param filename:
@@ -792,19 +880,19 @@ class GMTGrid(Grid2D):
             f.write(struct.pack('320s',b'Created with GMTGrid() class, a product of the NEIC.')) #command
             f.write(struct.pack('160s',b'')) #remark
             if self._data.dtype not in [np.int16,np.int32,np.float32,np.float64]:
-                raise DataSetException('Data type of "%s" is not supported by the GMT native format.' % str(self._data.dtype))
+                msg = 'Data type of "%s" is not supported by the GMT native format.'
+                raise DataSetException(msg % str(self._data.dtype))
             fpos1 = f.tell()
-            newdata = np.fliplr(np.flipud(self._data[:])) #the left-right flip is necessary because of the way tofile() works
+            #the left-right flip is necessary because of the way tofile() works
+            newdata = np.fliplr(np.flipud(self._data[:])) 
             newdata.tofile(f)
             fpos2 = f.tell()
             bytesout = fpos2 - fpos1
             f.close()
-            
-
     
             
     @classmethod
-    def load(cls,gmtfilename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan):
+    def load(cls,filename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan):
         """Create a GMTGrid object from a (possibly subsetted, resampled, or padded) GMT grid file.
         :param gmtfilename:
           Name of input file.
@@ -824,91 +912,29 @@ class GMTGrid(Grid2D):
           * When sample bounds are outside (or too close to outside) the bounds of the grid and doPadding=False.
           * When the input file type is not recognized.
         """
-        filegeodict = cls.getFileGeoDict(gmtfilename)
-        if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
-            msg = 'Input samplegeodict must at least intersect with the bounds of %s' % gmtfilename
-            raise DataSetException(msg)
-         #verify that if not resampling, the dimensions of the sampling geodict must match the file.
-        if resample == False and samplegeodict is not None:
-            ddx = np.abs(filegeodict.dx - samplegeodict.dx)
-            ddy = np.abs(filegeodict.dy - samplegeodict.dy)
-            if ddx > GeoDict.EPS or ddx > GeoDict.EPS:
-                raise DataSetException('File dimensions are different from sampledict dimensions.') 
-        ftype = cls.getFileType(gmtfilename)
-        data = None
-        geodict = None
-        bounds = None
-        sampledict = None
-        firstColumnDuplicated = False
-        if samplegeodict is not None:
-            bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
-            samplebounds = bounds
-            #if the user wants resampling, we can't just read the bounds they asked for, but instead
-            #go outside those bounds.  if they asked for padding and the input bounds exceed the bounds
-            #of the file, then we can pad.  If they *didn't* ask for padding and input exceeds, raise exception.
-            if resample:
-                PADFACTOR = 2 #how many cells will we buffer out for resampling?
-                
-                dx = filegeodict.dx
-                dy = filegeodict.dy
-                fbounds = (filegeodict.xmin,filegeodict.xmax,filegeodict.ymin,filegeodict.ymax)
-                hasMeridianWrap = False
-                if fbounds[0] == fbounds[1]-360:
-                    firstColumnDuplicated = True
-                if firstColumnDuplicated or np.abs(fbounds[0]-(fbounds[1]-360)) == dx:
-                    hasMeridianWrap = True
-                isOutside = False
-                #make a bounding box that is PADFACTOR number of rows/cols greater than what the user asked for
-                rbounds = [bounds[0]-dx*PADFACTOR,bounds[1]+dx*PADFACTOR,bounds[2]-dy*PADFACTOR,bounds[3]+dy*PADFACTOR]
-                #compare that bounding box to the file bounding box
-                if not hasMeridianWrap:
-                    if fbounds[0] > rbounds[0] or fbounds[1] < rbounds[1] or fbounds[2] > rbounds[2] or fbounds[3] < rbounds[3]:
-                        isOutside = True
-                else:
-                    if fbounds[2] > rbounds[2] or fbounds[3] < rbounds[3]:
-                        isOutside = True
-                if isOutside:
-                    if doPadding==False:
-                        raise DataSetException('Cannot resample data given input bounds, unless doPadding is set to True.')
-                    else:
-                        samplebounds = rbounds
-                else:
-                    samplebounds = rbounds
-                sampledict = GeoDict.createDictFromBox(samplebounds[0],samplebounds[1],samplebounds[2],samplebounds[3],dx,dy)
-            else:
-                sampledict = samplegeodict
+        #get the geodict describing the source file, plus a boolean telling us if the last column
+        #is a duplicate of the first column
+        filegeodict,first_column_duplicated = cls.getFileGeoDict(filename)
+
+        #buffer out the sample geodict (if resampling) enough to allow interpolation.
+        sampledict = cls.bufferBounds(samplegeodict,filegeodict,resample=resample) #parent static method
+
+        #Ensure that the two grids at least 1) intersect and 2) are aligned if resampling is True.
+        cls.verifyBounds(filegeodict,sampledict,resample=resample) #parent static method, may raise an exception
+        sampledict = filegeodict.getIntersection(sampledict)
+        bounds = (sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax)
         
-        if ftype == 'native':
-            #we're dealing with a binary "native" GMT grid file
-            data,geodict = cls.readGMTNative(gmtfilename,sampledict,firstColumnDuplicated)
-        elif ftype == 'netcdf':
-            data,geodict = cls.readNetCDF(gmtfilename,sampledict,firstColumnDuplicated)
-        elif ftype == 'hdf':
-            data,geodict = cls.readHDF(gmtfilename,sampledict,firstColumnDuplicated)
-        else:
-            raise DataSetException('File type "%s" cannot be read.' % ftype)
-        
-        if doPadding:
-            #up to this point, all we've done is either read in the whole file or cut out (along existing
-            #boundaries) the section of data we want.  Now we do padding as necessary.
-            #_getPadding is a class method inherited from Grid (our grandparent)
-            leftpad,rightpad,bottompad,toppad,geodict = super(Grid2D,cls)._getPadding(geodict,sampledict,padValue)
-            data = np.hstack((leftpad,data))
-            data = np.hstack((data,rightpad))
-            data = np.vstack((toppad,data))
-            data = np.vstack((data,bottompad))
-        #if the user asks to resample, take the (possibly cut and padded) data set, and resample
-        #it using the Grid2D super class
+        data_range = cls.getDataRange(filegeodict,bounds,
+                                      first_column_duplicated=first_column_duplicated)
+        data,geodict = cls.readFile(filename,data_range)
+        pad_dict = cls.getPadding(filegeodict,samplegeodict,doPadding=doPadding) #parent static method
+        data,geodict = cls.padGrid(data,geodict,pad_dict)
+        grid = cls(data=data,geodict=geodict)
         if resample:
-            grid = Grid2D(data,geodict)
-            if samplegeodict.xmin > samplegeodict.xmax:
-                gd = samplegeodict.asDict()
-                gd['xmax'] += 360
-                samplegeodict = GeoDict(gd)
             grid = grid.interpolateToGrid(samplegeodict,method=method)
-            data = grid.getData()
-            geodict = grid.getGeoDict()
-        return cls(data,geodict)
+            
+        grid._data[np.isinf(grid._data)] = padValue
+        return grid
             
         
 class BinCDFArray(object):
