@@ -35,6 +35,42 @@ class GDALGrid(Grid2D):
         self._geodict = geodict
 
     @classmethod
+    def load(cls,filename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan):
+        """
+        This method should do the following:
+        1) If resampling, buffer bounds outwards.
+        2) Translate geographic bounds to pixel bounds (Grid2D static method)
+        3) Create a Grid2D subclass instance
+        4) Call readFile() with pixel bounds
+        5) Pad as requested.
+        6) Resample as requested.
+        7) Return Grid2D subclass.
+        """
+        #get the geodict describing the source file, plus a boolean telling us if the last column
+        #is a duplicate of the first column
+        filegeodict,first_column_duplicated = cls.getFileGeoDict(filename)
+
+        #buffer out the sample geodict (if resampling) enough to allow interpolation.
+        sampledict = cls.bufferBounds(samplegeodict,filegeodict,resample=resample) #parent static method
+
+        #Ensure that the two grids at least 1) intersect and 2) are aligned if resampling is True.
+        cls.verifyBounds(filegeodict,sampledict,resample=resample) #parent static method, may raise an exception
+        sampledict = filegeodict.getIntersection(sampledict)
+        bounds = (sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax)
+        
+        data_range = cls.getDataRange(filegeodict,bounds,
+                                      first_column_duplicated=first_column_duplicated)
+        data,geodict = cls.readFile(filename,data_range)
+        pad_dict = cls.getPadding(filegeodict,samplegeodict,doPadding=doPadding) #parent static method
+        data,geodict = cls.padGrid(data,geodict,pad_dict)
+        grid = cls(data=data,geodict=geodict)
+        if resample:
+            grid = grid.interpolateToGrid(samplegeodict,method=method)
+            
+        grid._data[np.isinf(grid._data)] = padValue
+        return grid
+
+    @classmethod
     def getFileGeoDict(cls,filename):
         """Get the spatial extent, resolution, and shape of grid inside ESRI grid file.
         :param filename:
@@ -67,7 +103,10 @@ class GDALGrid(Grid2D):
 
                 gd = GeoDict(geodict)
 
-        return gd
+        first_column_duplicated = False
+        if gd.xmin == gd.xmax-360:
+            first_column_duplicated = True
+        return (gd,first_column_duplicated)
     
     @classmethod
     def _subsetRegions(self,src,sampledict,fgeodict,firstColumnDuplicated):
@@ -193,41 +232,84 @@ class GDALGrid(Grid2D):
         return (data,geodict)
 
     @classmethod
-    def readGDAL(cls,filename,sampledict=None,firstColumnDuplicated=False):
+    def readFile(cls,filename,data_range):
         """
         Read an ESRI flt/bip/bil/bsq formatted file using rasterIO (GDAL Python wrapper).
         :param filename:
           Input ESRI formatted grid file.
-        :param sampledict:
-          GeoDict object containing bounds, x/y dims, ny/nx.
-        :param firstColumnDuplicated:
-          Indicate whether the last column is the same as the first column.
+        :param data_range:
+          Dictionary containing fields:
+            - iulx1 Upper left X of first (perhaps only) segment.
+            - iuly1 Upper left Y of first (perhaps only) segment.
+            - ilrx1 Lower right X of first (perhaps only) segment.
+            - ilry1 Lower right Y of first (perhaps only) segment.
+            (if bounds cross 180 meridian...)
+            - iulx2 Upper left X of second segment.
+            - iuly2 Upper left Y of second segment.
+            - ilrx2 Lower right X of second segment.
+            - ilry2 Lower right Y of second segment.
         :returns:
           A tuple of (data,geodict) where data is a 2D numpy array of all data found inside bounds, and 
           geodict gives the geo-referencing information for the data.
         """
-        fgeodict = cls.getFileGeoDict(filename)
+        iulx1 = data_range['iulx1']
+        ilrx1 = data_range['ilrx1']
+        iuly1 = data_range['iuly1']
+        ilry1 = data_range['ilry1']
+        if 'iulx2' in data_range:
+            iulx2 = data_range['iulx2']
+            ilrx2 = data_range['ilrx2']
+            iuly2 = data_range['iuly2'] 
+            ilry2 = data_range['ilry2']
+        else:
+            iulx2 = None
+            ilrx2 = None
+            iuly2 = None
+            ilry2 = None
         data = None
         with rasterio.drivers():
             with rasterio.open(filename) as src:
-                if sampledict is None:
-                    data = src.read()
-                    data = np.squeeze(data)
-                    tgeodict = fgeodict.asDict()
-                    if firstColumnDuplicated:
-                        data = data[:,0:-1]
-                        tgeodict['xmax'] -= geodict['dx']
-                        geodict = GeoDict(tgeodict)
-                    else:
-                        geodict = GeoDict(tgeodict)
+                window1 = ((iuly1,ilry1),
+                           (iulx1,ilrx1))
+                section1 = src.read(1,window=window1)
+                if 'iulx2' in data_range:
+                    window2 = ((iuly2,ilry2),
+                               (iulx2,ilrx2))
+                    section2 = src.read(1,window=window2)
+                    data = np.hstack((section1,section2))
                 else:
-                    data,geodict = cls._subsetRegions(src,sampledict,fgeodict,firstColumnDuplicated)
+                    data = section1
+
         #Put NaN's back in where nodata value was
         nodata = src.get_nodatavals()[0]
         if nodata is not None and data.dtype in [np.float32,np.float64]: #NaNs only valid for floating point data
             if (data==nodata).any():
                 data[data == nodata] = np.nan
+
+        ny,nx = data.shape
+        filegeodict,first_column_duplicated = cls.getFileGeoDict(filename)
+        ymax1,xmin1 = filegeodict.getLatLon(iuly1,iulx1)
+        ymin1,xmax1 = filegeodict.getLatLon(ilry1-1,ilrx1-1)
+        xmin = xmin1
+        ymax = ymax1
+        ymin = ymin1
+        xmax = xmax1
+        if iulx2 is not None:
+            ymin2,xmax2 = filegeodict.getLatLon(ilry2-1,ilrx2-1)
+            xmax = xmax2
+
+        dx = filegeodict.dx
+        dy = filegeodict.dy
+        geodict = GeoDict({'xmin':xmin,
+                           'xmax':xmax,
+                           'ymin':ymin,
+                           'ymax':ymax,
+                           'nx':nx,
+                           'ny':ny,
+                           'dx':dx,
+                           'dy':dy},adjust='res')
         
+            
         return (data,geodict)
                 
 
@@ -332,107 +414,6 @@ class GDALGrid(Grid2D):
         f.close()
             
     
-    @classmethod
-    def load(cls,filename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan):
-        """Create a GDALGrid object from a (possibly subsetted, resampled, or padded) GDAL-compliant grid file.
-        :param filename:
-          Name of input file.
-        :param samplegeodict:
-          GeoDict object used to specify subset bounds and resolution (if resample is selected)
-        :param resample:
-          Boolean used to indicate whether grid should be resampled from the file based on samplegeodict.
-        :param method:
-          If resample=True, resampling method to use ('nearest','linear','cubic','quintic')
-        :param doPadding:
-          Boolean used to indicate whether, if samplegeodict is outside bounds of grid, to pad values around the edges.
-        :param padValue:
-          Value to fill in around the edges if doPadding=True.
-        :returns:
-          GDALgrid instance (possibly subsetted, padded, or resampled)
-        :raises DataSetException:
-          * When sample bounds are outside (or too close to outside) the bounds of the grid and doPadding=False.
-          * When the input file type is not recognized.
-        """
-        filegeodict = cls.getFileGeoDict(filename)
-        if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
-            msg = 'Input samplegeodict must at least intersect with the bounds of %s' % filename
-            raise DataSetException(msg)
-        #verify that if not resampling, the dimensions of the sampling geodict must match the file.
-        if resample == False and samplegeodict is not None:
-            ddx = np.abs(filegeodict.dx - samplegeodict.dx)
-            ddy = np.abs(filegeodict.dy - samplegeodict.dy)
-            if ddx > GeoDict.EPS or ddx > GeoDict.EPS:
-                raise DataSetException('File dimensions are different from sampledict dimensions.') 
 
-        
-        data = None
-        geodict = None
-        bounds = None
-        sampledict = None
-        firstColumnDuplicated = False
-        if samplegeodict is not None:
-            bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
-            samplebounds = bounds
-            #if the user wants resampling, we can't just read the bounds they asked for, but instead
-            #go outside those bounds.  if they asked for padding and the input bounds exceed the bounds
-            #of the file, then we can pad.  If they *didn't* ask for padding and input exceeds, raise exception.
-            if resample:
-                PADFACTOR = 2 #how many cells will we buffer out for resampling?
-                dx = filegeodict.dx
-                dy = filegeodict.dy
-                fbounds = (filegeodict.xmin,filegeodict.xmax,filegeodict.ymin,filegeodict.ymax)
-                hasMeridianWrap = False
-                if fbounds[0] == fbounds[1]-360:
-                    firstColumnDuplicated = True
-                if firstColumnDuplicated or np.abs(fbounds[0]-(fbounds[1]-360)) == dx:
-                    hasMeridianWrap = True
-                isOutside = False
-                #make a bounding box that is PADFACTOR number of rows/cols greater than what the user asked for
-                rbounds = [bounds[0]-dx*PADFACTOR,bounds[1]+dx*PADFACTOR,bounds[2]-dy*PADFACTOR,bounds[3]+dy*PADFACTOR]
-                rxmin,rxmax,rymin,rymax = rbounds
-                fxmin,fxmax,fymin,fymax = fbounds
-                #compare that bounding box to the file bounding box
-                if not hasMeridianWrap:
-                    if fxmin > fxmax: #this is normal
-                        fxmax = fxmax + 360
-                    if fxmin > rxmin or fxmax < rxmax or fymin > rymin or fymax < rymax:
-                            isOutside = True
-                else:
-                    if fbounds[2] > rbounds[2] or fbounds[3] < rbounds[3]:
-                        isOutside = True
-                if isOutside:
-                    if doPadding==False:
-                        raise DataSetException('Cannot resample data given input bounds, unless doPadding is set to True.')
-                    else:
-                        samplebounds = rbounds
-                else:
-                    samplebounds = rbounds
-                sampledict = GeoDict.createDictFromBox(samplebounds[0],samplebounds[1],samplebounds[2],samplebounds[3],dx,dy)
-            else:
-                sampledict = samplegeodict
-                         
-                    
-        data,geodict = cls.readGDAL(filename,sampledict,firstColumnDuplicated=firstColumnDuplicated)
-
-        if doPadding:
-            #up to this point, all we've done is either read in the whole file or cut out (along existing
-            #boundaries) the section of data we want.  Now we do padding as necessary.
-            #_getPadding is a class method inherited from Grid (our grandparent)
-            #because we're in a class method, we have to do some gymnastics to call it.
-            leftpad,rightpad,bottompad,toppad,geodict = super(Grid2D,cls)._getPadding(geodict,sampledict,padValue)
-            data = np.hstack((leftpad,data))
-            data = np.hstack((data,rightpad))
-            data = np.vstack((toppad,data))
-            data = np.vstack((data,bottompad))
-        #if the user asks to resample, take the (possibly cut and padded) data set, and resample
-        #it using the Grid2D super class
-        if resample:
-            grid = Grid2D(data,geodict)
-            if samplegeodict.xmin > samplegeodict.xmax:
-                samplegeodict.xmax += 360
-            grid = grid.interpolateToGrid(samplegeodict,method=method)
-            data = grid.getData()
-            geodict = grid.getGeoDict()
-        return cls(data,geodict)
 
 

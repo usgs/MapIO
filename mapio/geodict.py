@@ -188,8 +188,15 @@ class GeoDict(object):
         fbottomrow = int(np.floor(trow))
         newymin,newxmax = geodict.getLatLon(fbottomrow,frightcol)
 
+        if newxmax > 180:
+            newxmax = newxmax - 360
+
         nx = int(np.round((newxmax-newxmin)/dx + 1))
         ny = int(np.round((newymax-newymin)/dy + 1))
+
+        #handle the wrap-around meridian case
+        if nx <= 0:
+            nx = ((newxmax - fxmin) + dx)/dx + ((fxmax - newxmin)+dx)/dx
         
         outdict = GeoDict({'xmin':newxmin,'xmax':newxmax,
                            'ymin':newymin,'ymax':newymax,
@@ -215,6 +222,10 @@ class GeoDict(object):
         
         fxmin,fxmax,fymin,fymax = (self.xmin,self.xmax,self.ymin,self.ymax)
         xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
+
+        #if the input geodict crosses the 180 meridian, deal with this...
+        
+        
         fdx,fdy = (self.dx,self.dy)
 
         trow,tcol = self.getRowCol(ymax,xmin,returnFloat=True)
@@ -338,10 +349,14 @@ class GeoDict(object):
           True if input geodict is completely outside this GeoDict,
           False if not.
         """
-        if self.xmax > self.xmin:
-            inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
+        newxmin = geodict.xmin
+        if geodict.xmin < self.xmin and (geodict.xmin + 360) < self.xmax:
+            inside_x = True
         else:
-            inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax+360
+            if self.xmax > self.xmin:
+                inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
+            else:
+                inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax+360
         inside_y = geodict.ymin >= self._ymin and geodict.ymax <= self._ymax
         if inside_x and inside_y:
             return True
@@ -687,6 +702,9 @@ class GeoDict(object):
             self._ymin = self._ymax - self._dy*(self._ny-1)
         elif adjust == 'res':
             self._dx = ((self._xmax - self._xmin)/(self._nx-1))
+            if self._dx < 0:
+                if self._xmin > self._xmax:
+                    self._dx = ((self._xmax+360) - self._xmin)/(self._nx-1)
             self._dy = ((self._ymax - self._ymin)/(self._ny-1))
         else:
             raise DataSetException('Unsupported adjust option "%s"' % adjust)

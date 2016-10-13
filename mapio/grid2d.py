@@ -22,6 +22,9 @@ from affine import Affine
 from rasterio import features
 from shapely.geometry import MultiPoint,Polygon,mapping
 
+
+
+
 class Grid2D(Grid):
     reqfields = set(['xmin','xmax','ymin','ymax','dx','dy','nx','ny'])
     def __init__(self,data=None,geodict=None):
@@ -51,6 +54,267 @@ class Grid2D(Grid):
             self._data = None
             self._geodict = None
 
+    @staticmethod
+    def getDataRange(fgeodict,bounds,first_column_duplicated=False,padding=None):
+        """For a given set of input bounds and information about a file, determine the rows and columns for bounds.
+
+        :param fgeodict:
+          GeoDict object for a given file.
+        :param bounds:
+          Sequence containing (xmin,xmax,ymin,ymax).  If bounds cross 180 meridian, xmin may be > xmax.
+        :param first_column_duplicated:
+          Boolean indicating whether the last column in a file is a duplicate of the first column.
+        :returns:
+          Dictionary containing fields:
+            - iulx1 Upper left X of first (perhaps only) segment.
+            - iuly1 Upper left Y of first (perhaps only) segment.
+            - ilrx1 Lower right X of first (perhaps only) segment.
+            - ilry1 Lower right Y of first (perhaps only) segment.
+            (if bounds cross 180 meridian...)
+            - iulx2 Upper left X of second segment.
+            - iuly2 Upper left Y of second segment.
+            - ilrx2 Lower right X of second segment.
+            - ilry2 Lower right Y of second segment.
+        """
+        data_range = {}
+
+        #get the file values
+        gxmin = fgeodict.xmin
+        gxmax = fgeodict.xmax
+        gymin = fgeodict.ymin
+        gymax = fgeodict.ymax
+        gdx = fgeodict.dx
+        gdy = fgeodict.dy
+        nx = fgeodict.nx
+        ny = fgeodict.ny
+
+        #make sure fgeodict and bounds are in the same longitude system (-180 to 180, -360 to 0, or 0 to 360)
+        xmin,xmax,ymin,ymax = bounds
+        file_normal = gxmin >= -180 and gxmin <= 180 and gxmax >= -180 and gxmax <= 180 and gxmax > gxmin
+        file_negative = gxmin < -180
+
+        bounds_normal = xmin >= -180 and xmin <= 180 and xmax >= -180 and xmax <= 180 and xmax > gxmin
+        bounds_negative = xmin < -180
+        bounds_360 = xmin >= 0 and xmin <= 360 and xmax >= 0 and xmax <= 360 and xmax > gxmin
+
+        #if the file coordinates are between -180 and 180, inclusive...
+        if file_normal:
+            #if the input sampling bound xmin is less than -180...
+            if bounds_negative:
+                xmin += 360
+                if xmax < -180:
+                    xmax += 360
+            if bounds_360:
+                if xmin > 180:
+                    xmin -= 360
+                if xmax > 180:
+                    xmax -= 360
+
+        #these three values are the same regardless of whether we cross meridian
+        data_range['iulx1'] = int(np.floor((xmin - gxmin)/gdx))
+        data_range['iuly1'] = int(np.floor((gymax - ymax)/gdy))
+        data_range['ilry1'] = int(np.ceil((gymax - ymin)/gdy) + 1)
+        if xmin > xmax:
+            data_range['ilrx1'] = nx
+
+            data_range['iulx2'] = 0
+            data_range['iuly2'] = data_range['iuly1']
+            data_range['ilrx2'] = int(np.ceil((xmax - gxmin)/gdx) + 1)
+            data_range['ilry2'] = data_range['ilry1']
+        else:
+            data_range['ilrx1'] = int(np.ceil((xmax - gxmin)/gdx) + 1)
+
+        if first_column_duplicated:
+            data_range['ilrx2'] = data_range['ilrx2'] - 1
+        return data_range
+            
+    @staticmethod
+    def verifyBounds(filegeodict,samplegeodict,resample=False):
+        """Ensure that the two grids represented at least 1) intersect and 2) are aligned if resampling is True.
+
+        """
+        if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
+            msg = 'Input samplegeodict must at least intersect with the bounds of %s' % filename
+            raise DataSetException(msg)
+        #verify that if not resampling, the dimensions of the sampling geodict must match the file.
+        if resample == False and samplegeodict is not None:
+            ddx = np.abs(filegeodict.dx - samplegeodict.dx)
+            ddy = np.abs(filegeodict.dy - samplegeodict.dy)
+            if ddx > GeoDict.EPS or ddx > GeoDict.EPS:
+                raise DataSetException('File dimensions are different from sampledict dimensions.') 
+
+    @staticmethod
+    def bufferBounds(samplegeodict,filegeodict,resample=False,buffer_pixels=1):
+        """Buffer requested bounds out by buffer_pixels pixels, or edge of grid.
+
+        Buffer pixels shoud be at filegeodict resolution.
+        """
+        if not resample:
+            return samplegeodict
+        dx = filegeodict.dx
+        dy = filegeodict.dy
+        fxmin,fxmax = filegeodict.xmin,filegeodict.xmax
+        fymin,fymax = filegeodict.ymin,filegeodict.ymax
+        sxmin,sxmax = samplegeodict.xmin,samplegeodict.xmax
+        symin,symax = samplegeodict.ymin,samplegeodict.ymax
+        buffer_geo_x = buffer_pixels * dx
+        buffer_geo_y = buffer_pixels * dy
+
+        xmin = sxmin - buffer_geo_x
+        xmax = sxmax + buffer_geo_x
+        ymin = symin - buffer_geo_y
+        ymax = symax + buffer_geo_y
+        
+        #assign the "most minimum" x value, taking 180 meridian into account
+        is_180 = fxmin >= -180 and fxmax <= 180
+        if xmin < fxmin:
+            if is_180:
+                if xmin > -180:
+                    xmin = fxmin
+
+        #assign the "most maximum" x value, taking 180 meridian into account
+        if xmax > fxmax:
+            if is_180:
+                if xmax < 180:
+                    xmax = fxmax
+
+        if ymin < fymin:
+            ymin = fymin
+
+        if ymax > fymax:
+            ymax = fymax
+
+        #make sure that boundaries are on filegeodict boundaries - 
+        #if not, go outwards until we hit one
+        ddxmin = xmin/dx
+        if int(ddxmin) != ddxmin:
+            xmin = np.floor(ddxmin) * dx
+        ddxmax = xmax/dx
+        if int(ddxmax) != ddxmax:
+            xmax = np.ceil(ddxmax) * dx
+        ddymin = ymin/dy
+        if int(ddymin) != ddymin:
+            ymin = np.floor(ddymin) * dy
+        ddymax = ymax/dy
+        if int(ddymax) != ddymax:
+            ymax = np.ceil(ddymax) * dy
+            
+        geodict = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,dx,dy,inside=True)
+        return geodict
+
+    @staticmethod
+    def padGrid(data,geodict,pad_dict):
+        """Pad input data array with pixels specified by pad_dict on each side.
+
+        :param data:
+          2D numpy array of data.
+        :param geodict:
+          GeoDict object describing data.
+        :param pad_dict:
+          A dictionary containing fields:
+            - padleft The number of padding pixels on the left edge.
+            - padright The number of padding pixels on the right edge.
+            - padbottom The number of padding pixels on the bottom edge.
+            - padtop The number of padding pixels on the top edge.
+        :returns:
+          Tuple of (data,geodict) where data has been padded and geodict represents new padded data.
+        """
+        if pad_dict['padleft'] == 0 and pad_dict['padright'] == 0 and \
+            pad_dict['padbottom'] == 0 and pad_dict['padtop'] == 0:
+            return (data,geodict)
+        newdata = data.copy()
+        ny,nx = newdata.shape
+        dx,dy = geodict.dx,geodict.dy
+        #we're padding with inf so that we don't interfere with other nan pixels in the data
+        leftcols = np.ones((ny,pad_dict['padleft'])) * np.inf
+        newdata = np.hstack((leftcols,newdata))
+        ny,nx = newdata.shape
+        rightcols = np.ones((ny,pad_dict['padright'])) * np.inf
+        newdata = np.hstack((newdata,rightcols))
+        ny,nx = newdata.shape
+        bottomrows = np.ones((pad_dict['padbottom'],nx)) * np.inf
+        newdata = np.vstack((newdata,bottomrows))
+        ny,nx = newdata.shape
+        toprows = np.ones((pad_dict['padtop'],nx)) * np.inf
+        newdata = np.vstack((toprows,newdata))
+        
+        ny,nx = newdata.shape
+
+        #get the shapes of the pads - sometimes these can have a shape of (3,0) and a length of 3
+        leftheight,leftwidth = leftcols.shape
+        rightheight,rightwidth = rightcols.shape
+        bottomheight,bottomwidth = bottomrows.shape
+        topheight,topwidth = toprows.shape
+        
+        newxmin = geodict.xmin - leftwidth*dx
+        newxmax = geodict.xmax + rightwidth*dx
+        newymin = geodict.ymin - bottomheight*dy
+        newymax = geodict.ymax + topheight*dy
+        newdict = GeoDict({'xmin':newxmin,
+                           'xmax':newxmax,
+                           'ymin':newymin,
+                           'ymax':newymax,
+                           'nx':nx,
+                           'ny':ny,
+                           'dx':dx,
+                           'dy':dy},adjust='res')
+        return (newdata,newdict)
+                           
+    
+    @staticmethod
+    def getPadding(filegeodict,samplegeodict,doPadding=False):
+        """Determine how many pixels of padding there need to be on each side of requested grid.
+
+        :param filegeodict:
+          GeoDict object specifying the spatial information from a source file.
+        :param samplegeodict:
+          GeoDict object specifying the spatial information for a desired sampling regime.
+        :param resampling:
+          Boolean indicating that user wants to resample the data from the file to the samplegeodict.
+        :raises DataSetException:
+          When resampling is False and filegeodict and samplegeodict are not pixel aligned.
+        :returns:
+          A dictionary containing fields:
+            - padleft The number of padding pixels on the left edge.
+            - padright The number of padding pixels on the right edge.
+            - padbottom The number of padding pixels on the bottom edge.
+            - padtop The number of padding pixels on the top edge.
+        """
+        if not doPadding:
+            pad_dict = {'padleft':0,
+                        'padright':0,
+                        'padbottom':0,
+                        'padtop':0}
+        else:
+            #get pad left columns - go outside specified bounds if not exact edge
+            pxmin,pxmax,pymin,pymax = (samplegeodict.xmin,samplegeodict.xmax,
+                                       samplegeodict.ymin,samplegeodict.ymax)
+            gxmin,gxmax,gymin,gymax = (filegeodict.xmin,filegeodict.xmax,
+                                       filegeodict.ymin,filegeodict.ymax)
+            dx,dy = (filegeodict.dx,filegeodict.dy)
+            ny,nx = (filegeodict.ny,filegeodict.nx)
+
+            padleftcols = int(np.ceil((gxmin - pxmin)/dx))
+            padrightcols = int(np.ceil((pxmax - gxmax)/dx))
+            padbottomrows = int(np.ceil((gymin - pymin)/dy))
+            padtoprows = int(np.ceil((pymax - gymax)/dy))
+
+            #if any of these are negative, set them to zero
+            if padleftcols < 0:
+                padleftcols = 0
+            if padrightcols < 0:
+                padrightcols = 0
+            if padbottomrows < 0:
+                padbottomrows = 0
+            if padtoprows < 0:
+                padtoprows = 0
+            pad_dict = {'padleft':padleftcols,
+                       'padright':padrightcols,
+                       'padbottom':padbottomrows,
+                       'padtop':padtoprows}
+        return pad_dict
+                   
+    
     def __repr__(self):
         """
         String representation of a Grid2D object.
@@ -103,11 +367,32 @@ class Grid2D(Grid):
                    'dy':1.0}
         gd = GeoDict(geodict)
         return (data,gd)
-    
-    #This should be a @classmethod in subclasses
+
     @abc.abstractmethod
-    def load(filename,bounds=None,resample=False,padValue=None):
+    def getFileGeoDict(filename):
+        #this should return a geodict and a boolean indicating whether the first 
+        #column is duplicated at the end of each row (some data providers do this).
         raise NotImplementedError('Load method not implemented in base class')
+
+    @abc.abstractmethod
+    def readFile(filename,data_range):
+        """Read in data from the given file, at the pixels specified in data_range.
+
+        :param filename:
+          Name of file to read.
+        :param data_range:
+          Dictionary containing fields:
+            - iulx1 Upper left X of first (perhaps only) segment.
+            - iuly1 Upper left Y of first (perhaps only) segment.
+            - ilrx1 Lower right X of first (perhaps only) segment.
+            - ilry1 Lower right Y of first (perhaps only) segment.
+            (if bounds cross 180 meridian...)
+            - iulx2 Upper left X of second segment.
+            - iuly2 Upper left Y of second segment.
+            - ilrx2 Lower right X of second segment.
+            - ilry2 Lower right Y of second segment.
+        """
+        raise NotImplementedError('readFile is only implemented in Grid2D subclasses.')
 
     @classmethod
     def copyFromGrid(cls,grid):
@@ -491,7 +776,8 @@ class Grid2D(Grid):
         :raises DataSetException: 
            If the method is not one of ['nearest','linear','cubic']
            If the resulting interpolated grid shape does not match input geodict.
-        This function modifies the internal griddata and geodict object variables.
+        :returns:
+          A new instance of the Grid2D class or subclass with interpolated data.
         """
         if method not in ['linear', 'cubic','nearest']:
             raise DataSetException('Resampling method must be one of "linear", "cubic","nearest"')
@@ -565,7 +851,7 @@ class Grid2D(Grid):
                  'dy':geodict.dy}
         #self._geodict = GeoDict(gdict)
         newdict = GeoDict(gdict)
-        return Grid2D(newdata,newdict)
+        return self.__class__(newdata,newdict)
 
     @classmethod
     def rasterizeFromGeometry(cls,shapes,geodict,burnValue=1.0,fillValue=np.nan,

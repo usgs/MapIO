@@ -9,7 +9,6 @@ import tempfile
 
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
 
 #hack the path so that I can debug these functions if I need to
 homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
