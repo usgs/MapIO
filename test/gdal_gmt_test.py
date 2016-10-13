@@ -265,7 +265,55 @@ def test_meridian_interp():
             finally:
                 if os.path.isdir(tdir):
                     shutil.rmtree(tdir)
-            
+
+# def test_360():
+#     gridclasses = [GDALGrid,GMTGrid]
+#     for gridclass in gridclasses:
+#         for fileformat in FORMATS[gridclass]:
+#             tdir = None
+#             try:
+#                 geodict = GeoDict({'xmin':-180,
+#                                    'xmax':120,
+#                                    'ymin':-90,
+#                                    'ymax':90,
+#                                    'dx':60,
+#                                    'dy':45,
+#                                    'nx':6,
+#                                    'ny':5})
+#                 data = np.arange(1,31,dtype=np.float32).reshape((5,6))
+#                 tdir = tempfile.mkdtemp()
+#                 testfile = os.path.join(tdir,'test.bil')
+#                 testhdr = os.path.join(tdir,'test.hdr')
+#                 srcgrid = gridclass(data,geodict)
+#                 srcgrid.save(testfile,format=fileformat)
+#                 sampledict = GeoDict({'xmin':-90,
+#                                       'xmax':30,
+#                                       'ymin':-22.5,
+#                                       'ymax':22.5,
+#                                       'dx':60,
+#                                       'dy':45,
+#                                       'nx':3,
+#                                       'ny':2})
+#                 testdata = np.array([[11.5,12.5,13.5],
+#                                      [17.5,18.5,19.5],
+#                                      ],dtype=np.float32)
+#                 testdict = GeoDict({'xmin':-90,
+#                                     'xmax':30,
+#                                     'ymin':-22.5,
+#                                     'ymax':22.5,
+#                                     'dx':60,
+#                                     'dy':45,
+#                                     'nx':3,
+#                                     'ny':2})
+#                 samplegrid = gridclass.load(testfile,sampledict,resample=True)
+#                 np.testing.assert_almost_equal(samplegrid.getData(),testdata)
+#                 assert samplegrid.getGeoDict() == testdict
+#             except Exception as e:
+#                 raise(e)
+#             finally:
+#                 if os.path.isdir(tdir):
+#                     shutil.rmtree(tdir)    
+    
 if __name__ == '__main__':
     test_simple_subset()
     test_simple_meridian()
