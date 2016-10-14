@@ -827,8 +827,8 @@ class Grid2D(Grid):
         gxi = np.linspace(samplexmin,samplexmax,num=samplenx)
         gyi = np.linspace(sampleymin,sampleymax,num=sampleny)
 
-        xi = (gxi - samplexmin)/sampledx
-        yi = np.array(sorted(((sampleymax - gyi)/sampledy)))
+        xi = (gxi - hostxmin)/sampledx
+        yi = np.array(sorted(((hostymax - gyi)/sampledy)))
 
         return (xi,yi)
     
