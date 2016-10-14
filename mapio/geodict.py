@@ -171,6 +171,12 @@ class GeoDict(object):
             raise DataSetException('Input geodict has no overlap.')
         fxmin,fxmax,fymin,fymax = (self.xmin,self.xmax,self.ymin,self.ymax)
         xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
+
+        #handle the cases when the xmin is less than -180
+        #we're set up to handle xmin > xmax, so let's add 360 to it.
+        if xmin < -180 and fxmin > -180:
+            fxmin -= 360
+        
         dx,dy = (geodict.dx,geodict.dy)
         #get the intersected bounds
         txmin = max(fxmin,xmin)
