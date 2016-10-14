@@ -58,7 +58,7 @@ class GDALGrid(Grid2D):
         sampledict = filegeodict.getIntersection(sampledict)
         bounds = (sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax)
         
-        data_range = cls.getDataRange(filegeodict,bounds,
+        data_range = cls.getDataRange(filegeodict,sampledict,
                                       first_column_duplicated=first_column_duplicated)
         data,geodict = cls.readFile(filename,data_range)
         pad_dict = cls.getPadding(filegeodict,samplegeodict,doPadding=doPadding) #parent static method
@@ -66,8 +66,9 @@ class GDALGrid(Grid2D):
         grid = cls(data=data,geodict=geodict)
         if resample:
             grid = grid.interpolateToGrid(samplegeodict,method=method)
-            
-        grid._data[np.isinf(grid._data)] = padValue
+
+        if np.any(np.isinf(grid._data)):
+            grid._data[np.isinf(grid._data)] = padValue
         return grid
 
     @classmethod
@@ -103,10 +104,8 @@ class GDALGrid(Grid2D):
 
                 gd = GeoDict(geodict)
 
-        first_column_duplicated = False
-        if gd.xmin == gd.xmax-360:
-            first_column_duplicated = True
-        return (gd,first_column_duplicated)
+        newgeodict,first_column_duplicated = cls.checkFirstColumnDuplicated(gd)
+        return (newgeodict,first_column_duplicated)
     
     @classmethod
     def _subsetRegions(self,src,sampledict,fgeodict,firstColumnDuplicated):

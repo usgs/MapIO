@@ -179,13 +179,13 @@ class GeoDict(object):
         tymax = min(fymax,ymax)
         #now align those bounds with the input geodict
         trow,tcol = geodict.getRowCol(tymax,txmin,returnFloat=True)
-        fleftcol = int(np.ceil(tcol))
-        ftoprow = int(np.ceil(trow))
+        fleftcol = int(np.round(tcol))
+        ftoprow = int(np.round(trow))
         newymax,newxmin = geodict.getLatLon(ftoprow,fleftcol)
 
         trow,tcol = geodict.getRowCol(tymin,txmax,returnFloat=True)
-        frightcol = int(np.floor(tcol))
-        fbottomrow = int(np.floor(trow))
+        frightcol = int(np.round(tcol))
+        fbottomrow = int(np.round(trow))
         newymin,newxmax = geodict.getLatLon(fbottomrow,frightcol)
 
         if newxmax > 180:

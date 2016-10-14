@@ -223,7 +223,7 @@ def test():
     #                'dx':1.0,'dy':1.0,
     #                'nx':6,'ny':6})
     # print('Passed test of getIntersection() method')
-    
+
 if __name__ == '__main__':
     test()
 
