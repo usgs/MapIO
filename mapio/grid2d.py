@@ -55,13 +55,45 @@ class Grid2D(Grid):
             self._geodict = None
 
     @staticmethod
-    def getDataRange(fgeodict,bounds,first_column_duplicated=False,padding=None):
+    def checkFirstColumnDuplicated(geodict):
+        """Check to see if the first column in a file described by geodict is duplicated by the last column.
+
+        :param geodict:
+          GeoDict object which may have duplicate column.
+        :returns:
+          Tuple containing: 
+           - GeoDict object representing a grid with the last column removed.
+           - Boolean indicating whether the last column was a duplicate.
+        """
+        first_column_duplicated = False
+        cols_per_degree = 1/geodict.dx
+        is_even = np.isclose(cols_per_degree,np.floor(cols_per_degree))
+        is_global = (geodict.xmax - geodict.xmin) >= 360 or (geodict.xmax-geodict.xmin) < 0
+        newgeodict = geodict.copy()
+        if is_even and is_global:
+            if np.floor(cols_per_degree)*360 == geodict.nx-1:
+                first_column_duplicated = True
+                nx = geodict.nx-1
+                xmax = geodict.xmin + (nx-1)*geodict.dx
+                newgeodict = GeoDict({'xmin':geodict.xmin,
+                                      'xmax':xmax,
+                                      'ymin':geodict.ymin,
+                                      'ymax':geodict.ymax,
+                                      'nx':nx,
+                                      'ny':geodict.ny,
+                                      'dx':geodict.dx,
+                                      'dy':geodict.dy})
+        
+        return (newgeodict,first_column_duplicated)
+            
+    @staticmethod
+    def getDataRange(fgeodict,sampledict,first_column_duplicated=False,padding=None):
         """For a given set of input bounds and information about a file, determine the rows and columns for bounds.
 
         :param fgeodict:
           GeoDict object for a given file.
-        :param bounds:
-          Sequence containing (xmin,xmax,ymin,ymax).  If bounds cross 180 meridian, xmin may be > xmax.
+        :param sampledict:
+          Sampling GeoDict object.
         :param first_column_duplicated:
           Boolean indicating whether the last column in a file is a duplicate of the first column.
         :returns:
@@ -89,13 +121,14 @@ class Grid2D(Grid):
         ny = fgeodict.ny
 
         #make sure fgeodict and bounds are in the same longitude system (-180 to 180, -360 to 0, or 0 to 360)
-        xmin,xmax,ymin,ymax = bounds
+        xmin,xmax,ymin,ymax = sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax
         file_normal = gxmin >= -180 and gxmin <= 180 and gxmax >= -180 and gxmax <= 180 and gxmax > gxmin
         file_negative = gxmin < -180
 
         bounds_normal = xmin >= -180 and xmin <= 180 and xmax >= -180 and xmax <= 180 and xmax > gxmin
         bounds_negative = xmin < -180
-        bounds_360 = xmin >= 0 and xmin <= 360 and xmax >= 0 and xmax <= 360 and xmax > gxmin
+        #bounds_360 = xmin >= 0 and xmin <= 360 and xmax >= 0 and xmax <= 360 and xmax > gxmin
+        bounds_360 = xmin >= 180 or xmax >= 180
 
         #if the file coordinates are between -180 and 180, inclusive...
         if file_normal:
@@ -111,27 +144,47 @@ class Grid2D(Grid):
                     xmax -= 360
 
         #these three values are the same regardless of whether we cross meridian
-        data_range['iulx1'] = int(np.floor((xmin - gxmin)/gdx))
-        data_range['iuly1'] = int(np.floor((gymax - ymax)/gdy))
-        data_range['ilry1'] = int(np.ceil((gymax - ymin)/gdy) + 1)
-        if xmin > xmax:
-            data_range['ilrx1'] = nx
+        iuly1,iulx1 = fgeodict.getRowCol(ymax,xmin)
+        ilrx1 = iulx1 + sampledict.nx
+        ilry1 = iuly1 + sampledict.ny
 
-            data_range['iulx2'] = 0
-            data_range['iuly2'] = data_range['iuly1']
-            data_range['ilrx2'] = int(np.ceil((xmax - gxmin)/gdx) + 1)
-            data_range['ilry2'] = data_range['ilry1']
-        else:
-            data_range['ilrx1'] = int(np.ceil((xmax - gxmin)/gdx) + 1)
+        iulx2 = None
+        ilrx2 = None
+        iuly2 = None
+        ilry2 = None
+        if ilrx1 > nx:
+            ilrx2 = ilrx1-nx
+            ilrx1 = nx
+            iulx2 = 0
+            iuly2 = iuly1
+            ilry2 = ilry1
+        if ilry1 > ny:
+            ilry1 = ny
 
-        if first_column_duplicated:
-            data_range['ilrx2'] = data_range['ilrx2'] - 1
+        data_range['iulx1'] = int(iulx1)
+        data_range['ilrx1'] = int(ilrx1)
+        data_range['iuly1'] = int(iuly1)
+        data_range['ilry1'] = int(ilry1)
+        if iulx2 is not None:
+            data_range['iulx2'] = int(iulx2)
+            data_range['ilrx2'] = int(ilrx2)
+            data_range['iuly2'] = int(iuly2)
+            data_range['ilry2'] = int(ilry2)
+
         return data_range
             
     @staticmethod
     def verifyBounds(filegeodict,samplegeodict,resample=False):
         """Ensure that the two grids represented at least 1) intersect and 2) are aligned if resampling is True.
 
+        :param filegeodict:
+          GeoDict object describing file.
+        :param samplegeodict:
+          GeoDict object describing grid to use for sampling.
+        :param resample:
+          Boolean indicating whether we want to resample.
+        :raises:
+          DataSetException when geodicts do not intersect or if the grids are not aligned.
         """
         if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
             msg = 'Input samplegeodict must at least intersect with the bounds of %s' % filename
@@ -148,6 +201,17 @@ class Grid2D(Grid):
         """Buffer requested bounds out by buffer_pixels pixels, or edge of grid.
 
         Buffer pixels shoud be at filegeodict resolution.
+
+        :param samplegeodict:
+          GeoDict object describing grid to use for sampling.
+        :param filegeodict:
+          GeoDict object describing file.
+        :param resample:
+          Boolean indicating whether we want to resample.
+        :param buffer_pixels:
+          Number of pixels to buffer bounds in any possible direction.
+        :returns:
+          GeoDict which has been buffered by the appropriate number of pixels.
         """
         if not resample:
             return samplegeodict
