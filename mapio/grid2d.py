@@ -777,53 +777,58 @@ class Grid2D(Grid):
         #translate geographic coordinates to 2 1-D arrays of X and Y pixel coordinates
         #remember that pixel coordinates are (0,0) at the top left and increase going down and to the right
         #geographic coordinates are (xmin,ymin) at the bottom left and increase going up and to the right
-        dims = self._data.shape
-        ny1 = self._geodict.ny
-        nx1 = self._geodict.nx
 
-        #handle meridian crossing grids
-        if self._geodict.xmin > self._geodict.xmax:
-            xmax1 = self._geodict.xmax + 360
-        else:
-            xmax1 = self._geodict.xmax
-        xmin1 = self._geodict.xmin
-        
-        ymin1 = self._geodict.ymin
-        ymax1 = self._geodict.ymax
-        dx1 = self._geodict.dx
-        dy1 = self._geodict.dy
+        #we need to check if these two grids (host and sample) are in the same longitude system
+        #if not, adjust one to the other
+        hostxmin = self._geodict.xmin
+        hostxmax = self._geodict.xmax
+        hostymin = self._geodict.ymin
+        hostymax = self._geodict.ymax
+        host_normal = hostxmin >= -180 and hostxmin <= 180 and hostxmax >= -180 and hostxmax <= 180 and hostxmin > hostxmax
+        host_negative = hostxmin < -180
+        host_360 = hostxmin >= 180 or hostxmax >= 180
+
+        samplexmin = geodict.xmin
+        samplexmax = geodict.xmax
+        sampleymin = geodict.ymin
+        sampleymax = geodict.ymax
+        sample_normal = samplexmin >= -180 and samplexmin <= 180 and samplexmax >= -180 and samplexmax <= 180 and samplexmin > samplexmax
+        sample_negative = samplexmin < -180
+        sample_360 = samplexmin >= 180 or samplexmax >= 180
+
+        #get everything into negative mode
+        if host_normal:
+            if hostxmin > hostxmax:
+                hostxmin -= 360
+        if host_360:
+            if hostxmin > 180:
+                hostxmin -= 360
+            if hostxmax > 180:
+                hostxmax -= 360
+        if sample_normal:
+            if samplexmin > samplexmax:
+                samplexmin -= 360
+        if sample_360:
+            if samplexmin > 180:
+                samplexmin -= 360
+            if samplexmax > 180:
+                samplexmax -= 360
         
         #extract the geographic information about the grid we're sampling to
-        ny = geodict.ny
-        nx = geodict.nx
+        sampleny = geodict.ny
+        samplenx = geodict.nx
+        sampledx = geodict.dx
+        sampledy = geodict.dy
 
-        #handle meridian crossing grids
-        if geodict.xmin > geodict.xmax:
-            xmax = geodict.xmax + 360
-        else:
-            xmax = geodict.xmax
-        xmin = geodict.xmin
-
-        ymin = geodict.ymin
-        ymax = geodict.ymax
-        dx = geodict.dx
-        dy = geodict.dy
-
-        #make sure that the grid we're resampling TO is completely contained by our current grid
-        if xmin1 > xmin or xmax1 < xmax or ymin1 > ymin or ymax1 < ymax:
+        #make sure that the grid we're resampling TO is completely contained by host
+        if samplexmin < hostxmin or samplexmax > hostxmax or sampleymin < hostymin or sampleymax > hostymax:
             raise DataSetException('Grid you are resampling TO is not completely contained by base grid.')
         
-        gxi = np.linspace(xmin,xmax,num=nx)
-        gyi = np.linspace(ymin,ymax,num=ny)
-        
-        #we need to handle the meridian crossing here...
-        if xmin > xmax:
-            xmax += 360
-            xmin1 += 360
+        gxi = np.linspace(samplexmin,samplexmax,num=samplenx)
+        gyi = np.linspace(sampleymin,sampleymax,num=sampleny)
 
-        xi = (gxi - xmin1)/dx1
-        #yi = (gyi - ymin1)/dy1
-        yi = np.array(sorted(((ymax1 - gyi)/dy1)))
+        xi = (gxi - hostxmin)/sampledx
+        yi = np.array(sorted(((hostymax - gyi)/sampledy)))
 
         return (xi,yi)
     

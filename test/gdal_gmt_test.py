@@ -315,10 +315,10 @@ def test_meridian_interp():
 #                     shutil.rmtree(tdir)    
     
 if __name__ == '__main__':
+    test_simple_interp()
     test_simple_subset()
     test_simple_meridian()
     test_meridian_interp()
-    test_simple_interp()
     test_simple_pad()
     
     
