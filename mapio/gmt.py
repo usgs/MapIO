@@ -915,9 +915,13 @@ class GMTGrid(Grid2D):
         filegeodict,first_column_duplicated = cls.getFileGeoDict(filename)
 
         #buffer out the sample geodict (if resampling) enough to allow interpolation.
-        sampledict = cls.bufferBounds(samplegeodict,filegeodict,resample=resample) #parent static method
+        if samplegeodict is not None:
+            sampledict = cls.bufferBounds(samplegeodict,filegeodict,resample=resample) #parent static method
+        else:
+            sampledict = filegeodict
 
         #Ensure that the two grids at least 1) intersect and 2) are aligned if resampling is True.
+        
         cls.verifyBounds(filegeodict,sampledict,resample=resample) #parent static method, may raise an exception
         sampledict = filegeodict.getIntersection(sampledict)
         bounds = (sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax)
