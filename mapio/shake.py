@@ -297,92 +297,138 @@ class ShakeGrid(MultiGrid):
 
     @classmethod
     def load(cls,shakefilename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan,adjust=None):
-        """Create a ShakeGrid object from a ShakeMap grid.xml file.
-        :param shakefilename:
-          File name or File-like object of ShakeMap grid.xml file.
-        :param samplegeodict:
-          GeoDict used to specify subset bounds and resolution (if resample is selected)
-        :param resample:
-          Boolean used to indicate whether grid should be resampled from the file based on samplegeodict.
-        :param method:
-          If resample=True, resampling method to use ('nearest','linear','cubic','quintic')
-        :param doPadding:
-          Boolean used to indicate whether, if samplegeodict is outside bounds of grid, to pad values around the edges.
-        :param padValue:
-          Value to fill in around the edges if doPadding=True.
-        :param adjust:
-          String (one of None,'bounds','res') - adjust some of the ShakeMap parameters as necessary (usually "res").
-            None: All input parameters are assumed to be self-consistent, an exception will be raised if they are not.
-            'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin will be recalculated.
-            'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will be recalculated.
-        :returns:
-          ShakeGrid object.
-        """
-        #geodict can have dx/dy OR nx/ny.  If given both, dx/dy will be used to re-calculate ny/nx
+
+        #readShakeFile takes a file object.  Figure out if shakefilename is a file name or file object.
         isFileObj = False
         if not hasattr(shakefilename,'read'):
             shakefile = open(shakefilename,'r')
         else:
             isFileObj = True
             shakefile = shakefilename
-
-        if samplegeodict is not None:
-            #fill in ny/nx or dx/dy, whichever is not specified.  dx/dy dictate if both pairs are specified.
-            bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
-            dx,dy = samplegeodict.dx,samplegeodict.dy
-            ny,nx = samplegeodict.ny,samplegeodict.nx
-
-
-        #read the file using the available function
+        
+        #read everything from the file
         layers,fgeodict,eventDict,shakeDict,uncertaintyDict = readShakeFile(shakefile,adjust=adjust)
-            
-        if not isFileObj:
-            shakefile.close()
+        
+        #If the sample grid is aligned with the host grid, then resampling won't accomplish anything 
+        # if samplegeodict is not None and fgeodict.isAligned(samplegeodict):
+        #     resample = False
 
-        if samplegeodict is None:
-            geodict = fgeodict
+        #get area of shakemap that intersects with the desired input sampling grid
+        if samplegeodict is not None:
+            sampledict = fgeodict.getIntersection(samplegeodict)
         else:
-            bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
-            isOutside = False
-            xmin = fgeodict.xmin
-            xmax = fgeodict.xmax
-            ymin = fgeodict.ymin
-            ymax = fgeodict.ymax
-            if bounds[0] < xmin or bounds[1] > xmax or bounds[2] < ymin or bounds[3] > ymax:
-                isOutside = True
-            if isOutside and resample and not doPadding:
-                raise DataSetException('Cannot resample data given input bounds, unless doPadding is set to True.')
-
-            if doPadding:
-                leftpad,rightpad,bottompad,toppad,geodict = super(MultiGrid,cls)._getPadding(fgeodict,samplegeodict,padValue)
-                for (layername,layerdata) in layers.items():
-                    #pad left side
-                    layerdata = np.hstack((leftpad,layerdata))
-                    #pad right side
-                    layerdata = np.hstack((layerdata,rightpad))
-                    #pad bottom
-                    layerdata = np.vstack((layerdata,bottompad))
-                    #pad top
-                    layerdata = np.vstack((toppad,layerdata))
-                    grid = Grid2D(layerdata,geodict)
-                    if resample: #should I just do an interpolateToGrid() here?
-                        grid = grid.interpolateToGrid(samplegeodict,method=method)
-                    layers[layername] = grid.getData()
-                geodict = grid.getGeoDict().copy()
-            else:
-                tgeodict = fgeodict.getIntersection(samplegeodict)
-                geodict = fgeodict.getBoundsWithin(tgeodict)
-                for (layername,layerdata) in layers.items():
-                    newgrid = Grid2D(layerdata,fgeodict)
-                    if resample:
-                        newgrid = newgrid.interpolateToGrid(samplegeodict,method=method)
-                    else:
-                        newgrid = newgrid.cut(geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
-                    layers[layername] = newgrid.getData()
-                if resample:
-                    geodict = samplegeodict
+            sampledict = fgeodict
             
-        return cls(layers,geodict,eventDict,shakeDict,uncertaintyDict)
+        #Ensure that the two grids at least 1) intersect and 2) are aligned if resampling is True.
+        Grid2D.verifyBounds(fgeodict,sampledict,resample=resample) #parent static method, may raise an exception
+
+        pad_dict = Grid2D.getPadding(fgeodict,samplegeodict,doPadding=doPadding) #parent static method
+        newlayers = OrderedDict()
+        newgeodict = None
+        for layername,layerdata in layers.items():
+            data,geodict = Grid2D.padGrid(layerdata,fgeodict,pad_dict)
+            grid = Grid2D(data,geodict)
+            if resample:
+                grid = grid.interpolateToGrid(samplegeodict,method=method)
+
+            if np.any(np.isinf(grid._data)):
+                grid._data[np.isinf(grid._data)] = padValue
+                
+            newlayers[layername] = grid.getData()
+            if newgeodict is None:
+                newgeodict = grid.getGeoDict().copy()
+
+        return cls(newlayers,newgeodict,eventDict,shakeDict,uncertaintyDict)
+
+    
+    # @classmethod
+    # def load(cls,shakefilename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan,adjust=None):
+    #     """Create a ShakeGrid object from a ShakeMap grid.xml file.
+    #     :param shakefilename:
+    #       File name or File-like object of ShakeMap grid.xml file.
+    #     :param samplegeodict:
+    #       GeoDict used to specify subset bounds and resolution (if resample is selected)
+    #     :param resample:
+    #       Boolean used to indicate whether grid should be resampled from the file based on samplegeodict.
+    #     :param method:
+    #       If resample=True, resampling method to use ('nearest','linear','cubic','quintic')
+    #     :param doPadding:
+    #       Boolean used to indicate whether, if samplegeodict is outside bounds of grid, to pad values around the edges.
+    #     :param padValue:
+    #       Value to fill in around the edges if doPadding=True.
+    #     :param adjust:
+    #       String (one of None,'bounds','res') - adjust some of the ShakeMap parameters as necessary (usually "res").
+    #         None: All input parameters are assumed to be self-consistent, an exception will be raised if they are not.
+    #         'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin will be recalculated.
+    #         'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will be recalculated.
+    #     :returns:
+    #       ShakeGrid object.
+    #     """
+    #     #geodict can have dx/dy OR nx/ny.  If given both, dx/dy will be used to re-calculate ny/nx
+    #     isFileObj = False
+    #     if not hasattr(shakefilename,'read'):
+    #         shakefile = open(shakefilename,'r')
+    #     else:
+    #         isFileObj = True
+    #         shakefile = shakefilename
+
+    #     if samplegeodict is not None:
+    #         #fill in ny/nx or dx/dy, whichever is not specified.  dx/dy dictate if both pairs are specified.
+    #         bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
+    #         dx,dy = samplegeodict.dx,samplegeodict.dy
+    #         ny,nx = samplegeodict.ny,samplegeodict.nx
+
+
+    #     #read the file using the available function
+    #     layers,fgeodict,eventDict,shakeDict,uncertaintyDict = readShakeFile(shakefile,adjust=adjust)
+            
+    #     if not isFileObj:
+    #         shakefile.close()
+
+    #     if samplegeodict is None:
+    #         geodict = fgeodict
+    #     else:
+    #         bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
+    #         isOutside = False
+    #         xmin = fgeodict.xmin
+    #         xmax = fgeodict.xmax
+    #         ymin = fgeodict.ymin
+    #         ymax = fgeodict.ymax
+    #         if bounds[0] < xmin or bounds[1] > xmax or bounds[2] < ymin or bounds[3] > ymax:
+    #             isOutside = True
+    #         if isOutside and resample and not doPadding:
+    #             raise DataSetException('Cannot resample data given input bounds, unless doPadding is set to True.')
+
+    #         if doPadding:
+    #             leftpad,rightpad,bottompad,toppad,geodict = super(MultiGrid,cls)._getPadding(fgeodict,samplegeodict,padValue)
+    #             for (layername,layerdata) in layers.items():
+    #                 #pad left side
+    #                 layerdata = np.hstack((leftpad,layerdata))
+    #                 #pad right side
+    #                 layerdata = np.hstack((layerdata,rightpad))
+    #                 #pad bottom
+    #                 layerdata = np.vstack((layerdata,bottompad))
+    #                 #pad top
+    #                 layerdata = np.vstack((toppad,layerdata))
+    #                 grid = Grid2D(layerdata,geodict)
+    #                 if resample: #should I just do an interpolateToGrid() here?
+    #                     grid = grid.interpolateToGrid(samplegeodict,method=method)
+    #                 layers[layername] = grid.getData()
+    #             geodict = grid.getGeoDict().copy()
+    #         else:
+    #             tgeodict = fgeodict.getIntersection(samplegeodict)
+    #             geodict = fgeodict.getBoundsWithin(tgeodict)
+    #             for (layername,layerdata) in layers.items():
+    #                 newgrid = Grid2D(layerdata,fgeodict)
+    #                 if resample:
+    #                     newgrid = newgrid.interpolateToGrid(samplegeodict,method=method)
+    #                 else:
+    #                     newgrid = newgrid.cut(geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
+    #                 layers[layername] = newgrid.getData()
+    #             if resample:
+    #                 geodict = samplegeodict
+            
+    #     return cls(layers,geodict,eventDict,shakeDict,uncertaintyDict)
 
     def interpolateToGrid(self,geodict,method='linear'):
         """

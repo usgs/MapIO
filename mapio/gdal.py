@@ -50,6 +50,10 @@ class GDALGrid(Grid2D):
         #is a duplicate of the first column
         filegeodict,first_column_duplicated = cls.getFileGeoDict(filename)
 
+        #If the sample grid is aligned with the host grid, then resampling won't accomplish anything 
+        # if samplegeodict is not None and filegeodict.isAligned(samplegeodict):
+        #     resample = False
+        
         #buffer out the sample geodict (if resampling) enough to allow interpolation.
         if samplegeodict is not None:
             sampledict = cls.bufferBounds(samplegeodict,filegeodict,resample=resample) #parent static method

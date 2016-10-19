@@ -194,15 +194,11 @@ class GeoDict(object):
         fbottomrow = int(np.round(trow))
         newymin,newxmax = geodict.getLatLon(fbottomrow,frightcol)
 
-        if newxmax > 180:
-            newxmax = newxmax - 360
-
         nx = int(np.round((newxmax-newxmin)/dx + 1))
         ny = int(np.round((newymax-newymin)/dy + 1))
-
-        #handle the wrap-around meridian case
-        if nx <= 0:
-            nx = ((newxmax - fxmin) + dx)/dx + ((fxmax - newxmin)+dx)/dx
+        
+        if newxmax > 180:
+            newxmax = newxmax - 360
         
         outdict = GeoDict({'xmin':newxmin,'xmax':newxmax,
                            'ymin':newymin,'ymax':newymax,
@@ -228,32 +224,24 @@ class GeoDict(object):
         
         fxmin,fxmax,fymin,fymax = (self.xmin,self.xmax,self.ymin,self.ymax)
         xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
-
-        #if the input geodict crosses the 180 meridian, deal with this...
-        
-        
         fdx,fdy = (self.dx,self.dy)
+        fnx,fny = (self.nx,self.ny)
 
-        trow,tcol = self.getRowCol(ymax,xmin,returnFloat=True)
-        fleftcol = int(np.ceil(tcol))
-        #row starts from the top, so making it larger moves it south
-        ftoprow = int(np.ceil(trow)) 
-
-        trow,tcol = self.getRowCol(ymin,xmax,returnFloat=True)
-        frightcol = int(np.floor(tcol))
-        fbottomrow = int(np.floor(trow))
+        xmincol = np.ceil((xmin-fxmin)/fdx)
+        xmaxcol = np.floor((xmax-fxmin)/fdx)
+        newxmin = fxmin + xmincol*fdx
+        newxmax = fxmin + xmaxcol*fdx
+        yminrow = np.floor((fymax-ymin)/fdy)
+        ymaxrow = np.ceil((fymax-ymax)/fdy)
+        newymin = fymax - yminrow*fdy
+        newymax = fymax - ymaxrow*fdy
+        ny = int((yminrow-ymaxrow)+1)
+        #if the input geodict crosses the 180 meridian, deal with this...
+        if xmin > xmax:
+            nx = ((fnx-xmincol)) + (xmaxcol + 1)
+        else:
+            nx = int((xmaxcol - xmincol) + 1)
         
-        #these should all be on the host grid
-        newymax,newxmin = self.getLatLon(ftoprow,fleftcol)
-        newymin,newxmax = self.getLatLon(fbottomrow,frightcol)
-
-        #testing
-        newrow,newcol = self.getRowCol(newymax,newxmin)
-        newrow,newcol = self.getRowCol(newymin,newxmax)
-        
-        nx = int(np.round((newxmax-newxmin)/fdx + 1))
-        ny = int(np.round((newymax-newymin)/fdy + 1))
-
         outgeodict = GeoDict({'xmin':newxmin,'xmax':newxmax,
                               'ymin':newymin,'ymax':newymax,
                               'dx':fdx,'dy':fdy,

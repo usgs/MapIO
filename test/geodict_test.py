@@ -224,7 +224,178 @@ def test():
     #                'nx':6,'ny':6})
     # print('Passed test of getIntersection() method')
 
+def test_bounds_within_meridian():
+    host = GeoDict({'xmin':-180,
+                    'xmax':150,
+                    'ymin':-90,
+                    'ymax':90,
+                    'dx':30,
+                    'dy':45,
+                    'nx':12,
+                    'ny':5})
+    sample = GeoDict({'xmin':75,
+                       'xmax':-135,
+                       'ymin':-67.5,
+                       'ymax':67.5,
+                       'dx':30,
+                       'dy':45,
+                       'nx':6,
+                       'ny':4})
+
+    result = GeoDict({'xmin':90,
+                      'xmax':-150,
+                      'ymin':-45,
+                      'ymax':45,
+                      'dx':30,
+                      'dy':45,
+                      'nx':5,
+                      'ny':3})
+    
+    inside = host.getBoundsWithin(sample)
+    assert inside == result
+
+def test_intersection():
+    fxmin,fxmax = (178.311, -179.189)
+    fymin,fymax = (50.616, 52.176)
+    fdx,fdy = (0.025, 0.02516129032258068)
+    fnx,fny = (101, 63)
+    host = GeoDict({'xmin':fxmin,
+                    'xmax':fxmax,
+                    'ymin':fymin,
+                    'ymax':fymax,
+                    'dx':fdx,
+                    'dy':fdy,
+                    'nx':fnx,
+                    'ny':fny})
+    sxmin,sxmax = (178.31249999999858, -179.19583333333335)
+    symin,symax = (50.62083333333279, 52.17083333333278)
+    sdx,sdy = (0.0083333333333333, 0.0083333333333333)
+    snx,sny = (300, 187)
+    sample = GeoDict({'xmin':sxmin,
+                      'xmax':sxmax,
+                      'ymin':symin,
+                      'ymax':symax,
+                      'dx':sdx,
+                      'dy':sdy,
+                      'nx':snx,
+                      'ny':sny})
+    #result = GeoDict()
+    ixmin,ixmax = (178.31249999999858, -179.19583333333478)
+    iymin,iymax = (50.62083333333278, 52.17083333333278)
+    idx,idy = (0.0083333333333333, 0.0083333333333333)
+    inx,iny = (300, 187)
+    result = GeoDict({'xmin':ixmin,
+                      'xmax':ixmax,
+                      'ymin':iymin,
+                      'ymax':iymax,
+                      'dx':idx,
+                      'dy':idy,
+                      'nx':inx,
+                      'ny':iny})
+    intersection = host.getIntersection(sample)
+    assert intersection == result
+    
+def test_bounds_within():
+    host = GeoDict({'xmin':-180,
+                    'xmax':150,
+                    'ymin':-90,
+                    'ymax':90,
+                    'dx':30,
+                    'dy':45,
+                    'nx':12,
+                    'ny':5})
+    sample = GeoDict({'xmin':-75,
+                       'xmax':45,
+                       'ymin':-67.5,
+                       'ymax':67.5,
+                       'dx':30,
+                       'dy':45,
+                       'nx':5,
+                       'ny':4})
+
+    result = GeoDict({'xmin':-60,
+                      'xmax':30,
+                      'ymin':-45,
+                      'ymax':45,
+                      'dx':30,
+                      'dy':45,
+                      'nx':4,
+                      'ny':3})
+    
+    inside = host.getBoundsWithin(sample)
+    assert inside == result
+
+def test_real():
+    fxmin,fxmax,fymin,fymax = (-179.99583333333334, 179.99583333333192, -89.99583333333331, 83.99583333333266)
+    fdx,fdy = (0.0083333333333333, 0.0083333333333333)
+    fnx,fny = (43200, 20880)
+
+    host = GeoDict({'xmin':fxmin,
+                    'xmax':fxmax,
+                    'ymin':fymin,
+                    'ymax':fymax,
+                    'dx':fdx,
+                    'dy':fdy,
+                    'nx':fnx,
+                    'ny':fny})
+    
+    xmin,xmax,ymin,ymax = (178.311, -179.189, 50.616, 52.176)
+    dx,dy = (0.025, 0.02516129032258068)
+    nx,ny = (101, 63)
+
+    sample = GeoDict({'xmin':xmin,
+                      'xmax':xmax,
+                      'ymin':ymin,
+                      'ymax':ymax,
+                      'dx':dx,
+                      'dy':dy,
+                      'nx':nx,
+                      'ny':ny})
+    # sample = GeoDict({'xmin':179.8967,
+    #                   'xmax':-179.9283,
+    #                   'ymin':30.0,
+    #                   'ymax':31.0,
+    #                   'dx':0.025,
+    #                   'dy':1.0,
+    #                   'nx':8,
+    #                   'ny':2})
+
+    inside = host.getBoundsWithin(sample)
+    # assert inside == result
+    
+# def test2():
+#     host = GeoDict({'xmin':-180,
+#                     'xmax':120,
+#                     'ymin':-60,
+#                     'ymax':60,
+#                     'dx':60,
+#                     'dy':30,
+#                     'nx':6,
+#                     'ny':5})
+#     sample = GeoDict({'xmin':30.0,
+#                       'xmax':-90,
+#                       'ymin':-52.5,
+#                       'ymax':52.5,
+#                       'dx':30,
+#                       'dy':15,
+#                       'nx':9,
+#                       'ny':8})
+#     result = GeoDict({'xmin':60,
+#                       'xmax':-120,
+#                       'ymin':-30,
+#                       'ymax':30,
+#                       'dx':60,
+#                       'dy':30,
+#                       'nx':4,
+#                       'ny':3})
+#     inside = host.getBoundsWithin(sample)
+#     assert inside == result
+    
 if __name__ == '__main__':
+    test_intersection()
+    #test2()
+    test_bounds_within()
+    test_bounds_within_meridian()
     test()
 
 

@@ -861,7 +861,9 @@ class Grid2D(Grid):
         basey = np.arange(0,baserows)
         newdata = None
         if method in ['linear','cubic']:
-            if not np.isnan(self._data).any():
+            hasnan = np.isnan(self._data).any()
+            hasinf = np.isinf(self._data).any()
+            if not hasnan and not hasinf:
                 #at the time of this writing, interp2d does not support NaN values at all.
                 f = interpolate.interp2d(basex,basey,self._data,kind=method)
                 #self._data = f(xi,yi)
