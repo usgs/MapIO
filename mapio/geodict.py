@@ -5,6 +5,7 @@ from .dataset import DataSetException
 
 class GeoDict(object):
     EPS = 1e-12
+    DIST_THRESH = .01/(111.191*1000) #1 centimeter in decimal degrees
     REQ_KEYS = ['xmin','xmax','ymin','ymax','dx','dy','ny','nx']
     def __init__(self,geodict,adjust=None):
         """
@@ -679,13 +680,13 @@ class GeoDict(object):
         dxmax,ddx,dymax,ddy = self.getDeltas()
 
         if adjust is None:
-            if dxmax > self.EPS:
+            if dxmax > self.DIST_THRESH:
                 raise DataSetException('GeoDict X resolution is not consistent with bounds and number of columns')
-            if ddx > self.EPS:
+            if ddx > self.DIST_THRESH:
                 raise DataSetException('GeoDict X resolution is not consistent with bounds and number of columns')
-            if dymax > self.EPS:
+            if dymax > self.DIST_THRESH:
                 raise DataSetException('GeoDict Y resolution is not consistent with bounds and number of rows')
-            if ddy > self.EPS:
+            if ddy > self.DIST_THRESH:
                 raise DataSetException('GeoDict Y resolution is not consistent with bounds and number of rows')
         elif adjust == 'bounds':
             if self._xmin > self._xmax:
