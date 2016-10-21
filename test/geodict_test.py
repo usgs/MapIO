@@ -325,44 +325,7 @@ def test_bounds_within():
     inside = host.getBoundsWithin(sample)
     assert inside == result
 
-def test_real():
-    fxmin,fxmax,fymin,fymax = (-179.99583333333334, 179.99583333333192, -89.99583333333331, 83.99583333333266)
-    fdx,fdy = (0.0083333333333333, 0.0083333333333333)
-    fnx,fny = (43200, 20880)
-
-    host = GeoDict({'xmin':fxmin,
-                    'xmax':fxmax,
-                    'ymin':fymin,
-                    'ymax':fymax,
-                    'dx':fdx,
-                    'dy':fdy,
-                    'nx':fnx,
-                    'ny':fny})
-    
-    xmin,xmax,ymin,ymax = (178.311, -179.189, 50.616, 52.176)
-    dx,dy = (0.025, 0.02516129032258068)
-    nx,ny = (101, 63)
-
-    sample = GeoDict({'xmin':xmin,
-                      'xmax':xmax,
-                      'ymin':ymin,
-                      'ymax':ymax,
-                      'dx':dx,
-                      'dy':dy,
-                      'nx':nx,
-                      'ny':ny})
-    # sample = GeoDict({'xmin':179.8967,
-    #                   'xmax':-179.9283,
-    #                   'ymin':30.0,
-    #                   'ymax':31.0,
-    #                   'dx':0.025,
-    #                   'dy':1.0,
-    #                   'nx':8,
-    #                   'ny':2})
-
-    inside = host.getBoundsWithin(sample)
-    # assert inside == result
-    
+  
 def test_bounds_within_real():
     fxmin,fxmax = (-179.995833333333, 179.99583333189372)
     fymin,fymax = (-89.99583333333332, 89.9958333326134)
@@ -410,11 +373,68 @@ def test_bounds_within_real():
                       'nx':inx,
                       'ny':iny})
     assert inside == result
+
+def test_bounds_within_again():
+    fxmin,fxmax = (-179.995833333333, 179.99583333189372)
+    fymin,fymax = (-89.99583333333332, 89.9958333326134)
+    fdx,fdy = (0.0083333333333, 0.0083333333333)
+    fnx,fny = (43200, 21600)
+
+    xmin,xmax = (97.233, 99.733)
+    ymin,ymax = (84.854, 85.074)
+    dx,dy = (0.025, 0.024444444444444317)
+    nx,ny = (101, 10)
+
+    host = GeoDict({'xmin':fxmin,
+                    'xmax':fxmax,
+                    'ymin':fymin,
+                    'ymax':fymax,
+                    'dx':fdx,
+                    'dy':fdy,
+                    'nx':fnx,
+                    'ny':fny})
+    sample = GeoDict({'xmin':xmin,
+                      'xmax':xmax,
+                      'ymin':ymin,
+                      'ymax':ymax,
+                      'dx':dx,
+                      'dy':dy,
+                      'nx':nx,
+                      'ny':ny})
+    inside = host.getBoundsWithin(sample)
+
+def test_contains():
+    fxmin,fxmax = (-179.995833333333, 179.99583333189372)
+    fymin,fymax = (-89.99583333333332, 89.9958333326134)
+    fdx,fdy = (0.0083333333333, 0.0083333333333)
+    fnx,fny = (43200, 21600)
+    xmin,xmax = (-179.996, -177.496)
+    ymin,ymax = (-21.89175, -19.55425)
+    dx,dy = (0.025, 0.02513440860215052)
+    nx,ny = (101, 94)
+    host = GeoDict({'xmin':fxmin,
+                    'xmax':fxmax,
+                    'ymin':fymin,
+                    'ymax':fymax,
+                    'dx':fdx,
+                    'dy':fdy,
+                    'nx':fnx,
+                    'ny':fny})
+    sample = GeoDict({'xmin':xmin,
+                      'xmax':xmax,
+                      'ymin':ymin,
+                      'ymax':ymax,
+                      'dx':dx,
+                      'dy':dy,
+                      'nx':nx,
+                      'ny':ny})
+    assert host.contains(sample)
     
 if __name__ == '__main__':
+    test_contains()
+    test_bounds_within_again()
     test_bounds_within_real()
     test_intersection()
-    #test2()
     test_bounds_within()
     test_bounds_within_meridian()
     test()

@@ -187,7 +187,7 @@ class Grid2D(Grid):
           DataSetException when geodicts do not intersect or if the grids are not aligned.
         """
         if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
-            msg = 'Input samplegeodict must at least intersect with the bounds of %s' % filename
+            msg = 'Input samplegeodict must at least intersect with the file bounds'
             raise DataSetException(msg)
         #verify that if not resampling, the dimensions of the sampling geodict must match the file.
         if resample == False and samplegeodict is not None:
@@ -197,7 +197,7 @@ class Grid2D(Grid):
                 raise DataSetException('File dimensions are different from sampledict dimensions.') 
 
     @staticmethod
-    def bufferBounds(samplegeodict,filegeodict,resample=False,buffer_pixels=1):
+    def bufferBounds(samplegeodict,filegeodict,resample=False,buffer_pixels=1,doPadding=False):
         """Buffer requested bounds out by buffer_pixels pixels, or edge of grid.
 
         Buffer pixels shoud be at filegeodict resolution.
@@ -215,12 +215,21 @@ class Grid2D(Grid):
         """
         if not resample:
             return samplegeodict
+        
         dx = filegeodict.dx
         dy = filegeodict.dy
         fxmin,fxmax = filegeodict.xmin,filegeodict.xmax
         fymin,fymax = filegeodict.ymin,filegeodict.ymax
         sxmin,sxmax = samplegeodict.xmin,samplegeodict.xmax
         symin,symax = samplegeodict.ymin,samplegeodict.ymax
+
+        if not filegeodict.intersects(samplegeodict):
+            if not doPadding:
+                msg = 'Cannot buffer bounds when sampling grid is completely outside file grid, unless doPadding=True.'
+                raise DataSetException(msg)
+            else:
+                return samplegeodict
+        
         buffer_geo_x = buffer_pixels * dx
         buffer_geo_y = buffer_pixels * dy
 
