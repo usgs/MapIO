@@ -344,14 +344,18 @@ class GeoDict(object):
           True if input geodict is completely outside this GeoDict,
           False if not.
         """
-        newxmin = geodict.xmin
-        if geodict.xmin < self.xmin and (geodict.xmin + 360) < self.xmax:
+        inside_x = False
+        if np.abs((self.xmax+self.dx) - (self.xmin + 360)) < self.dx*0.01:
             inside_x = True
-        else:
-            if self.xmax > self.xmin:
-                inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
+        if not inside_x:
+            newxmin = geodict.xmin
+            if geodict.xmin < self.xmin and (geodict.xmin + 360) < self.xmax:
+                inside_x = True
             else:
-                inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax+360
+                if self.xmax > self.xmin:
+                    inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
+                else:
+                    inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax+360
         inside_y = geodict.ymin >= self._ymin and geodict.ymax <= self._ymax
         if inside_x and inside_y:
             return True

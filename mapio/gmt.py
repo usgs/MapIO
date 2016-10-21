@@ -920,12 +920,20 @@ class GMTGrid(Grid2D):
         
         #buffer out the sample geodict (if resampling) enough to allow interpolation.
         if samplegeodict is not None:
-            sampledict = cls.bufferBounds(samplegeodict,filegeodict,resample=resample) #parent static method
+            sampledict = cls.bufferBounds(samplegeodict,filegeodict,resample=resample,doPadding=doPadding) #parent static method
         else:
             sampledict = filegeodict
             
         #Ensure that the two grids at least 1) intersect and 2) are aligned if resampling is True.
-        cls.verifyBounds(filegeodict,sampledict,resample=resample) #parent static method, may raise an exception
+        try:
+            cls.verifyBounds(filegeodict,sampledict,resample=resample) #parent static method, may raise an exception
+        #if they're not, and we have padding on, then give them a grid with all pad values.
+        except DataSetException as dse:
+            if doPadding:
+                if not filegeodict.contains(sampledict):
+                    data = np.ones((sampledict.ny,sampledict.nx),dtype=np.float32)*padValue
+                    return cls(data=data,geodict=sampledict)
+                
         sampledict = filegeodict.getIntersection(sampledict)
         bounds = (sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax)
         
