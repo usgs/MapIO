@@ -102,26 +102,26 @@ class GDALGrid(Grid2D):
           When the file geodict is internally inconsistent.
         """
         geodict = {}
-        with rasterio.drivers():
-            with rasterio.open(filename) as src:
-                aff = src.affine
-                geodict['dx'] = aff.a
-                geodict['dy'] = -1*aff.e
-                geodict['xmin'] = aff.xoff + geodict['dx']/2.0
-                geodict['ymax'] = aff.yoff - geodict['dy']/2.0
-                                
-                shp = src.shape
-                if len(shp) > 2:
-                    raise DataSetException('Cannot support grids with more than one band')
-                geodict['ny'] = src.height
-                geodict['nx'] = src.width
-                geodict['xmax'] = geodict['xmin'] + (geodict['nx']-1)*geodict['dx']
-                if geodict['xmax'] == geodict['xmin']:
-                    pass
-                                              
-                geodict['ymin'] = geodict['ymax'] - (geodict['ny']-1)*geodict['dy']
 
-                gd = GeoDict(geodict)
+        with rasterio.open(filename) as src:
+            aff = src.transform
+            geodict['dx'] = aff.a
+            geodict['dy'] = -1*aff.e
+            geodict['xmin'] = aff.xoff + geodict['dx']/2.0
+            geodict['ymax'] = aff.yoff - geodict['dy']/2.0
+
+            shp = src.shape
+            if len(shp) > 2:
+                raise DataSetException('Cannot support grids with more than one band')
+            geodict['ny'] = src.height
+            geodict['nx'] = src.width
+            geodict['xmax'] = geodict['xmin'] + (geodict['nx']-1)*geodict['dx']
+            if geodict['xmax'] == geodict['xmin']:
+                pass
+
+            geodict['ymin'] = geodict['ymax'] - (geodict['ny']-1)*geodict['dy']
+
+            gd = GeoDict(geodict)
 
         newgeodict,first_column_duplicated = cls.checkFirstColumnDuplicated(gd)
         return (newgeodict,first_column_duplicated)
@@ -285,18 +285,18 @@ class GDALGrid(Grid2D):
             iuly2 = None
             ilry2 = None
         data = None
-        with rasterio.drivers():
-            with rasterio.open(filename) as src:
-                window1 = ((iuly1,ilry1),
-                           (iulx1,ilrx1))
-                section1 = src.read(1,window=window1)
-                if 'iulx2' in data_range:
-                    window2 = ((iuly2,ilry2),
-                               (iulx2,ilrx2))
-                    section2 = src.read(1,window=window2)
-                    data = np.hstack((section1,section2))
-                else:
-                    data = section1
+
+        with rasterio.open(filename) as src:
+            window1 = ((iuly1,ilry1),
+                       (iulx1,ilrx1))
+            section1 = src.read(1,window=window1)
+            if 'iulx2' in data_range:
+                window2 = ((iuly2,ilry2),
+                           (iulx2,ilrx2))
+                section2 = src.read(1,window=window2)
+                data = np.hstack((section1,section2))
+            else:
+                data = section1
 
         #Put NaN's back in where nodata value was
         nodata = src.get_nodatavals()[0]
