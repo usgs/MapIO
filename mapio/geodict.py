@@ -7,12 +7,12 @@ class GeoDict(object):
     EPS = 1e-12
     DIST_THRESH = .01/(111.191*1000) #1 centimeter in decimal degrees
     REQ_KEYS = ['xmin','xmax','ymin','ymax','dx','dy','ny','nx']
-    def __init__(self,geodict,adjust=None):
+    def __init__(self,geodict,adjust='bounds'):
         """
         An object which represents the spatial information for a grid and is guaranteed to be self-consistent.
-
+       
         :param geodict:
-          A dictionary containing the following fields:
+          A dictionary containing at least some of the following fields:
              - xmin Longitude minimum (decimal degrees) (Center of upper left cell)
              - xmax Longitude maximum (decimal degrees) (Center of upper right cell)
              - ymin Longitude minimum (decimal degrees) (Center of lower left cell)
@@ -21,13 +21,11 @@ class GeoDict(object):
              - dy Cell height (decimal degrees)
              - ny Number of rows of input data (must match input data dimensions)
              - nx Number of columns of input data (must match input data dimensions).
+        
         :param adjust:
-            String (one of None,'bounds','res')
-              None: All input parameters are assumed to be self-consistent, an exception will be raised if they are not.
+            String (one of 'bounds','res')
               'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin will be recalculated.
               'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will be recalculated.
-        :raises DataSetException:
-          When adjust is set to None, and any parameters are not self-consistent.
         """
         for key in self.REQ_KEYS:
             if key not in geodict.keys():
@@ -41,7 +39,7 @@ class GeoDict(object):
         self._dy = float(geodict['dy'])
         self._ny = int(geodict['ny'])
         self._nx = int(geodict['nx'])
-        self.validate(adjust=adjust)
+        self.validate(adjust)
 
     @classmethod
     def createDictFromBox(cls,xmin,xmax,ymin,ymax,dx,dy,inside=False):
@@ -680,19 +678,10 @@ class GeoDict(object):
 
         return (dxmax,ddx,dymax,ddy)
         
-    def validate(self,adjust=None):
-        dxmax,ddx,dymax,ddy = self.getDeltas()
+    def validate(self,adjust):
+        #dxmax,ddx,dymax,ddy = self.getDeltas()
 
-        if adjust is None:
-            if dxmax > self.DIST_THRESH:
-                raise DataSetException('GeoDict X resolution is not consistent with bounds and number of columns')
-            if ddx > self.DIST_THRESH:
-                raise DataSetException('GeoDict X resolution is not consistent with bounds and number of columns')
-            if dymax > self.DIST_THRESH:
-                raise DataSetException('GeoDict Y resolution is not consistent with bounds and number of rows')
-            if ddy > self.DIST_THRESH:
-                raise DataSetException('GeoDict Y resolution is not consistent with bounds and number of rows')
-        elif adjust == 'bounds':
+        if adjust == 'bounds':
             if self._xmin > self._xmax:
                 txmax = self._xmax + 360
             else:

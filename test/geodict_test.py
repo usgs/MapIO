@@ -28,10 +28,10 @@ def test():
              'ymin':54.104700,'ymax':65.104700,
              'dx':0.025000,'dy':0.025000,
              'ny':441,'nx':561}
-    gd = GeoDict(gdict,adjust=None)
+    gd = GeoDict(gdict)
     print('Consistent dictionary passed.')
 
-    print('Testing dictionary with inconsistent dimensions...')
+    print('Testing dictionary with inconsistent resolution...')
     #this should pass
     gdict = {'xmin':-160.340600,'xmax':-146.340600,
              'ymin':54.104700,'ymax':65.104700,
@@ -431,13 +431,14 @@ def test_contains():
     assert host.contains(sample)
     
 if __name__ == '__main__':
+    test()
     test_contains()
     test_bounds_within_again()
     test_bounds_within_real()
     test_intersection()
     test_bounds_within()
     test_bounds_within_meridian()
-    test()
+    
 
 
         
