@@ -7,6 +7,7 @@ import os.path
 import sys
 
 import numpy as np
+import pandas as pd
 
 #hack the path so that I can debug these functions if I need to
 homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
@@ -403,6 +404,10 @@ def test_bounds_within_again():
                       'ny':ny})
     inside = host.getBoundsWithin(sample)
 
+
+    
+    
+    
 def test_contains():
     fxmin,fxmax = (-179.995833333333, 179.99583333189372)
     fymin,fymax = (-89.99583333333332, 89.9958333326134)
@@ -429,8 +434,34 @@ def test_contains():
                       'nx':nx,
                       'ny':ny})
     assert host.contains(sample)
+
+def test_shapes():
+    gd = GeoDict.createDictFromBox(100.0,102.0,32.0,34.0,0.08,0.08)
+
+    #pass in scalar values
+    inrow,incol = (10,10)
+    lat,lon = gd.getLatLon(inrow,incol) #should get scalar results
+    assert np.isscalar(lat) and np.isscalar(lon)
+
+    #pass in array values
+    inrow = np.array([10,11,12])
+    incol = np.array([10,11,12])
+    lat,lon = gd.getLatLon(inrow,incol) #should get array results
+    c1 = isinstance(lat,np.ndarray) and lat.shape == inrow.shape
+    c2 = isinstance(lon,np.ndarray) and lon.shape == incol.shape
+    assert c1 and c2
+
+    #this should fail, because inputs are un-dimensioned numpy arrays
+    inrow = np.array(10)
+    incol = np.array(10)
+    try:
+        lat,lon = gd.getLatLon(inrow,incol) #should get array results
+        assert 1 == 0 #this should never happen
+    except DataSetException as dse:
+        pass
     
 if __name__ == '__main__':
+    test_shapes()
     test()
     test_contains()
     test_bounds_within_again()

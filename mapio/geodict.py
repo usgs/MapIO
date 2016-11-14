@@ -436,16 +436,17 @@ class GeoDict(object):
         :returns: 
            Tuple of latitude and longitude.
         """
-        seqtypes = (list,tuple,np.ndarray)
-        if isinstance(row,seqtypes): #is this a sequence type thing?
-            row = np.array(row)
-            col = np.array(col)
-        else: #or a scalar - if so, make it an array
-            row = np.array([row])
-            col = np.array([col])
+        scalar_types = (int,float)
+        if type(row) != type(col):
+            raise DataSetException('Input row/col types must be the same')
         
-        row = np.array(row)
-        col = np.array(col)
+        if not isinstance(row,scalar_types): #is this a sequence type thing?
+            if isinstance(row,np.ndarray):
+                if row.shape == () or col.shape == ():
+                    raise DataSetException('Input row/col values must be scalars or dimensioned numpy arrays.')
+            else:
+                raise DataSetException('Input row/col values must be scalars or dimensioned numpy arrays.')
+        
         ulx = self._xmin
         uly = self._ymax
         dx = self._dx
@@ -469,13 +470,17 @@ class GeoDict(object):
         :returns: 
            Tuple of row and column.
         """
-        seqtypes = (list,tuple,np.ndarray)
-        if isinstance(lat,seqtypes): #is this a sequence type thing?
-            lat = np.array(lat)
-            lon = np.array(lon)
-        else: #or a scalar - if so, make it an array
-            lat = np.array([lat])
-            lon = np.array([lon])
+        scalar_types = (int,float)
+        if type(lat) != type(lon):
+            raise DataSetException('Input lat/lon types must be the same')
+        
+        if not isinstance(lat,scalar_types): #is this a sequence type thing?
+            if isinstance(lat,np.ndarray):
+                if lat.shape == () or lon.shape == ():
+                    raise DataSetException('Input lat/lon values must be scalars or dimensioned numpy arrays.')
+            else:
+                raise DataSetException('Input lat/lon values must be scalars or dimensioned numpy arrays.')
+            
         if intMethod not in ['round','floor','ceil']:
             raise DataSetException('intMethod %s is not supported.' % intMethod)
         

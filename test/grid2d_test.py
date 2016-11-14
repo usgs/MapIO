@@ -326,7 +326,6 @@ def get_data_range_test():
     assert dict5 == cdict5
 
 if __name__ == '__main__':
-    get_data_range_test()
     test_subdivide()
     test_rasterize()
     test_interpolate()
@@ -334,4 +333,5 @@ if __name__ == '__main__':
     test_cut()
     test_copy()
     test_setData()
+    get_data_range_test()
         
