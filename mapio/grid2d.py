@@ -719,7 +719,7 @@ class Grid2D(Grid):
             raise DataSetException('Input bounds must be completely contained by this grid.')
         uly,ulx = self._geodict.getRowCol(td.ymax,td.xmin)
         lry,lrx = self._geodict.getRowCol(td.ymin,td.xmax)
-        data = self._data[uly[0]:lry[0]+1,ulx[0]:lrx[0]+1]
+        data = self._data[uly:lry+1,ulx:lrx+1]
         grid = Grid2D(data,td)
         return grid
     
@@ -736,25 +736,34 @@ class Grid2D(Grid):
            Default value to return when lat/lon is outside of grid bounds.
         :return: 
            Value at input latitude,longitude position.
+        :raises DataSetException:
+          When lat/lon is outside of bounds and default is None.
         """
+        
         if method == 'nearest':
             row,col = self.getRowCol(lat,lon)
         else:
-            row,col = self.getRowCol(lat,lon,returnFloat=True)
+            raise NotImplementedError('nearest is the only interpolation method currently supported.')
         ny,nx = self._data.shape
-        outidx = np.where((row < 0) | (row > ny-1) | (col < 0) | (col > nx-1))[0]
-        inidx = np.where((row >= 0) & (row <= ny-1) & (col >= 0) & (col <= nx-1))[0]
-        value = np.ones_like(row).astype(self._data.dtype)
-        if len(outidx):
-            if default is None:
-                msg = 'One of more of your lat/lon values is outside Grid boundaries: %s' % (str(self.getBounds()))
-                raise DataSetException(msg)
-            value[outidx] = default
-        if method == 'nearest':
+        if isinstance(row,np.ndarray):
+            outidx = np.where((row < 0) | (row > ny-1) | (col < 0) | (col > nx-1))[0]
+            inidx = np.where((row >= 0) & (row <= ny-1) & (col >= 0) & (col <= nx-1))[0]
+            value = np.ones_like(row).astype(self._data.dtype)
+            if len(outidx):
+                if default is None:
+                    msg = 'One of more of your lat/lon values is outside Grid boundaries: %s' % (str(self.getBounds()))
+                    raise DataSetException(msg)
+                value[outidx] = default
             value[inidx] = self._data[row[inidx],col[inidx]]
-            return value
         else:
-            raise NotImplementedError('getValue method "%s" not implemented yet' % method)
+            if (row < 0 or row > ny-1 or col < 0 or col > nx-1):
+                if default is None:
+                    msg = 'Your lat/lon value is outside Grid boundaries: %s' % (str(self.getBounds()))
+                    raise DataSetException(msg)
+                else:
+                    return default
+            value = self._data[row,col]        
+        return value
 
     def getLatLon(self,row,col):
         """Return geographic coordinates (lat/lon decimal degrees) for given data row and column.
@@ -793,7 +802,7 @@ class Grid2D(Grid):
         hostxmax = self._geodict.xmax
         hostymin = self._geodict.ymin
         hostymax = self._geodict.ymax
-        host_normal = hostxmin >= -180 and hostxmin <= 180 and hostxmax >= -180 and hostxmax <= 180 and hostxmin > hostxmax
+        host_normal = hostxmin >= -180 and hostxmin <= 180 and hostxmax >= -180 and hostxmax <= 180
         host_negative = hostxmin < -180
         host_360 = hostxmin >= 180 or hostxmax >= 180
 
@@ -801,7 +810,7 @@ class Grid2D(Grid):
         samplexmax = geodict.xmax
         sampleymin = geodict.ymin
         sampleymax = geodict.ymax
-        sample_normal = samplexmin >= -180 and samplexmin <= 180 and samplexmax >= -180 and samplexmax <= 180 and samplexmin > samplexmax
+        sample_normal = samplexmin >= -180 and samplexmin <= 180 and samplexmax >= -180 and samplexmax <= 180
         sample_negative = samplexmin < -180
         sample_360 = samplexmin >= 180 or samplexmax >= 180
 
@@ -829,6 +838,9 @@ class Grid2D(Grid):
         sampledx = geodict.dx
         sampledy = geodict.dy
 
+        hostdx = self._geodict.dx
+        hostdy = self._geodict.dy
+
         #make sure that the grid we're resampling TO is completely contained by host
         if samplexmin < hostxmin or samplexmax > hostxmax or sampleymin < hostymin or sampleymax > hostymax:
             raise DataSetException('Grid you are resampling TO is not completely contained by base grid.')
@@ -836,8 +848,8 @@ class Grid2D(Grid):
         gxi = np.linspace(samplexmin,samplexmax,num=samplenx)
         gyi = np.linspace(sampleymin,sampleymax,num=sampleny)
 
-        xi = (gxi - hostxmin)/sampledx
-        yi = np.array(sorted(((hostymax - gyi)/sampledy)))
+        xi = (gxi - hostxmin)/hostdx
+        yi = np.array(sorted(((hostymax - gyi)/hostdy)))
 
         return (xi,yi)
     
