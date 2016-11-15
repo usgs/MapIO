@@ -624,11 +624,11 @@ class Grid2D(Grid):
                     frightlon = clon + (self._geodict.dx/2) - finerdict.dx/2
                     fbottomlat = clat - (self._geodict.dy/2) + finerdict.dy/2
                     itop,jleft = finerdict.getRowCol(ftoplat,fleftlon)
-                    itop = itop[0]
-                    jleft = jleft[0]
+                    itop = itop
+                    jleft = jleft
                     ibottom,jright = finerdict.getRowCol(fbottomlat,frightlon)
-                    ibottom = ibottom[0]
-                    jright = jright[0]
+                    ibottom = ibottom
+                    jright = jright
                     finedata[itop:ibottom+1,jleft:jright+1] = cellvalue
         else:
             for i in range(0,self._geodict.ny):
