@@ -333,5 +333,5 @@ if __name__ == '__main__':
     test_cut()
     test_copy()
     test_setData()
-    get_data_range_test()
+    #get_data_range_test()
         
