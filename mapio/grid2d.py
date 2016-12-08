@@ -1034,6 +1034,8 @@ class Grid2D(Grid):
         xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
         dx,dy = (geodict.dx,geodict.dy)
 
+        if xmax < xmin:
+            xmax += 360
         xvar = np.arange(xmin,xmax+(dx*0.1),dx)
         yvar = np.arange(ymin,ymax+(dy*0.1),dy)
         nx = len(xvar)
