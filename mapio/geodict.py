@@ -2,9 +2,11 @@
 
 import numpy as np
 from .dataset import DataSetException
+from osgeo import osr
 
 class GeoDict(object):
     EPS = 1e-12
+    DEFAULT_PROJ4 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
     DIST_THRESH = .01/(111.191*1000) #1 centimeter in decimal degrees
     REQ_KEYS = ['xmin','xmax','ymin','ymax','dx','dy','ny','nx']
     def __init__(self,geodict,adjust='bounds'):
@@ -21,6 +23,8 @@ class GeoDict(object):
              - dy Cell height (decimal degrees)
              - ny Number of rows of input data (must match input data dimensions)
              - nx Number of columns of input data (must match input data dimensions).
+             - projection proj4 string defining projection.  Optional. If not specified, assumed to be
+               "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" (WGS-84 geographic).
         
         :param adjust:
             String (one of 'bounds','res')
@@ -39,6 +43,13 @@ class GeoDict(object):
         self._dy = float(geodict['dy'])
         self._ny = int(geodict['ny'])
         self._nx = int(geodict['nx'])
+        if 'projection' in geodict:
+            srs = osr.SpatialReference()
+            srs.ImportFromProj4(geodict['projection'])
+            if srs.ExportToProj4() == '':
+                raise DataSetException('%s is not a valid proj4 string.' % geodict['projection'])
+        else:
+            self._projection = self.DEFAULT_PROJ4
         self.validate(adjust)
 
     @classmethod
@@ -93,6 +104,20 @@ class GeoDict(object):
         ymax = cy + yspan/2.0
         return cls.createDictFromBox(xmin,xmax,ymin,ymax,dx,dy)
 
+    def setProjection(self,projection):
+        """Set a new projection for the GeoDict.
+
+        :param projection:
+          Valid proj4 string.
+        :raises DataSetException:
+          When input is not valid proj4.
+        """
+        srs = osr.SpatialReference()
+        srs.ImportFromProj4(projection)
+        if srs.ExportToProj4() == '':
+            raise DataSetException('%s is not a valid proj4 string.' % geodict['projection'])
+        self._projection = projection
+    
     def getAligned(self,geodict,inside=False):
         """Return a geodict that is close to the input geodict bounds but aligned with this GeoDict.
 
@@ -567,6 +592,14 @@ class GeoDict(object):
         """
         return self._nx
 
+    @property
+    def projection(self):
+        """Get projection Proj4 string.
+        :returns:
+          Valid Proj4 string.
+        """
+        return self._projection
+    
     @xmin.setter
     def xmin(self, value):
         """Set xmin value, re-validate object.

@@ -10,6 +10,7 @@ import abc
 import textwrap
 import glob
 import os
+import tempfile
 
 #hack the path so that I can debug these functions if I need to
 homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
@@ -20,6 +21,7 @@ sys.path.insert(0,mapiodir) #put this at the front of the system path, ignoring 
 #third party imports
 from mapio.gridbase import Grid
 from mapio.grid2d import Grid2D
+from mapio.gdal import GDALGrid
 from mapio.dataset import DataSetException
 from mapio.geodict import GeoDict
 import numpy as np
@@ -27,6 +29,9 @@ from scipy import interpolate
 import shapely
 from affine import Affine
 from rasterio import features
+from rasterio.warp import reproject, Resampling, calculate_default_transform, Env
+from rasterio.crs import CRS
+import rasterio
 from shapely.geometry import MultiPoint,Polygon,mapping
 
 def test_subdivide():
@@ -325,7 +330,72 @@ def get_data_range_test():
               'ilrx1':3,'ilry1':4}
     assert dict5 == cdict5
 
+def test_project():
+    data = np.array([[0,0,1,0,0],
+                     [0,0,1,0,0],
+                     [1,1,1,1,1],
+                     [0,0,1,0,0],
+                     [0,0,1,0,0]],dtype=np.int32)
+    geodict = {'xmin':50,'xmax':50.4,'ymin':50,'ymax':50.4,'dx':0.1,'dy':0.1,'nx':5,'ny':5}
+    gd = GeoDict(geodict)
+    grid = GDALGrid(data,gd)
+    projstr = "+proj=utm +zone=40 +north +ellps=WGS84 +datum=WGS84 +units=m +no_defs "
+    newgrid = grid.project(projstr,method='nearest')
+
+    try:
+        tdir = tempfile.mkdtemp()
+        outfile = os.path.join(tdir,'output.bil')
+        grid.save(outfile)
+        with rasterio.open(outfile) as src:
+            aff = src.transform
+            data = src.read(1)
+            src_crs = CRS().from_string(GeoDict.DEFAULT_PROJ4).to_dict()
+            dst_crs = CRS().from_string(projstr).to_dict()
+            nrows,ncols = data.shape
+            left = aff.xoff
+            top = aff.yoff
+            right,bottom = aff * (ncols-1, nrows-1)
+            dst_transform,width,height = calculate_default_transform(src_crs,dst_crs,
+                                                                     ncols,nrows,
+                                                                     left,bottom,
+                                                                     right,top)
+            destination = np.zeros((height,width))
+            reproject(data,
+                      destination,
+                      src_transform=aff,
+                      src_crs=src_crs,
+                      dst_transform=dst_transform,
+                      dst_crs=dst_crs,
+                      src_nodata=src.nodata,
+                      dst_nodata=np.nan,
+                      resampling=Resampling.nearest)
+            x = 1
+    except:
+        pass
+    finally:
+        shutil.rmtree(tdir)
+    # cmpdata = np.array([[ 0.,  0.,  1.,  0.],
+    #                     [ 0.,  0.,  1.,  0.],
+    #                     [ 0.,  0.,  1.,  0.],
+    #                     [ 1.,  1.,  1.,  1.],
+    #                     [ 0.,  1.,  1.,  1.],
+    #                     [ 0.,  0.,  1.,  0.]],dtype=np.float64)
+    # np.testing.assert_almost_equal(cmpdata,newgrid._data)
+    
+    # cmpdict = GeoDict({'ymax': 5608705.974598191, 
+    #                    'ny': 6, 
+    #                    'ymin': 5571237.8659376735, 
+    #                    'nx': 4, 
+    #                    'xmax': 21363.975311354592, 
+    #                    'dy': 7493.621732103531, 
+    #                    'dx': 7493.621732103531, 
+    #                    'xmin': -756.8898849560019})
+    
+    # assert cmpdict == newgrid._geodict
+    
+    
 if __name__ == '__main__':
+    test_project()
     test_subdivide()
     test_rasterize()
     test_interpolate()
