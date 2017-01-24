@@ -255,10 +255,12 @@ class ShakeGrid(MultiGrid):
         :returns:
            A ShakeGrid object.
         """
+        self._descriptions = OrderedDict()
         self._layers = OrderedDict()
         self._geodict = geodict
         for (layerkey,layerdata) in layers.items():
             self._layers[layerkey] = Grid2D(data=layerdata,geodict=geodict)
+            self._descriptions[layerkey] = ''
         self._setEventDict(eventDict)
         self._setShakeDict(shakeDict)
         self._setUncertaintyDict(uncertaintyDict)
