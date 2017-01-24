@@ -3,7 +3,7 @@
 VENV=mapio
 PYVER=3.5
 
-DEPARRAY=(numpy scipy matplotlib rasterio pandas shapely h5py gdal pytest pytest pytest-cov pytest-mpl cartopy basemap jupyter)
+DEPARRAY=(numpy scipy matplotlib rasterio pandas shapely h5py gdal pytest pytest pytest-cov pytest-mpl jupyter)
 
 #turn off whatever other virtual environment user might be in
 source deactivate
