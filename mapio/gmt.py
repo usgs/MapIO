@@ -914,6 +914,10 @@ class GMTGrid(Grid2D):
         #is a duplicate of the first column
         filegeodict,first_column_duplicated = cls.getFileGeoDict(filename)
 
+        #if the sampling geodict is identical to the file geodict, then turn resampling off
+        if samplegeodict == filegeodict:
+            resample = False
+
         #If the sample grid is aligned with the host grid, then resampling won't accomplish anything 
         # if samplegeodict is not None and filegeodict.isAligned(samplegeodict):
         #     resample = False
