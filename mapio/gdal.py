@@ -51,7 +51,7 @@ class GDALGrid(Grid2D):
         filegeodict,first_column_duplicated = cls.getFileGeoDict(filename)
 
         #if the sampling geodict is identical to the file geodict, then turn resampling off
-        if samplegeodict == filegeodict:
+        if samplegeodict is not None and samplegeodict == filegeodict:
             resample = False
         
         #If the sample grid is aligned with the host grid, then resampling won't accomplish anything 
