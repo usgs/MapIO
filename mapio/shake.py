@@ -493,8 +493,8 @@ class ShakeGrid(MultiGrid):
         
         nfields = 2 + len(self._layers)
         data = np.zeros((self._geodict.ny*self._geodict.nx,nfields))
-        data[:,0] = lat.flatten()
-        data[:,1] = lon.flatten()
+        data[:,0] = lon.flatten()
+        data[:,1] = lat.flatten()
         fidx = 2
         for grid in self._layers.values():
             data[:,fidx] = grid.getData().flatten()
