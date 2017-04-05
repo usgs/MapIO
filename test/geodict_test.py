@@ -281,20 +281,12 @@ def test_intersection():
                       'nx':snx,
                       'ny':sny})
     #result = GeoDict()
-    ixmin,ixmax = (178.31249999999858, -179.19583333333478)
-    iymin,iymax = (50.62083333333278, 52.17083333333278)
-    idx,idy = (0.0083333333333333, 0.0083333333333333)
-    inx,iny = (300, 187)
-    result = GeoDict({'xmin':ixmin,
-                      'xmax':ixmax,
-                      'ymin':iymin,
-                      'ymax':iymax,
-                      'dx':idx,
-                      'dy':idy,
-                      'nx':inx,
-                      'ny':iny})
     intersection = host.getIntersection(sample)
-    assert intersection == result
+    np.testing.assert_allclose(intersection.xmin, 178.31249999999858)
+    np.testing.assert_allclose(intersection.xmax, -179.2041666666681)
+    np.testing.assert_allclose(intersection.ymin, 50.62083333333278)
+    np.testing.assert_allclose(intersection.ymax, 52.17083333333278)
+
     
 def test_bounds_within():
     host = GeoDict({'xmin':-180,
