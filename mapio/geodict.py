@@ -214,8 +214,8 @@ class GeoDict(object):
         newymax,newxmin = geodict.getLatLon(ftoprow,fleftcol)
 
         trow,tcol = geodict.getRowCol(tymin,txmax,returnFloat=True)
-        frightcol = int(np.floor(tcol))
-        fbottomrow = int(np.floor(trow))
+        frightcol = int(np.round(tcol))
+        fbottomrow = int(np.round(trow))
         newymin,newxmax = geodict.getLatLon(fbottomrow,frightcol)
 
         nx = int(np.round((newxmax-newxmin)/dx + 1))
