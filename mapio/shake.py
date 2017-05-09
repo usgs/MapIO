@@ -493,6 +493,9 @@ class ShakeGrid(MultiGrid):
         
         nfields = 2 + len(self._layers)
         data = np.zeros((self._geodict.ny*self._geodict.nx,nfields))
+        #the data are ordered from the top left, so we need to invert the latitudes to
+        #start from the top left
+        lat = lat[::-1] 
         data[:,0] = lon.flatten()
         data[:,1] = lat.flatten()
         fidx = 2
@@ -500,7 +503,7 @@ class ShakeGrid(MultiGrid):
             data[:,fidx] = grid.getData().flatten()
             fidx += 1
         np.savetxt(f,data,delimiter=' ',fmt=data_formats)
-        f.write(b'</grid_data>\n')
+        f.write(b'</grid_data>\n</shakemap_grid>\n')
         if isFile:
             f.close()
 
