@@ -21,7 +21,7 @@ import shapely
 from affine import Affine
 from rasterio import features
 from shapely.geometry import MultiPoint,Polygon,mapping
-from rasterio.warp import reproject, Resampling, calculate_default_transform, Env
+from rasterio.warp import reproject, Resampling, calculate_default_transform
 from rasterio.crs import CRS
 from osgeo import osr
 
@@ -1085,85 +1085,84 @@ class Grid2D(Grid):
         except AttributeError as ae:
             raise DataSetException('%s is not a valid resampling method.' % method)
         
-        with Env():
-            #get the dimensions of the input data
-            nrows, ncols = src_shape = self._data.shape
-            #define the input Affine object
-            src_transform = Affine.from_gdal(self._geodict.xmin - self._geodict.dx/2.0,
-                                             self._geodict.dx,
-                                             0.0, #x rotation, not used by us
-                                             self._geodict.ymax + self._geodict.dy/2.0,
-                                             0.0, #y rotation, not used by us
-                                             -1*self._geodict.dy) #their dy is negative
+        #get the dimensions of the input data
+        nrows, ncols = src_shape = self._data.shape
+        #define the input Affine object
+        src_transform = Affine.from_gdal(self._geodict.xmin - self._geodict.dx/2.0,
+                                         self._geodict.dx,
+                                         0.0, #x rotation, not used by us
+                                         self._geodict.ymax + self._geodict.dy/2.0,
+                                         0.0, #y rotation, not used by us
+                                         -1*self._geodict.dy) #their dy is negative
 
-            #set the source and destination projections (have to be CRS dictionaries)
-            src_crs = CRS().from_string(self._geodict.projection).to_dict()
-            dst_crs = CRS().from_string(projection).to_dict()
-            
-            #determine the boundaries in src coordinates
-            if self._geodict.xmin < self._geodict.xmax:
-                right = self._geodict.xmax - (self._geodict.dx/2.0)
-            else:
-                txmax = self._geodict.xmax + 360
-                right = txmax - (self._geodict.dx/2.0)
-            left = self._geodict.xmin - (self._geodict.dx/2.0)
-            top = self._geodict.ymax + (self._geodict.dy/2.0)
-            bottom = self._geodict.ymin + (self._geodict.dy/2.0)
+        #set the source and destination projections (have to be CRS dictionaries)
+        src_crs = CRS().from_string(self._geodict.projection).to_dict()
+        dst_crs = CRS().from_string(projection).to_dict()
 
-            #use this convenience function to determine optimal output transform and dimensions
-            dst_transform,width,height = calculate_default_transform(src_crs,dst_crs,
-                                                                     ncols,nrows,
-                                                                     left,bottom,
-                                                                     right,top)
+        #determine the boundaries in src coordinates
+        if self._geodict.xmin < self._geodict.xmax:
+            right = self._geodict.xmax - (self._geodict.dx/2.0)
+        else:
+            txmax = self._geodict.xmax + 360
+            right = txmax - (self._geodict.dx/2.0)
+        left = self._geodict.xmin - (self._geodict.dx/2.0)
+        top = self._geodict.ymax + (self._geodict.dy/2.0)
+        bottom = self._geodict.ymin + (self._geodict.dy/2.0)
 
-            #allocate space for output data (very C-like)
-            destination = np.zeros((height,width))
+        #use this convenience function to determine optimal output transform and dimensions
+        dst_transform,width,height = calculate_default_transform(src_crs,dst_crs,
+                                                                 ncols,nrows,
+                                                                 left,bottom,
+                                                                 right,top)
 
-            #if the input has nan values, then tell reproject about that
-            #and set the output to that value as well
-            src_nan = None
-            dst_nan = None
-            if np.any(np.isnan(self._data)):
-                src_nan = np.nan
-                dst_nan = np.nan
-            if self._data.dtype in (np.float32,np.float64):
-                src_nan = np.nan
-                dst_nan = np.nan
-            
-            #call the reproject function
-            reproject(
-                self._data,
-                destination,
-                src_transform=src_transform,
-                src_crs=src_crs,
-                dst_transform=dst_transform,
-                src_nodata=src_nan,
-                dst_nodata=dst_nan,
-                dst_crs=projection,
-                resampling=int_method)
+        #allocate space for output data (very C-like)
+        destination = np.zeros((height,width))
 
-            #get the pieces of the output transformation
-            xmin,dx,xrot,ymax,yrot,mdy = dst_transform.to_gdal()
+        #if the input has nan values, then tell reproject about that
+        #and set the output to that value as well
+        src_nan = None
+        dst_nan = None
+        if np.any(np.isnan(self._data)):
+            src_nan = np.nan
+            dst_nan = np.nan
+        if self._data.dtype in (np.float32,np.float64):
+            src_nan = np.nan
+            dst_nan = np.nan
 
-            #affine dy is negative, so we have to flip it back
-            dy = -1*mdy
+        #call the reproject function
+        reproject(
+            self._data,
+            destination,
+            src_transform=src_transform,
+            src_crs=src_crs,
+            dst_transform=dst_transform,
+            src_nodata=src_nan,
+            dst_nodata=dst_nan,
+            dst_crs=projection,
+            resampling=int_method)
 
-            #correct for different pixel offsets
-            xmin = xmin + (dx/2.0)
-            ymax = ymax - (dy/2.0)
+        #get the pieces of the output transformation
+        xmin,dx,xrot,ymax,yrot,mdy = dst_transform.to_gdal()
 
-            #Construct a new GeoDict
-            gdict = {'xmin':xmin,
-                     'xmax':xmin+width*dx,
-                     'ymin':ymax-height*dy,
-                     'ymax':ymax,
-                     'dx':dx,
-                     'dy':dy,
-                     'nx':width,
-                     'ny':height,
-                     'projection':projection}
-            geodict = GeoDict(gdict,adjust='bounds')
+        #affine dy is negative, so we have to flip it back
+        dy = -1*mdy
 
-            #Make a new Grid2D object and return it
-            newgrid = Grid2D(destination,geodict)
-            return newgrid
+        #correct for different pixel offsets
+        xmin = xmin + (dx/2.0)
+        ymax = ymax - (dy/2.0)
+
+        #Construct a new GeoDict
+        gdict = {'xmin':xmin,
+                 'xmax':xmin+width*dx,
+                 'ymin':ymax-height*dy,
+                 'ymax':ymax,
+                 'dx':dx,
+                 'dy':dy,
+                 'nx':width,
+                 'ny':height,
+                 'projection':projection}
+        geodict = GeoDict(gdict,adjust='bounds')
+
+        #Make a new Grid2D object and return it
+        newgrid = Grid2D(destination,geodict)
+        return newgrid
