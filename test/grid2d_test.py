@@ -30,7 +30,7 @@ from scipy import interpolate
 import shapely
 from affine import Affine
 from rasterio import features
-from rasterio.warp import reproject, Resampling, calculate_default_transform, Env
+from rasterio.warp import reproject, Resampling, calculate_default_transform
 from rasterio.crs import CRS
 import rasterio
 from shapely.geometry import MultiPoint,Polygon,mapping
