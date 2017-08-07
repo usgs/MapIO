@@ -108,7 +108,7 @@ class GDALGrid(Grid2D):
         geodict = {}
 
         with rasterio.open(filename) as src:
-            aff = src.transform
+            aff = src.affine
             geodict['dx'] = aff.a
             geodict['dy'] = -1*aff.e
             geodict['xmin'] = aff.xoff + geodict['dx']/2.0
