@@ -60,6 +60,7 @@ FIELDKEYS['psa03'] = ('pctg','%.2f')
 FIELDKEYS['psa10'] = ('pctg','%.2f')
 FIELDKEYS['psa30'] = ('pctg','%.2f')
 FIELDKEYS['stdpga'] = ('ln(pctg)','%.2f')
+FIELDKEYS['stdpgv'] = ('ln(cms)','%.2f')
 FIELDKEYS['urat'] = ('','%.2f')
 FIELDKEYS['svel'] = ('ms','%.2f')
 FIELDKEYS['lat'] = ('dd','%.4f')
@@ -170,12 +171,12 @@ def _getHeaderData(fileobj):
 
     return (griddict,eventdict,specdict,fields,uncertainties)
 
-def readShakeFile(fileobj,adjust=None):
+def readShakeFile(fileobj,adjust='bounds'):
     """Reads in the data and metadata for a ShakeMap object (can be passed to ShakeGrid constructor).
     :param fileobj:
       File-like object representing an open ShakeMap grid file.
     :param adjust:
-      String (one of None,'bounds','res') - adjust some of the ShakeMap parameters as necessary (usually "res").
+      String (one of 'bounds','res') - adjust some of the ShakeMap parameters as necessary (usually "bounds").
         None: All input parameters are assumed to be self-consistent, an exception will be raised if they are not.
         'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin will be recalculated.
         'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will be recalculated.
@@ -255,21 +256,23 @@ class ShakeGrid(MultiGrid):
         :returns:
            A ShakeGrid object.
         """
+        self._descriptions = OrderedDict()
         self._layers = OrderedDict()
         self._geodict = geodict
         for (layerkey,layerdata) in layers.items():
             self._layers[layerkey] = Grid2D(data=layerdata,geodict=geodict)
+            self._descriptions[layerkey] = ''
         self._setEventDict(eventDict)
         self._setShakeDict(shakeDict)
         self._setUncertaintyDict(uncertaintyDict)
 
     @classmethod
-    def getFileGeoDict(cls,shakefilename,adjust=None):
+    def getFileGeoDict(cls,shakefilename,adjust='bounds'):
         """Get the spatial extent, resolution, and shape of grids inside ShakeMap grid file.
         :param filename:
            File name of ShakeMap grid file.
         :param adjust:
-          String (one of None,'bounds','res') - adjust some of the ShakeMap parameters as necessary (usually "res").
+          String (one of 'bounds','res') - adjust some of the ShakeMap parameters as necessary (usually "bounds").
             None: All input parameters are assumed to be self-consistent, an exception will be raised if they are not.
             'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin will be recalculated.
             'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will be recalculated.
@@ -296,7 +299,7 @@ class ShakeGrid(MultiGrid):
         return geodict
 
     @classmethod
-    def load(cls,shakefilename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan,adjust=None):
+    def load(cls,shakefilename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan,adjust='bounds'):
 
         #readShakeFile takes a file object.  Figure out if shakefilename is a file name or file object.
         isFileObj = False
@@ -340,95 +343,6 @@ class ShakeGrid(MultiGrid):
 
         return cls(newlayers,newgeodict,eventDict,shakeDict,uncertaintyDict)
 
-    
-    # @classmethod
-    # def load(cls,shakefilename,samplegeodict=None,resample=False,method='linear',doPadding=False,padValue=np.nan,adjust=None):
-    #     """Create a ShakeGrid object from a ShakeMap grid.xml file.
-    #     :param shakefilename:
-    #       File name or File-like object of ShakeMap grid.xml file.
-    #     :param samplegeodict:
-    #       GeoDict used to specify subset bounds and resolution (if resample is selected)
-    #     :param resample:
-    #       Boolean used to indicate whether grid should be resampled from the file based on samplegeodict.
-    #     :param method:
-    #       If resample=True, resampling method to use ('nearest','linear','cubic','quintic')
-    #     :param doPadding:
-    #       Boolean used to indicate whether, if samplegeodict is outside bounds of grid, to pad values around the edges.
-    #     :param padValue:
-    #       Value to fill in around the edges if doPadding=True.
-    #     :param adjust:
-    #       String (one of None,'bounds','res') - adjust some of the ShakeMap parameters as necessary (usually "res").
-    #         None: All input parameters are assumed to be self-consistent, an exception will be raised if they are not.
-    #         'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin will be recalculated.
-    #         'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will be recalculated.
-    #     :returns:
-    #       ShakeGrid object.
-    #     """
-    #     #geodict can have dx/dy OR nx/ny.  If given both, dx/dy will be used to re-calculate ny/nx
-    #     isFileObj = False
-    #     if not hasattr(shakefilename,'read'):
-    #         shakefile = open(shakefilename,'r')
-    #     else:
-    #         isFileObj = True
-    #         shakefile = shakefilename
-
-    #     if samplegeodict is not None:
-    #         #fill in ny/nx or dx/dy, whichever is not specified.  dx/dy dictate if both pairs are specified.
-    #         bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
-    #         dx,dy = samplegeodict.dx,samplegeodict.dy
-    #         ny,nx = samplegeodict.ny,samplegeodict.nx
-
-
-    #     #read the file using the available function
-    #     layers,fgeodict,eventDict,shakeDict,uncertaintyDict = readShakeFile(shakefile,adjust=adjust)
-            
-    #     if not isFileObj:
-    #         shakefile.close()
-
-    #     if samplegeodict is None:
-    #         geodict = fgeodict
-    #     else:
-    #         bounds = (samplegeodict.xmin,samplegeodict.xmax,samplegeodict.ymin,samplegeodict.ymax)
-    #         isOutside = False
-    #         xmin = fgeodict.xmin
-    #         xmax = fgeodict.xmax
-    #         ymin = fgeodict.ymin
-    #         ymax = fgeodict.ymax
-    #         if bounds[0] < xmin or bounds[1] > xmax or bounds[2] < ymin or bounds[3] > ymax:
-    #             isOutside = True
-    #         if isOutside and resample and not doPadding:
-    #             raise DataSetException('Cannot resample data given input bounds, unless doPadding is set to True.')
-
-    #         if doPadding:
-    #             leftpad,rightpad,bottompad,toppad,geodict = super(MultiGrid,cls)._getPadding(fgeodict,samplegeodict,padValue)
-    #             for (layername,layerdata) in layers.items():
-    #                 #pad left side
-    #                 layerdata = np.hstack((leftpad,layerdata))
-    #                 #pad right side
-    #                 layerdata = np.hstack((layerdata,rightpad))
-    #                 #pad bottom
-    #                 layerdata = np.vstack((layerdata,bottompad))
-    #                 #pad top
-    #                 layerdata = np.vstack((toppad,layerdata))
-    #                 grid = Grid2D(layerdata,geodict)
-    #                 if resample: #should I just do an interpolateToGrid() here?
-    #                     grid = grid.interpolateToGrid(samplegeodict,method=method)
-    #                 layers[layername] = grid.getData()
-    #             geodict = grid.getGeoDict().copy()
-    #         else:
-    #             tgeodict = fgeodict.getIntersection(samplegeodict)
-    #             geodict = fgeodict.getBoundsWithin(tgeodict)
-    #             for (layername,layerdata) in layers.items():
-    #                 newgrid = Grid2D(layerdata,fgeodict)
-    #                 if resample:
-    #                     newgrid = newgrid.interpolateToGrid(samplegeodict,method=method)
-    #                 else:
-    #                     newgrid = newgrid.cut(geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
-    #                 layers[layername] = newgrid.getData()
-    #             if resample:
-    #                 geodict = samplegeodict
-            
-    #     return cls(layers,geodict,eventDict,shakeDict,uncertaintyDict)
 
     def interpolateToGrid(self,geodict,method='linear'):
         """
@@ -579,14 +493,17 @@ class ShakeGrid(MultiGrid):
         
         nfields = 2 + len(self._layers)
         data = np.zeros((self._geodict.ny*self._geodict.nx,nfields))
-        data[:,0] = lat.flatten()
-        data[:,1] = lon.flatten()
+        #the data are ordered from the top left, so we need to invert the latitudes to
+        #start from the top left
+        lat = lat[::-1] 
+        data[:,0] = lon.flatten()
+        data[:,1] = lat.flatten()
         fidx = 2
         for grid in self._layers.values():
             data[:,fidx] = grid.getData().flatten()
             fidx += 1
         np.savetxt(f,data,delimiter=' ',fmt=data_formats)
-        f.write(b'</grid_data>\n')
+        f.write(b'</grid_data>\n</shakemap_grid>\n')
         if isFile:
             f.close()
 

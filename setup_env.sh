@@ -3,7 +3,7 @@
 VENV=mapio
 PYVER=3.5
 
-DEPARRAY=(numpy scipy matplotlib rasterio pandas shapely h5py gdal pytest pytest pytest-cov pytest-mpl cartopy basemap)
+DEPARRAY=(numpy scipy matplotlib rasterio pandas shapely h5py gdal pytest pytest pytest-cov pytest-mpl jupyter)
 
 #turn off whatever other virtual environment user might be in
 source deactivate
@@ -26,7 +26,10 @@ conda install -y psutil
 
 #do pip installs of those things that are not available via conda.
 #do pip installs of those things that are not available via conda.
-pip -v install https://github.com/gem/oq-hazardlib/archive/master.zip
+curl --max-time 60 --retry 3 -L https://github.com/gem/oq-engine/archive/master.zip -o openquake.zip
+pip -v install --no-deps openquake.zip
+rm openquake.zip
+
 pip install flake8
 pip install pep8-naming
 

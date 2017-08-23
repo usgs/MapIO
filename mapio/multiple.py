@@ -78,7 +78,7 @@ class MultiGrid(Grid):
           If the data layer dimensions don't match the geodict.
         """
         nr,nc = data.shape
-        if nr != self._geodict['ny'] or nc != self._geodict['nx']:
+        if nr != self._geodict.ny or nc != self._geodict.nx:
             raise DataSetException("Data layer dimensions don't match those already in the grid")
         self._layers[name] = Grid2D(data,self._geodict.copy())
         self._descriptions[name] = desc

@@ -7,6 +7,7 @@ import os.path
 import sys
 
 import numpy as np
+import pandas as pd
 
 #hack the path so that I can debug these functions if I need to
 homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
@@ -28,10 +29,10 @@ def test():
              'ymin':54.104700,'ymax':65.104700,
              'dx':0.025000,'dy':0.025000,
              'ny':441,'nx':561}
-    gd = GeoDict(gdict,adjust=None)
+    gd = GeoDict(gdict)
     print('Consistent dictionary passed.')
 
-    print('Testing dictionary with inconsistent dimensions...')
+    print('Testing dictionary with inconsistent resolution...')
     #this should pass
     gdict = {'xmin':-160.340600,'xmax':-146.340600,
              'ymin':54.104700,'ymax':65.104700,
@@ -279,21 +280,24 @@ def test_intersection():
                       'dy':sdy,
                       'nx':snx,
                       'ny':sny})
-    #result = GeoDict()
-    ixmin,ixmax = (178.31249999999858, -179.19583333333478)
-    iymin,iymax = (50.62083333333278, 52.17083333333278)
-    idx,idy = (0.0083333333333333, 0.0083333333333333)
+    ixmin,ixmax = (178.31249999999858, -179.19583333333478)		
+    iymin,iymax = (50.62083333333278, 52.17083333333278)		
+    idx,idy = (0.0083333333333333, 0.0083333333333333)		
     inx,iny = (300, 187)
-    result = GeoDict({'xmin':ixmin,
-                      'xmax':ixmax,
-                      'ymin':iymin,
-                      'ymax':iymax,
-                      'dx':idx,
-                      'dy':idy,
-                      'nx':inx,
+    result = GeoDict({'xmin':ixmin,		
+                      'xmax':ixmax,		
+                      'ymin':iymin,		
+                      'ymax':iymax,		
+                      'dx':idx,		
+                      'dy':idy,		
+                      'nx':inx,		
                       'ny':iny})
     intersection = host.getIntersection(sample)
-    assert intersection == result
+    np.testing.assert_allclose(intersection.xmin, ixmin)
+    np.testing.assert_allclose(intersection.xmax, ixmax)
+    np.testing.assert_allclose(intersection.ymin, iymin)
+    np.testing.assert_allclose(intersection.ymax, iymax)
+
     
 def test_bounds_within():
     host = GeoDict({'xmin':-180,
@@ -325,10 +329,65 @@ def test_bounds_within():
     inside = host.getBoundsWithin(sample)
     assert inside == result
 
-def test_real():
-    fxmin,fxmax,fymin,fymax = (-179.99583333333334, 179.99583333333192, -89.99583333333331, 83.99583333333266)
-    fdx,fdy = (0.0083333333333333, 0.0083333333333333)
-    fnx,fny = (43200, 20880)
+  
+def test_bounds_within_real():
+    fxmin,fxmax = (-179.995833333333, 179.99583333189372)
+    fymin,fymax = (-89.99583333333332, 89.9958333326134)
+    fdx,fdy = (0.0083333333333, 0.0083333333333)
+    fnx,fny = (43200, 21600)
+    xmin,xmax = (177.75, -179.75)
+    ymin,ymax = (50.41625, 51.98375)
+    dx,dy = (0.025, 0.02488095238095242)
+    nx,ny = (101, 64)
+    host = GeoDict({'xmin':fxmin,
+                    'xmax':fxmax,
+                    'ymin':fymin,
+                    'ymax':fymax,
+                    'dx':fdx,
+                    'dy':fdy,
+                    'nx':fnx,
+                    'ny':fny})
+    sample = GeoDict({'xmin':xmin,
+                      'xmax':xmax,
+                      'ymin':ymin,
+                      'ymax':ymax,
+                      'dx':dx,
+                      'dy':dy,
+                      'nx':nx,
+                      'ny':ny})
+    result = GeoDict({'xmin':60,
+                      'xmax':-120,
+                      'ymin':-30,
+                      'ymax':30,
+                      'dx':60,
+                      'dy':30,
+                      'nx':4,
+                      'ny':3})
+    inside = host.getBoundsWithin(sample)
+    ixmin,ixmax = (177.75416666523603, -179.7541666666673)
+    iymin,iymax = (50.4208333327717, 51.9791666660988)
+    idx,idy = (0.0083333333333, 0.0083333333333)
+    inx,iny = (300, 188)
+    result = GeoDict({'xmin':ixmin,
+                      'xmax':ixmax,
+                      'ymin':iymin,
+                      'ymax':iymax,
+                      'dx':idx,
+                      'dy':idy,
+                      'nx':inx,
+                      'ny':iny})
+    assert inside == result
+
+def test_bounds_within_again():
+    fxmin,fxmax = (-179.995833333333, 179.99583333189372)
+    fymin,fymax = (-89.99583333333332, 89.9958333326134)
+    fdx,fdy = (0.0083333333333, 0.0083333333333)
+    fnx,fny = (43200, 21600)
+
+    xmin,xmax = (97.233, 99.733)
+    ymin,ymax = (84.854, 85.074)
+    dx,dy = (0.025, 0.024444444444444317)
+    nx,ny = (101, 10)
 
     host = GeoDict({'xmin':fxmin,
                     'xmax':fxmax,
@@ -338,11 +397,6 @@ def test_real():
                     'dy':fdy,
                     'nx':fnx,
                     'ny':fny})
-    
-    xmin,xmax,ymin,ymax = (178.311, -179.189, 50.616, 52.176)
-    dx,dy = (0.025, 0.02516129032258068)
-    nx,ny = (101, 63)
-
     sample = GeoDict({'xmin':xmin,
                       'xmax':xmax,
                       'ymin':ymin,
@@ -351,52 +405,74 @@ def test_real():
                       'dy':dy,
                       'nx':nx,
                       'ny':ny})
-    # sample = GeoDict({'xmin':179.8967,
-    #                   'xmax':-179.9283,
-    #                   'ymin':30.0,
-    #                   'ymax':31.0,
-    #                   'dx':0.025,
-    #                   'dy':1.0,
-    #                   'nx':8,
-    #                   'ny':2})
-
     inside = host.getBoundsWithin(sample)
-    # assert inside == result
+
+
     
-# def test2():
-#     host = GeoDict({'xmin':-180,
-#                     'xmax':120,
-#                     'ymin':-60,
-#                     'ymax':60,
-#                     'dx':60,
-#                     'dy':30,
-#                     'nx':6,
-#                     'ny':5})
-#     sample = GeoDict({'xmin':30.0,
-#                       'xmax':-90,
-#                       'ymin':-52.5,
-#                       'ymax':52.5,
-#                       'dx':30,
-#                       'dy':15,
-#                       'nx':9,
-#                       'ny':8})
-#     result = GeoDict({'xmin':60,
-#                       'xmax':-120,
-#                       'ymin':-30,
-#                       'ymax':30,
-#                       'dx':60,
-#                       'dy':30,
-#                       'nx':4,
-#                       'ny':3})
-#     inside = host.getBoundsWithin(sample)
-#     assert inside == result
+    
+    
+def test_contains():
+    fxmin,fxmax = (-179.995833333333, 179.99583333189372)
+    fymin,fymax = (-89.99583333333332, 89.9958333326134)
+    fdx,fdy = (0.0083333333333, 0.0083333333333)
+    fnx,fny = (43200, 21600)
+    xmin,xmax = (-179.996, -177.496)
+    ymin,ymax = (-21.89175, -19.55425)
+    dx,dy = (0.025, 0.02513440860215052)
+    nx,ny = (101, 94)
+    host = GeoDict({'xmin':fxmin,
+                    'xmax':fxmax,
+                    'ymin':fymin,
+                    'ymax':fymax,
+                    'dx':fdx,
+                    'dy':fdy,
+                    'nx':fnx,
+                    'ny':fny})
+    sample = GeoDict({'xmin':xmin,
+                      'xmax':xmax,
+                      'ymin':ymin,
+                      'ymax':ymax,
+                      'dx':dx,
+                      'dy':dy,
+                      'nx':nx,
+                      'ny':ny})
+    assert host.contains(sample)
+
+def test_shapes():
+    gd = GeoDict.createDictFromBox(100.0,102.0,32.0,34.0,0.08,0.08)
+
+    #pass in scalar values
+    inrow,incol = (10,10)
+    lat,lon = gd.getLatLon(inrow,incol) #should get scalar results
+    assert np.isscalar(lat) and np.isscalar(lon)
+
+    #pass in array values
+    inrow = np.array([10,11,12])
+    incol = np.array([10,11,12])
+    lat,lon = gd.getLatLon(inrow,incol) #should get array results
+    c1 = isinstance(lat,np.ndarray) and lat.shape == inrow.shape
+    c2 = isinstance(lon,np.ndarray) and lon.shape == incol.shape
+    assert c1 and c2
+
+    #this should fail, because inputs are un-dimensioned numpy arrays
+    inrow = np.array(10)
+    incol = np.array(10)
+    try:
+        lat,lon = gd.getLatLon(inrow,incol) #should get array results
+        assert 1 == 0 #this should never happen
+    except DataSetException as dse:
+        pass
     
 if __name__ == '__main__':
+    test_shapes()
+    test()
+    test_contains()
+    test_bounds_within_again()
+    test_bounds_within_real()
     test_intersection()
-    #test2()
     test_bounds_within()
     test_bounds_within_meridian()
-    test()
+    
 
 
         

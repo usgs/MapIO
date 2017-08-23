@@ -19,13 +19,12 @@ else:
     from io import StringIO
 import os.path
 
-#third party
-
 #hack the path so that I can debug these functions if I need to
 homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
 mapiodir = os.path.abspath(os.path.join(homedir,'..'))
 sys.path.insert(0,mapiodir) #put this at the front of the system path, ignoring any installed mapio stuff
 
+#third party
 from mapio.shake import ShakeGrid
 from mapio.gridbase import Grid
 from mapio.multiple import MultiGrid
@@ -33,6 +32,35 @@ from mapio.dataset import DataSetException
 from mapio.grid2d import Grid2D
 from mapio.geodict import GeoDict
 import numpy as np
+
+def test_modify():
+    print('Testing ShakeGrid interpolate() method...')
+    geodict = GeoDict({'xmin':0.5,'xmax':6.5,'ymin':1.5,'ymax':6.5,'dx':1.0,'dy':1.0,'ny':6,'nx':7})
+    data = np.arange(14,56).reshape(6,7)
+    layers = OrderedDict()
+    layers['pga'] = data
+    shakeDict = {'event_id':'usabcd1234',
+                 'shakemap_id':'usabcd1234',
+                 'shakemap_version':1,
+                 'code_version':'4.0',
+                 'process_timestamp':datetime.utcnow(),
+                 'shakemap_originator':'us',
+                 'map_status':'RELEASED',
+                 'shakemap_event_type':'ACTUAL'}
+    eventDict = {'event_id':'usabcd1234',
+                 'magnitude':7.6,
+                 'depth':1.4,
+                 'lat':2.0,
+                 'lon':2.0,
+                 'event_timestamp':datetime.utcnow(),
+                 'event_network':'us',
+                 'event_description':'sample event'}
+    uncDict = {'pga':(0.0,0)}
+    shake = ShakeGrid(layers,geodict,eventDict,shakeDict,uncDict)
+    rdata = np.random.rand(data.shape[0],data.shape[1])
+    shake.setLayer('pga',rdata)
+    newdata = shake.getLayer('pga').getData()
+    np.testing.assert_almost_equal(rdata,newdata)
 
 def test_interpolate():
     print('Testing ShakeGrid interpolate() method...')
@@ -226,6 +254,7 @@ def test_save():
             shutil.rmtree(tdir)
 
 if __name__ == '__main__':
+    test_modify()
     test_interpolate()
     test_read()
     test_save()

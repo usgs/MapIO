@@ -2,16 +2,19 @@
 
 import numpy as np
 from .dataset import DataSetException
+from osgeo import osr
 
 class GeoDict(object):
     EPS = 1e-12
+    DEFAULT_PROJ4 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+    DIST_THRESH = .01/(111.191*1000) #1 centimeter in decimal degrees
     REQ_KEYS = ['xmin','xmax','ymin','ymax','dx','dy','ny','nx']
-    def __init__(self,geodict,adjust=None):
+    def __init__(self,geodict,adjust='bounds'):
         """
         An object which represents the spatial information for a grid and is guaranteed to be self-consistent.
-
+       
         :param geodict:
-          A dictionary containing the following fields:
+          A dictionary containing at least some of the following fields:
              - xmin Longitude minimum (decimal degrees) (Center of upper left cell)
              - xmax Longitude maximum (decimal degrees) (Center of upper right cell)
              - ymin Longitude minimum (decimal degrees) (Center of lower left cell)
@@ -20,13 +23,13 @@ class GeoDict(object):
              - dy Cell height (decimal degrees)
              - ny Number of rows of input data (must match input data dimensions)
              - nx Number of columns of input data (must match input data dimensions).
+             - projection proj4 string defining projection.  Optional. If not specified, assumed to be
+               "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" (WGS-84 geographic).
+        
         :param adjust:
-            String (one of None,'bounds','res')
-              None: All input parameters are assumed to be self-consistent, an exception will be raised if they are not.
+            String (one of 'bounds','res')
               'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin will be recalculated.
               'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will be recalculated.
-        :raises DataSetException:
-          When adjust is set to None, and any parameters are not self-consistent.
         """
         for key in self.REQ_KEYS:
             if key not in geodict.keys():
@@ -40,7 +43,14 @@ class GeoDict(object):
         self._dy = float(geodict['dy'])
         self._ny = int(geodict['ny'])
         self._nx = int(geodict['nx'])
-        self.validate(adjust=adjust)
+        if 'projection' in geodict:
+            srs = osr.SpatialReference()
+            srs.ImportFromProj4(geodict['projection'])
+            if srs.ExportToProj4() == '':
+                raise DataSetException('%s is not a valid proj4 string.' % geodict['projection'])
+        else:
+            self._projection = self.DEFAULT_PROJ4
+        self.validate(adjust)
 
     @classmethod
     def createDictFromBox(cls,xmin,xmax,ymin,ymax,dx,dy,inside=False):
@@ -94,6 +104,20 @@ class GeoDict(object):
         ymax = cy + yspan/2.0
         return cls.createDictFromBox(xmin,xmax,ymin,ymax,dx,dy)
 
+    def setProjection(self,projection):
+        """Set a new projection for the GeoDict.
+
+        :param projection:
+          Valid proj4 string.
+        :raises DataSetException:
+          When input is not valid proj4.
+        """
+        srs = osr.SpatialReference()
+        srs.ImportFromProj4(projection)
+        if srs.ExportToProj4() == '':
+            raise DataSetException('%s is not a valid proj4 string.' % geodict['projection'])
+        self._projection = projection
+    
     def getAligned(self,geodict,inside=False):
         """Return a geodict that is close to the input geodict bounds but aligned with this GeoDict.
 
@@ -343,14 +367,18 @@ class GeoDict(object):
           True if input geodict is completely outside this GeoDict,
           False if not.
         """
-        newxmin = geodict.xmin
-        if geodict.xmin < self.xmin and (geodict.xmin + 360) < self.xmax:
+        inside_x = False
+        if np.abs((self.xmax+self.dx) - (self.xmin + 360)) < self.dx*0.01:
             inside_x = True
-        else:
-            if self.xmax > self.xmin:
-                inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
+        if not inside_x:
+            newxmin = geodict.xmin
+            if geodict.xmin < self.xmin and (geodict.xmin + 360) < self.xmax:
+                inside_x = True
             else:
-                inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax+360
+                if self.xmax > self.xmin:
+                    inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
+                else:
+                    inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax+360
         inside_y = geodict.ymin >= self._ymin and geodict.ymax <= self._ymax
         if inside_x and inside_y:
             return True
@@ -433,16 +461,17 @@ class GeoDict(object):
         :returns: 
            Tuple of latitude and longitude.
         """
-        seqtypes = (list,tuple,np.ndarray)
-        if isinstance(row,seqtypes): #is this a sequence type thing?
-            row = np.array(row)
-            col = np.array(col)
-        else: #or a scalar - if so, make it an array
-            row = np.array([row])
-            col = np.array([col])
+        scalar_types = (int,float)
+        if type(row) != type(col):
+            raise DataSetException('Input row/col types must be the same')
         
-        row = np.array(row)
-        col = np.array(col)
+        if not isinstance(row,scalar_types): #is this a sequence type thing?
+            if isinstance(row,np.ndarray):
+                if row.shape == () or col.shape == ():
+                    raise DataSetException('Input row/col values must be scalars or dimensioned numpy arrays.')
+            else:
+                raise DataSetException('Input row/col values must be scalars or dimensioned numpy arrays.')
+        
         ulx = self._xmin
         uly = self._ymax
         dx = self._dx
@@ -466,13 +495,17 @@ class GeoDict(object):
         :returns: 
            Tuple of row and column.
         """
-        seqtypes = (list,tuple,np.ndarray)
-        if isinstance(lat,seqtypes): #is this a sequence type thing?
-            lat = np.array(lat)
-            lon = np.array(lon)
-        else: #or a scalar - if so, make it an array
-            lat = np.array([lat])
-            lon = np.array([lon])
+        scalar_types = (int,float)
+        if type(lat) != type(lon):
+            raise DataSetException('Input lat/lon types must be the same')
+        
+        if not isinstance(lat,scalar_types): #is this a sequence type thing?
+            if isinstance(lat,np.ndarray):
+                if lat.shape == () or lon.shape == ():
+                    raise DataSetException('Input lat/lon values must be scalars or dimensioned numpy arrays.')
+            else:
+                raise DataSetException('Input lat/lon values must be scalars or dimensioned numpy arrays.')
+            
         if intMethod not in ['round','floor','ceil']:
             raise DataSetException('intMethod %s is not supported.' % intMethod)
         
@@ -559,6 +592,14 @@ class GeoDict(object):
         """
         return self._nx
 
+    @property
+    def projection(self):
+        """Get projection Proj4 string.
+        :returns:
+          Valid Proj4 string.
+        """
+        return self._projection
+    
     @xmin.setter
     def xmin(self, value):
         """Set xmin value, re-validate object.
@@ -675,19 +716,10 @@ class GeoDict(object):
 
         return (dxmax,ddx,dymax,ddy)
         
-    def validate(self,adjust=None):
-        dxmax,ddx,dymax,ddy = self.getDeltas()
+    def validate(self,adjust):
+        #dxmax,ddx,dymax,ddy = self.getDeltas()
 
-        if adjust is None:
-            if dxmax > self.EPS:
-                raise DataSetException('GeoDict X resolution is not consistent with bounds and number of columns')
-            if ddx > self.EPS:
-                raise DataSetException('GeoDict X resolution is not consistent with bounds and number of columns')
-            if dymax > self.EPS:
-                raise DataSetException('GeoDict Y resolution is not consistent with bounds and number of rows')
-            if ddy > self.EPS:
-                raise DataSetException('GeoDict Y resolution is not consistent with bounds and number of rows')
-        elif adjust == 'bounds':
+        if adjust == 'bounds':
             if self._xmin > self._xmax:
                 txmax = self._xmax + 360
             else:

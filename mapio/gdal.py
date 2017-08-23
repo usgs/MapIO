@@ -50,18 +50,34 @@ class GDALGrid(Grid2D):
         #is a duplicate of the first column
         filegeodict,first_column_duplicated = cls.getFileGeoDict(filename)
 
+        #if the sampling geodict is identical to the file geodict, then turn resampling off
+        if samplegeodict is not None and samplegeodict == filegeodict:
+            resample = False
+        
         #If the sample grid is aligned with the host grid, then resampling won't accomplish anything 
         # if samplegeodict is not None and filegeodict.isAligned(samplegeodict):
         #     resample = False
+
+        if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
+             if not doPadding:
+                 raise DataSetException('Your sampling grid is not contained by the file.  To load anyway, use doPadding=True.')
         
         #buffer out the sample geodict (if resampling) enough to allow interpolation.
         if samplegeodict is not None:
-            sampledict = cls.bufferBounds(samplegeodict,filegeodict,resample=resample) #parent static method
+            sampledict = cls.bufferBounds(samplegeodict,filegeodict,resample=resample,doPadding=doPadding) #parent static method
         else:
             sampledict = filegeodict
 
         #Ensure that the two grids at least 1) intersect and 2) are aligned if resampling is True.
-        cls.verifyBounds(filegeodict,sampledict,resample=resample) #parent static method, may raise an exception
+        try:
+            cls.verifyBounds(filegeodict,sampledict,resample=resample) #parent static method, may raise an exception
+        #if they're not, and we have padding on, then give them a grid with all pad values.
+        except DataSetException as dse:
+            if doPadding:
+                if not filegeodict.contains(sampledict):
+                    data = np.ones((sampledict.ny,sampledict.nx),dtype=np.float32)*padValue
+                    return cls(data=data,geodict=sampledict)
+                
         sampledict = filegeodict.getIntersection(sampledict)
         bounds = (sampledict.xmin,sampledict.xmax,sampledict.ymin,sampledict.ymax)
         
@@ -90,26 +106,26 @@ class GDALGrid(Grid2D):
           When the file geodict is internally inconsistent.
         """
         geodict = {}
-        with rasterio.drivers():
-            with rasterio.open(filename) as src:
-                aff = src.affine
-                geodict['dx'] = aff.a
-                geodict['dy'] = -1*aff.e
-                geodict['xmin'] = aff.xoff + geodict['dx']/2.0
-                geodict['ymax'] = aff.yoff - geodict['dy']/2.0
-                                
-                shp = src.shape
-                if len(shp) > 2:
-                    raise DataSetException('Cannot support grids with more than one band')
-                geodict['ny'] = src.height
-                geodict['nx'] = src.width
-                geodict['xmax'] = geodict['xmin'] + (geodict['nx']-1)*geodict['dx']
-                if geodict['xmax'] == geodict['xmin']:
-                    pass
-                                              
-                geodict['ymin'] = geodict['ymax'] - (geodict['ny']-1)*geodict['dy']
 
-                gd = GeoDict(geodict)
+        with rasterio.open(filename) as src:
+            aff = src.affine
+            geodict['dx'] = aff.a
+            geodict['dy'] = -1*aff.e
+            geodict['xmin'] = aff.xoff + geodict['dx']/2.0
+            geodict['ymax'] = aff.yoff - geodict['dy']/2.0
+
+            shp = src.shape
+            if len(shp) > 2:
+                raise DataSetException('Cannot support grids with more than one band')
+            geodict['ny'] = src.height
+            geodict['nx'] = src.width
+            geodict['xmax'] = geodict['xmin'] + (geodict['nx']-1)*geodict['dx']
+            if geodict['xmax'] == geodict['xmin']:
+                pass
+
+            geodict['ymin'] = geodict['ymax'] - (geodict['ny']-1)*geodict['dy']
+
+            gd = GeoDict(geodict)
 
         newgeodict,first_column_duplicated = cls.checkFirstColumnDuplicated(gd)
         return (newgeodict,first_column_duplicated)
@@ -273,18 +289,18 @@ class GDALGrid(Grid2D):
             iuly2 = None
             ilry2 = None
         data = None
-        with rasterio.drivers():
-            with rasterio.open(filename) as src:
-                window1 = ((iuly1,ilry1),
-                           (iulx1,ilrx1))
-                section1 = src.read(1,window=window1)
-                if 'iulx2' in data_range:
-                    window2 = ((iuly2,ilry2),
-                               (iulx2,ilrx2))
-                    section2 = src.read(1,window=window2)
-                    data = np.hstack((section1,section2))
-                else:
-                    data = section1
+
+        with rasterio.open(filename) as src:
+            window1 = ((iuly1,ilry1),
+                       (iulx1,ilrx1))
+            section1 = src.read(1,window=window1)
+            if 'iulx2' in data_range:
+                window2 = ((iuly2,ilry2),
+                           (iulx2,ilrx2))
+                section2 = src.read(1,window=window2)
+                data = np.hstack((section1,section2))
+            else:
+                data = section1
 
         #Put NaN's back in where nodata value was
         nodata = src.get_nodatavals()[0]

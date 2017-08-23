@@ -167,8 +167,11 @@ class Cities(object):
         :raises DataSetException:
           When column(s) are not in the list of dataframe columns.
         """
-        if column not in self._dataframe.columns:
-            raise DataSetException('Column not in list of DataFrame columns')
+        if isinstance(columns,str):
+            columns = [columns]
+        for column in columns:
+            if column not in self._dataframe.columns:
+                raise DataSetException('Column not in list of DataFrame columns')
         if pd.__version__ < '0.17.0':
              self._dataframe = self._dataframe.sort(columns=columns,ascending=ascending)
         else:
