@@ -68,6 +68,7 @@ class BasemapCities(MapCities):
             raise DataSetException('Cities object has not had project() called yet.')
         
         if fontname not in self._fontlist:
+            print('Available fonts: ", self._fontlist)
             raise DataSetException('Font %s not in supported list.' % fontname)
         #TODO: - check placement column
         newdf = self._dataframe.copy()
