@@ -717,7 +717,7 @@ class GMTGrid(Grid2D):
         if 'x' in f.keys():
             xvarname = 'x'
             yvarname = 'y'
-        elif 'lon' in cdf.variables.keys():
+        elif 'lon' in f.keys():
             xvarname = 'lon'
             yvarname = 'lat'
         if xvarname is not None:
