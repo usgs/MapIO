@@ -422,7 +422,8 @@ class GeoDict(object):
                    'dx':self._dx,
                    'dy':self._dy,
                    'ny':self._ny,
-                   'nx':self._nx}
+                   'nx':self._nx,
+                   'projection':self._projection}
         return GeoDict(geodict)
         
     def __eq__(self,other):
