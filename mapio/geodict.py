@@ -48,6 +48,7 @@ class GeoDict(object):
             srs.ImportFromProj4(geodict['projection'])
             if srs.ExportToProj4() == '':
                 raise DataSetException('%s is not a valid proj4 string.' % geodict['projection'])
+            self._projection = geodict['projection']
         else:
             self._projection = self.DEFAULT_PROJ4
         self.validate(adjust)
@@ -412,9 +413,11 @@ class GeoDict(object):
         """Return an object that is a complete copy of this GeoDict.
 
         :returns:
-          A GeoDict object whose elements (xmin, xmax, ...) are an exact copy of 
+          A GeoDict object whose elements (xmin, xmax, ...) are an exact copy of
           this object's elements.
         """
+        if not hasattr(self.__class__, 'projection'):
+            self._projection = self.DEFAULT_PROJ4
         geodict = {'xmin':self._xmin,
                    'xmax':self._xmax,
                    'ymin':self._ymin,

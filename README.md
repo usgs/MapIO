@@ -48,7 +48,7 @@ Uninstalling and Updating
 
 To uninstall:
 
-pip uninstall grid
+pip uninstall mapio
 
 To update:
 
