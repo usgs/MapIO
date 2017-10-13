@@ -736,4 +736,6 @@ class GeoDict(object):
             raise DataSetException('Unsupported adjust option "%s"' % adjust)
         if self._xmax > 180:
             self._xmax -= 360
+        if self._xmin < -180:
+            self._xmin += 360
 
