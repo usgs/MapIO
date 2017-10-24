@@ -25,10 +25,18 @@ source activate $VENV
 conda install -y psutil
 
 #do pip installs of those things that are not available via conda.
-#do pip installs of those things that are not available via conda.
+
+#install GEM openquake library
 curl --max-time 60 --retry 3 -L https://github.com/gem/oq-engine/archive/master.zip -o openquake.zip
 pip -v install --no-deps openquake.zip
 rm openquake.zip
+
+#install impactutils library
+echo "Installing impactutils..."
+curl --retry 3 -L https://github.com/usgs/earthquake-impact-utils/archive/master.zip -o impact.zip
+pip install impact.zip
+rm impact.zip
+
 
 pip install flake8
 pip install pep8-naming
