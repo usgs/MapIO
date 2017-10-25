@@ -28,7 +28,7 @@ before_script:
 script:
     - export PYTHONPATH="."
     - echo `which py.test`
-    - py.test --mpl --cov=mapio
+    - py.test --cov=mapio
     - echo `sphinx-build --version`
 after_success:
     - pip install codecov codacy-coverage
