@@ -43,7 +43,13 @@ fi
 
 #if we're already in an environment called pager, switch out of it so we can remove it
 source activate root
-    
+
+#add channels
+conda update -q -y conda
+conda config --prepend channels conda-forge
+conda config --append channels digitalglobe # for rasterio v 1.0a9
+conda config --append channels ioos # for rasterio v 1.0a2
+
 #remove any previous virtual environments called libcomcat
 CWD=`pwd`
 cd $HOME;
