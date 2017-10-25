@@ -348,7 +348,7 @@ def test_project():
         outfile = os.path.join(tdir,'output.bil')
         grid.save(outfile)
         with rasterio.open(outfile) as src:
-            aff = src.transform
+            aff = src.affine
             data = src.read(1)
             src_crs = CRS().from_string(GeoDict.DEFAULT_PROJ4).to_dict()
             dst_crs = CRS().from_string(projstr).to_dict()

@@ -53,16 +53,6 @@ SPECKEYS = {'lon_min':'float',
             'nlat':'int'}
 
 FIELDKEYS = OrderedDict()
-FIELDKEYS['pga'] = ('pctg','%.2f')
-FIELDKEYS['pgv'] = ('cms','%.2f')
-FIELDKEYS['mmi'] = ('intensity','%.2f')
-FIELDKEYS['psa03'] = ('pctg','%.2f')
-FIELDKEYS['psa10'] = ('pctg','%.2f')
-FIELDKEYS['psa30'] = ('pctg','%.2f')
-FIELDKEYS['stdpga'] = ('ln(pctg)','%.2f')
-FIELDKEYS['stdpgv'] = ('ln(cms)','%.2f')
-FIELDKEYS['urat'] = ('','%.2f')
-FIELDKEYS['svel'] = ('ms','%.2f')
 FIELDKEYS['lat'] = ('dd','%.4f')
 FIELDKEYS['lon'] = ('dd','%.4f')
 
@@ -225,7 +215,7 @@ class ShakeGrid(MultiGrid):
     """
     A class that implements a MultiGrid object around ShakeMap grid.xml data sets.
     """
-    def __init__(self,layers,geodict,eventDict,shakeDict,uncertaintyDict):
+    def __init__(self,layers,geodict,eventDict,shakeDict,uncertaintyDict,field_keys={}):
         """Construct a ShakeGrid object.
         :param layers:
            OrderedDict containing ShakeMap data layers (keys are 'pga', etc., values are 2D arrays of data).
@@ -253,6 +243,11 @@ class ShakeGrid(MultiGrid):
         :param uncertaintyDict:
           Dictionary with elements that have keys matching the layers keys, and values that are
            a tuple of that layer's uncertainty (float) and the number of stations used to determine that uncertainty (int).
+        :param field_keys:
+          Dictionary containing keys matching at least some of input layers. For each key, 
+          a tuple of (UNITS,DIGITS) where UNITS is a string indicating
+          the units of the layer quantity (e.g, cm/s) and DIGITS is the number of significant digits
+          that the layer column should be printed with.
         :returns:
            A ShakeGrid object.
         """
@@ -265,6 +260,19 @@ class ShakeGrid(MultiGrid):
         self._setEventDict(eventDict)
         self._setShakeDict(shakeDict)
         self._setUncertaintyDict(uncertaintyDict)
+        self._field_keys = FIELDKEYS.copy()
+
+        #assign the units and digits the user wants
+        for layer,layertuple in field_keys.items():
+            units,digits = layertuple
+            fmtstr = '%%.%ig' % digits
+            self._field_keys[layer] = (units,fmtstr)
+
+        #if the user missed any, fill in with default values
+        for layer in self._layers.keys():
+            if layer in self._field_keys:
+                continue
+            self._field_keys[layer] = ('','%.4g')
 
     @classmethod
     def getFileGeoDict(cls,shakefilename,adjust='bounds'):
@@ -457,8 +465,8 @@ class ShakeGrid(MultiGrid):
         fmt = '<grid_field index="%i" name="%s" units="%s" />\n'
         data_formats = ['%.4f','%.4f']
         for field in self._layers.keys():
-            tpl = (idx,field.upper(),FIELDKEYS[field][0])
-            data_formats.append(FIELDKEYS[field][1])
+            tpl = (idx,field.upper(),self._field_keys[field][0])
+            data_formats.append(self._field_keys[field][1])
             if isThree:
                 db = bytes(fmt % tpl,'ascii')
             else:

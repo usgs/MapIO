@@ -660,39 +660,44 @@ class Grid2D(Grid):
             #we have to now find all rows/columns where there are NaN values and deal with them
             #accordingly - let's look at output rows first, looking for a row that is all NaN
             #and doesn't have an all NaN row above or below it.
-            colidx = finerdict.nx//2
-            while colidx > -1:
-                col = finedata[:,colidx]
-                if not np.isnan(col).all():
-                    nanrows = np.where(np.isnan(col))
-                    break
-                colidx -= 1
-            for i in nanrows[0]:
-                if i == 0 or i == finerdict.ny-1:
-                    continue
-                if cellFill == 'min':
-                    finedata[i,:] = np.minimum(finedata[i-1,:],finedata[i+1,:])
-                elif cellFill == 'max':
-                    finedata[i,:] = np.maximum(finedata[i-1,:],finedata[i+1,:])
-                else: #cellFill == 'mean':
-                    finedata[i,:] = (finedata[i-1,:] + finedata[i+1,:])/2.0
-            #now look at output columns
-            rowidx = finerdict.ny//2
-            while rowidx > -1:
-                row = finedata[rowidx,:]
-                if not np.isnan(row).all():
-                    nancols = np.where(np.isnan(row))
-                    break
-                rowidx -= 1
-            for j in nancols[0]:
-                if j == 0 or j == finerdict.nx-1:
-                    continue
-                if cellFill == 'min':
-                    finedata[:,j] = np.minimum(finedata[:,j-1],finedata[:,j+1])
-                elif cellFill == 'max':
-                    finedata[:,j] = np.maximum(finedata[:,j-1],finedata[:,j+1])
-                else: #cellFill == 'mean':
-                    finedata[:,j] = (finedata[:,j-1] + finedata[:,j+1])/2.0
+
+            #np.minimum and maximum throw warnings with NaN values, even the behavior with respect
+            #to those is clearly documented.  So, let's ignore those warnings in this
+            #section where we use those methods.
+            with np.errstate(invalid='ignore'):
+                colidx = finerdict.nx//2
+                while colidx > -1:
+                    col = finedata[:,colidx]
+                    if not np.isnan(col).all():
+                        nanrows = np.where(np.isnan(col))
+                        break
+                    colidx -= 1
+                for i in nanrows[0]:
+                    if i == 0 or i == finerdict.ny-1:
+                        continue
+                    if cellFill == 'min':
+                        finedata[i,:] = np.minimum(finedata[i-1,:],finedata[i+1,:])
+                    elif cellFill == 'max':
+                        finedata[i,:] = np.maximum(finedata[i-1,:],finedata[i+1,:])
+                    else: #cellFill == 'mean':
+                        finedata[i,:] = (finedata[i-1,:] + finedata[i+1,:])/2.0
+                #now look at output columns
+                rowidx = finerdict.ny//2
+                while rowidx > -1:
+                    row = finedata[rowidx,:]
+                    if not np.isnan(row).all():
+                        nancols = np.where(np.isnan(row))
+                        break
+                    rowidx -= 1
+                for j in nancols[0]:
+                    if j == 0 or j == finerdict.nx-1:
+                        continue
+                    if cellFill == 'min':
+                        finedata[:,j] = np.minimum(finedata[:,j-1],finedata[:,j+1])
+                    elif cellFill == 'max':
+                        finedata[:,j] = np.maximum(finedata[:,j-1],finedata[:,j+1])
+                    else: #cellFill == 'mean':
+                        finedata[:,j] = (finedata[:,j-1] + finedata[:,j+1])/2.0
 
 
         finegrid = Grid2D(finedata,finerdict)
