@@ -1,7 +1,7 @@
 #!/bin/bash
 
-VENV=impact
-PYVER=3.6
+VENV=mapio
+PYVER=3.5
 
 unamestr=`uname`
 if [[ "$unamestr" == 'Linux' ]]; then
