@@ -13,7 +13,7 @@ install:
     - conda config --set always_yes yes --set changeps1 no
     - conda update -q conda
     - conda info -a
-    - bash setup_env.sh
+    - bash install.sh
     - source activate mapio
     #---------------------
     # Install mapio

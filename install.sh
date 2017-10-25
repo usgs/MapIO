@@ -20,7 +20,7 @@ if [[ "$unamestr" == 'Linux' ]]; then
               cartopy=0.15.1 \
               fiona=1.7.8 \
               pycrypto=2.6.1 \
-              paramiko=2.1.1 \
+              paramiko=2.2.1 \
               beautifulsoup4=4.5.3)
 elif [[ "$unamestr" == 'FreeBSD' ]] || [[ "$unamestr" == 'Darwin' ]]; then
     DEPARRAY=(numpy=1.13.1 \
@@ -37,7 +37,7 @@ elif [[ "$unamestr" == 'FreeBSD' ]] || [[ "$unamestr" == 'Darwin' ]]; then
               cartopy=0.15.1 \
               fiona=1.7.8 \
               pycrypto=2.6.1 \
-              paramiko=2.1.1 \
+              paramiko=2.2.1 \
               beautifulsoup4=4.5.3)
 fi
 
