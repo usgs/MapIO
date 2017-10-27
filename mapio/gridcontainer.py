@@ -18,24 +18,31 @@ from mapio.geodict import GeoDict
 
 
 class GridHDFContainer(HDFContainer):
-    def setGrid(self,name,grid,metadata=None):
+    def setGrid(self,name,grid,metadata=None,compression=True):
         """Store a Grid2D object as a dataset.
         
         Args:
           name (str): Name of the Grid2D object to be stored.
           grid (Grid2D): Grid2D object to be stored.
           metadata (dict): Simple dictionary (values of strings and numbers).
+          compression (bool): Boolean indicating whether dataset should be compressed
+                              using the gzip algorithm.
 
         Returns:
           HDF Dataset containing grid and metadata.
         """
+        if compression:
+            compression = 'gzip'
+        else:
+            compression = None
+        
         grid_name = '__grid_%s__' % name
         array_metadata = grid.getGeoDict().asDict()
         data = grid.getData()
         if metadata is not None:
             for key,value in metadata.items():
                 array_metadata[key] = value
-        dset = self._hdfobj.create_dataset(grid_name, data=data)
+        dset = self._hdfobj.create_dataset(grid_name, data=data, compression=compression)
         for key, value in array_metadata.items():
             dset.attrs[key] = value
         return dset
