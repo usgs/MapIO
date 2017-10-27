@@ -30,14 +30,37 @@ def test_grid_hdf_container():
         assert outgrid.getGeoDict() == geodict
         assert outmetadata == metadata
 
-        #test getGridNames() and getArrayNames()
+        #set another grid without compression
+        geodict = GeoDict.createDictFromBox(-119.5,-115.5,32.3,37.7,0.01,0.02)
+        nrows,ncols = geodict.ny,geodict.nx
+        data = np.random.rand(nrows,ncols)
+        metadata = {'name':'Legolas',
+                    'color':'green',
+                    'powers':'stealth'}
+        grid2 = Grid2D(data,geodict)
+        container.setGrid('testgrid2',grid2,metadata=metadata,compression=False)
+        outgrid2,outmetadata2 = container.getGrid('testgrid2')
+        np.testing.assert_array_equal(outgrid2.getData(),data)
+        assert outgrid2.getGeoDict() == geodict
+        assert outmetadata2 == metadata
+        
+        #test getGridNames()
         names = container.getGrids()
-        assert names == ['testgrid']
+        assert sorted(names) == ['testgrid','testgrid2']
+
+        #test looking for a grid that does not exist
+        try:
+            container.getGrid('foo')
+        except LookupError as le:
+            pass
+
+        #test dropping a grid
+        container.dropGrid('testgrid2')
 
         container.close()
         container2 = GridHDFContainer.load(fname)
         names = container2.getGrids()
-        assert names == ['testgrid']
+        assert sorted(names) == ['testgrid']
     except:
         assert 1==2
     finally:
