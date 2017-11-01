@@ -40,8 +40,7 @@ class GridHDFContainer(HDFContainer):
         array_metadata = grid.getGeoDict().asDict()
         data = grid.getData()
         if metadata is not None:
-            for key,value in metadata.items():
-                array_metadata[key] = value
+            array_metadata.update(metadata)
         dset = self._hdfobj.create_dataset(grid_name, data=data, compression=compression)
         for key, value in array_metadata.items():
             dset.attrs[key] = value
@@ -63,17 +62,7 @@ class GridHDFContainer(HDFContainer):
             raise LookupError('Array %s not in %s' % (name,self.getFileName()))
         dset = self._hdfobj[array_name]
         data = dset[()]
-        metadata = {}
-        for key, value in dset.attrs.items():
-            metadata[key] = value
-        grid_keys = ['xmin','xmax','ymin','ymax','nx','ny','dx','dy']
-        array_metadata = {}
-        meta_metadata = {}
-        for key,value in metadata.items():
-            if key in grid_keys:
-                array_metadata[key] = value
-            else:
-                meta_metadata[key] = value
+        array_metadata,meta_metadata = _split_dset_attrs(dset)
         geodict = GeoDict(array_metadata)
         grid = Grid2D(data,geodict)
         return grid,meta_metadata
@@ -102,3 +91,13 @@ class GridHDFContainer(HDFContainer):
 
 
 
+def _split_dset_attrs(dset):
+    geodict = {}
+    metadata = {}
+    grid_keys = ['xmin','xmax','ymin','ymax','nx','ny','dx','dy']
+    for key,value in dset.attrs.items():
+        if key in grid_keys:
+            geodict[key] = value
+        else:
+            metadata[key] = value
+    return (geodict,metadata)
