@@ -3,42 +3,77 @@
 VENV=mapio
 PYVER=3.5
 
+# Is the reset flag set?
+reset=0
+while getopts r FLAG; do
+  case $FLAG in
+    r)
+        reset=1
+        echo "Letting conda sort out dependencies..."
+      ;;
+  esac
+done
+
+
+
 unamestr=`uname`
 if [[ "$unamestr" == 'Linux' ]]; then
-    DEPARRAY=(numpy=1.11 \
-              scipy=0.19.1 \
-              matplotlib=2.0.2 \
-              rasterio=1.0a2 \
-              pandas=0.20.3 \
-              shapely=1.5.17
-              h5py=2.7.0 \
+    DEPARRAY=(numpy=1.13.3 \
+              scipy=1.0.0 \
+              matplotlib=2.1.0 \
+              rasterio=0.36.0 \
+              pandas=0.21.0 \
+              shapely=1.6.2
+              h5py=2.7.1 \
               gdal=2.1.4 \
-              pytest=3.2.0 \
+              pytest=3.2.5 \
               pytest-cov=2.5.1 \
-              jupyter=1.0.0 \
-              ipython=6.1.0 \
+              ipython=6.2.1 \
               cartopy=0.15.1 \
-              fiona=1.7.8 \
+              fiona=1.7.10 \
               pycrypto=2.6.1 \
-              paramiko=2.2.1 \
-              beautifulsoup4=4.5.3)
+              paramiko=2.3.1 \
+              psutil=5.4.0 \
+              beautifulsoup4=4.6.0)
 elif [[ "$unamestr" == 'FreeBSD' ]] || [[ "$unamestr" == 'Darwin' ]]; then
-    DEPARRAY=(numpy=1.13.1 \
-              scipy=0.19.1 \
-              matplotlib=2.0.2 \
-              rasterio=1.0a9 \
-              pandas=0.20.3 \
-              shapely=1.5.17 \
-              h5py=2.7.0 \
-              gdal=2.1.4 \
-              pytest=3.2.0 \
-              pytest-cov=2.5.1 \
-              ipython=6.1.0 \
-              cartopy=0.15.1 \
-              fiona=1.7.8 \
-              pycrypto=2.6.1 \
-              paramiko=2.2.1 \
-              beautifulsoup4=4.5.3)
+    if [ $reset -eq 0 ]; then
+        DEPARRAY=(numpy=1.13.3 \
+                  scipy=1.0.0 \
+                  matplotlib=2.1.0 \
+                  rasterio=0.36.0 \
+                  pandas=0.21.0 \
+                  shapely=1.6.2 \
+                  h5py=2.7.1 \
+                  gdal=2.1.4 \
+                  pytest=3.2.5 \
+                  pytest-cov=2.5.1 \
+                  ipython=6.2.1 \
+                  cartopy=0.15.1 \
+                  fiona=1.7.10 \
+                  pycrypto=2.6.1 \
+                  paramiko=2.3.1 \
+                  psutil=5.4.0 \
+                  beautifulsoup4=4.6.0)
+    else
+        echo "Letting conda sort out dependencies..."
+        DEPARRAY=(numpy \
+                  scipy \
+                  matplotlib \
+                  rasterio \
+                  pandas \
+                  shapely \
+                  h5py \
+                  gdal \
+                  pytest \
+                  pytest-cov \
+                  ipython \
+                  cartopy \
+                  fiona \
+                  pycrypto \
+                  paramiko \
+                  psutil \
+                  beautifulsoup4)
+    fi
 fi
 
 #if we're already in an environment called pager, switch out of it so we can remove it
@@ -58,6 +93,11 @@ cd $CWD
     
 #create a new virtual environment called $VENV with the below list of dependencies installed into it
 conda create --name $VENV --yes --channel conda-forge python=$PYVER ${DEPARRAY[*]} -y
+
+if [ $? -ne 0 ]; then
+    echo "Failed to create conda environment.  Resolve any conflicts, then try again."
+    exit
+fi
 
 #activate the new environment
 source activate $VENV
