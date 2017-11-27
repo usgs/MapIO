@@ -109,12 +109,15 @@ class BasemapCities(MapCities):
                 ikeep.append(i)
             else:
                 foo = 1
-
-        newdf = newdf.iloc[ikeep]
-        newdf['top'] = tops[ikeep]
-        newdf['bottom'] = bottoms[ikeep]
-        newdf['left'] = lefts[ikeep]
-        newdf['right'] = rights[ikeep]
+        if len(newdf):
+            try:
+                newdf = newdf.iloc[ikeep]
+                newdf['top'] = tops[ikeep]
+                newdf['bottom'] = bottoms[ikeep]
+                newdf['left'] = lefts[ikeep]
+                newdf['right'] = rights[ikeep]
+            except Exception as e:
+                x = 1
         return type(self)(newdf)
 
     def renderToMap(self,ax,fontname='Bitstream Vera Sans',fontsize=10.0,zorder=10,shadow=False):
@@ -139,7 +142,8 @@ class BasemapCities(MapCities):
         self._display_to_data_transform = ax.transData.inverted()
         
         for index,row in self._dataframe.iterrows():
-            th = self._renderRow(row,ax,fontname,fontsize,shadow=shadow)
+            th = self._renderRow(row,ax,fontname,fontsize,shadow=shadow,
+                                 zorder=zorder)
             ax.plot(row['x'],row['y'],'k.')
     
     def _getCityBoundingBoxes(self,df,fontname,fontsize,ax):
@@ -170,21 +174,22 @@ class BasemapCities(MapCities):
         bottoms = np.ones(len(df))*np.nan
         lefts = np.ones(len(df))*np.nan
         rights = np.ones(len(df))*np.nan
-        left,right,bottom,top = self._getCityEdges(df.iloc[0],newax,newfig,fontname,fontsize)
-        lefts[0] = left
-        rights[0] = right
-        bottoms[0] = bottom
-        tops[0] = top
-        for i in range(1,len(df)):
-            row = df.iloc[i]
-            left,right,bottom,top = self._getCityEdges(row,newax,newfig,fontname,fontsize)
-            #remove cities that have any portion off the map
-            if left < axmin or right > axmax or bottom < aymin or top > aymax:
-                continue
-            lefts[i] = left
-            rights[i] = right
-            bottoms[i] = bottom
-            tops[i] = top
+        if len(df):
+            left,right,bottom,top = self._getCityEdges(df.iloc[0],newax,newfig,fontname,fontsize)
+            lefts[0] = left
+            rights[0] = right
+            bottoms[0] = bottom
+            tops[0] = top
+            for i in range(1,len(df)):
+                row = df.iloc[i]
+                left,right,bottom,top = self._getCityEdges(row,newax,newfig,fontname,fontsize)
+                #remove cities that have any portion off the map
+                if left < axmin or right > axmax or bottom < aymin or top > aymax:
+                    continue
+                lefts[i] = left
+                rights[i] = right
+                bottoms[i] = bottom
+                tops[i] = top
 
         #get rid of new figure and its axes
         plt.close(newfig)
@@ -232,12 +237,12 @@ class BasemapCities(MapCities):
         ty = row['y']
         if shadow:  
             th = ax.text(tx,ty,row['name'],fontname=fontname,color='white',
-                         fontsize=fontsize,ha=ha,va=va,zorder=zorder)
+                         fontsize=fontsize,ha=ha,va=va,zorder=zorder,clip_on=True)
             th.set_path_effects([path_effects.Stroke(linewidth=1.5, foreground='black'),
                                  path_effects.Normal()])
         else:     
             th = ax.text(tx,ty,row['name'],fontname=fontname,
-                         fontsize=fontsize,ha=ha,va=va,zorder=zorder)
+                         fontsize=fontsize,ha=ha,va=va,zorder=zorder,clip_on=True)
             
         return th
         

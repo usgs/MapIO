@@ -11,10 +11,21 @@ import warnings
 
 #third party imports
 import rasterio
+from affine import Affine
 import numpy as np
 from .grid2d import Grid2D
 from .dataset import DataSetException,DataSetWarning
 from .geodict import GeoDict
+
+def get_affine(src):
+    aff = None
+    # See https://github.com/mapbox/rasterio/issues/86
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        aff = src.transform
+    if isinstance(aff,list):
+        aff = Affine.from_gdal(*aff)
+    return aff
 
 class GDALGrid(Grid2D):
     def __init__(self,data,geodict):
@@ -108,11 +119,16 @@ class GDALGrid(Grid2D):
         geodict = {}
 
         with rasterio.open(filename) as src:
-            aff = src.transform
+            aff = get_affine(src)
+            if aff is None:
+                fmt = 'Could not find .transform attribute from GDAL dataset.'
+                raise AttributeError(fmt)
+            
             geodict['dx'] = aff.a
             geodict['dy'] = -1*aff.e
             geodict['xmin'] = aff.xoff + geodict['dx']/2.0
             geodict['ymax'] = aff.yoff - geodict['dy']/2.0
+            
 
             shp = src.shape
             if len(shp) > 2:

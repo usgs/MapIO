@@ -260,13 +260,59 @@ class GeoDict(object):
         ymaxrow = np.ceil((fymax-ymax)/fdy)
         newymin = fymax - yminrow*fdy
         newymax = fymax - ymaxrow*fdy
+
+        #in certain edge cases, the "inside" bounds can be equal (or nearly) to input bounds
+        #check for this here, and nudge in one pixel until fixed
+        while newxmin <= xmin:
+            xmincol = xmincol + 1
+            newxmin = fxmin + xmincol*fdx
+            
+        while newxmax >= xmax:
+            xmaxcol = xmaxcol - 1
+            newxmax = fxmin + xmaxcol*fdx
+            
+        while newymin <= ymin:
+            yminrow = yminrow - 1
+            newymin = fymax - yminrow*fdy
+            
+        while newymax >= ymax:
+            ymaxrow = ymaxrow + 1
+            newymax = fymax - ymaxrow*fdy
+            
+        
         ny = int((yminrow-ymaxrow)+1)
         #if the input geodict crosses the 180 meridian, deal with this...
         if xmin > xmax:
             nx = ((fnx-xmincol)) + (xmaxcol + 1)
         else:
             nx = int((xmaxcol - xmincol) + 1)
-        
+
+        #because validate() calculates ymin and xmax differently,
+        #let's re-calculate those that way and see if we get the same results
+        tmp_new_ymin = newymax - fdy*(ny-1)
+        tmp_new_xmax = newxmin + fdx*(nx-1)
+        tmp_nx = nx
+        tmp_ny = ny
+        tmp_xmax = xmax
+        if tmp_new_xmax > 180:
+            tmp_xmax += 360
+
+        # if we don't get the same results, adjust nx/ny until we do.
+        while tmp_new_ymin < ymin:
+            tmp_ny = tmp_ny - 1
+            tmp_new_ymin = newymax - fdy*(tmp_ny-1)
+        while tmp_new_xmax > tmp_xmax:
+            tmp_nx = tmp_nx - 1
+            tmp_new_xmax = newxmin + fdx*(tmp_nx-1)
+
+        if tmp_new_ymin != newymin:
+            newymin = tmp_new_ymin
+            ny = tmp_ny
+
+        if tmp_new_xmax != newxmax:
+            newxmax = tmp_new_xmax
+            nx = tmp_nx
+            
         outgeodict = GeoDict({'xmin':newxmin,'xmax':newxmax,
                               'ymin':newymin,'ymax':newymax,
                               'dx':fdx,'dy':fdy,
@@ -274,6 +320,11 @@ class GeoDict(object):
         isaligned = self.isAligned(outgeodict)
         if not isaligned:
             raise DataSetException('getBoundsWithin() cannot create an aligned geodict.')
+
+        isinside = geodict.contains(outgeodict)
+        if not isaligned:
+            raise DataSetException('getBoundsWithin() cannot create an geodict inside input.')
+        
         return outgeodict
 
     def isAligned(self,geodict):

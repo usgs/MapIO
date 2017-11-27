@@ -22,7 +22,7 @@ sys.path.insert(0,mapiodir) #put this at the front of the system path, ignoring 
 #third party imports
 from mapio.gridbase import Grid
 from mapio.grid2d import Grid2D
-from mapio.gdal import GDALGrid
+from mapio.gdal import GDALGrid,get_affine
 from mapio.dataset import DataSetException
 from mapio.geodict import GeoDict
 import numpy as np
@@ -348,7 +348,7 @@ def test_project():
         outfile = os.path.join(tdir,'output.bil')
         grid.save(outfile)
         with rasterio.open(outfile) as src:
-            aff = src.transform
+            aff = get_affine(src)
             data = src.read(1)
             src_crs = CRS().from_string(GeoDict.DEFAULT_PROJ4).to_dict()
             dst_crs = CRS().from_string(projstr).to_dict()
