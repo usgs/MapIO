@@ -17,6 +17,10 @@ sys.path.insert(0,mapiodir) #put this at the front of the system path, ignoring 
 from mapio.dataset import DataSetException
 from mapio.geodict import GeoDict
 
+
+
+
+
 def test():
     #these values taken from the shakemap header of: 
     #http://earthquake.usgs.gov/realtime/product/shakemap/ak12496371/ak/1453829475592/download/grid.xml
@@ -328,6 +332,41 @@ def test_bounds_within():
     
     inside = host.getBoundsWithin(sample)
     assert inside == result
+
+    # test degenerate case where first pass at getting inside bounds fails (xmax)
+    host = GeoDict({'ymax': 84.0,
+                    'dx': 0.008333333333333333,
+                    'ny': 16801,
+                    'xmax': 179.99166666666667,
+                    'xmin': -180.0,
+                    'nx': 43200,
+                    'dy': 0.008333333333333333,
+                    'ymin': -56.0})
+
+    sample = GeoDict({'ymax': 18.933333333333334,
+                      'dx': 0.008333333333333333,
+                      'ny': 877,
+                      'xmax': -90.28333333333333,
+                      'xmin': -97.86666666666666,
+                      'nx': 911,
+                      'dy': 0.008333333333333333,
+                      'ymin': 11.633333333333333})
+    inside = host.getBoundsWithin(sample)
+    assert sample.contains(inside)
+
+    #this tests some logic that I can't figure out
+    #a way to make happen inside getBoundsWithin().
+    newymin,ymin = (11.63333333333334, 11.633333333333333)
+    fdy = 0.008333333333333333
+    yminrow = 8684.0
+    fymax = 84.0
+    newymin -= fdy/2 #bump it down
+    while newymin <= ymin:
+        yminrow = yminrow - 1
+        newymin = fymax - yminrow*fdy
+    assert newymin > ymin
+    
+    
 
   
 def test_bounds_within_real():
