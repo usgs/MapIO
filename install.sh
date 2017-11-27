@@ -20,10 +20,10 @@ unamestr=`uname`
 if [[ "$unamestr" == 'Linux' ]]; then
     DEPARRAY=(numpy=1.13.3 \
               scipy=1.0.0 \
-              matplotlib=2.1.0 \
+              matplotlib=1.5.3 \
               rasterio=0.36.0 \
               pandas=0.21.0 \
-              shapely=1.6.2
+              shapely=1.6.2 \
               h5py=2.7.1 \
               gdal=2.1.4 \
               pytest=3.2.5 \
@@ -39,7 +39,7 @@ elif [[ "$unamestr" == 'FreeBSD' ]] || [[ "$unamestr" == 'Darwin' ]]; then
     if [ $reset -eq 0 ]; then
         DEPARRAY=(numpy=1.13.3 \
                   scipy=1.0.0 \
-                  matplotlib=2.1.0 \
+                  matplotlib=1.5.3 \
                   rasterio=0.36.0 \
                   pandas=0.21.0 \
                   shapely=1.6.2 \
