@@ -246,6 +246,11 @@ class GeoDict(object):
         """
         if not self.contains(geodict):
             raise DataSetException('Input geodict not fully contained by this GeoDict object.')
+
+        # if the input geodict is identical to the host grid, then just return that
+        # geodict.
+        if self == geodict:
+            return geodict.copy()
         
         fxmin,fxmax,fymin,fymax = (self.xmin,self.xmax,self.ymin,self.ymax)
         xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
