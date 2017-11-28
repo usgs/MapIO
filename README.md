@@ -1,6 +1,5 @@
-<a href="https://codecov.io/gh/usgs/MapIO">
-  <img src="https://codecov.io/gh/usgs/MapIO/branch/master/graph/badge.svg" alt="Codecov" />
-</a>
+[![Build Status](https://travis-ci.org/usgs/MapIO.svg?branch=master)](https://travis-ci.org/usgs/MapIO)
+[![codecov](https://codecov.io/gh/usgs/MapIO/branch/master/graph/badge.svg)](https://codecov.io/gh/usgs/MapIO)
 
 
 Introduction
