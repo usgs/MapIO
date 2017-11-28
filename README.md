@@ -31,13 +31,7 @@ This library depends on:
  * pandas: <a href="http://pandas.pydata.org/">http://pandas.pydata.org/</a>
 
  
-These packages are all either installed automatically by the Anaconda scientific Python distribution, or easily installed using the conda command.  The final dependency:
-
- * openquake: <a href="http://www.globalquakemodel.org/openquake/about/">http://www.globalquakemodel.org/openquake/about/</a>
-
-can be installed by using pip with git:
-
-pip install git+git://github.com/gem/oq-hazardlib.git
+These packages are all either installed automatically by the Anaconda scientific Python distribution, or easily installed using the conda command.  
 
 To install this package:
 
