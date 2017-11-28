@@ -9,6 +9,6 @@ setup(name='mapio',
       author='Mike Hearne,Bruce Worden',
       author_email='mhearne@usgs.gov,cbworden@usgs.gov',
       url='',
-      packages=['mapio'],
+      packages=['mapio', 'mapio.extern'],
       scripts = [],
 )
