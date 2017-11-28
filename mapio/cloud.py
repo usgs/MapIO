@@ -8,8 +8,8 @@ import numpy as np
 
 from .dataset import DataSet,DataSetException
 from .gridbase import Grid
-from openquake.hazardlib.geo import geodetic
-
+#from openquake.hazardlib.geo import geodetic
+from .extern import geodetic
 
 
 class Cloud(DataSet):
