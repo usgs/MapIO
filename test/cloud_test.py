@@ -19,8 +19,7 @@ from mapio.dataset import DataSet,DataSetException
 from mapio.gridbase import Grid
 from mapio.cloud import Cloud
 
-from openquake.hazardlib.geo import geodetic
-            
+
 def test():
     npoints = 1000
     lon = np.random.random_integers(-180000,180000,size=npoints)/1000.0

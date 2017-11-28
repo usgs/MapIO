@@ -1,6 +1,5 @@
-<a href="https://codecov.io/gh/usgs/MapIO">
-  <img src="https://codecov.io/gh/usgs/MapIO/branch/master/graph/badge.svg" alt="Codecov" />
-</a>
+[![Build Status](https://travis-ci.org/usgs/MapIO.svg?branch=master)](https://travis-ci.org/usgs/MapIO)
+[![codecov](https://codecov.io/gh/usgs/MapIO/branch/master/graph/badge.svg)](https://codecov.io/gh/usgs/MapIO)
 
 
 Introduction
@@ -31,13 +30,7 @@ This library depends on:
  * pandas: <a href="http://pandas.pydata.org/">http://pandas.pydata.org/</a>
 
  
-These packages are all either installed automatically by the Anaconda scientific Python distribution, or easily installed using the conda command.  The final dependency:
-
- * openquake: <a href="http://www.globalquakemodel.org/openquake/about/">http://www.globalquakemodel.org/openquake/about/</a>
-
-can be installed by using pip with git:
-
-pip install git+git://github.com/gem/oq-hazardlib.git
+These packages are all either installed automatically by the Anaconda scientific Python distribution, or easily installed using the conda command.  
 
 To install this package:
 
