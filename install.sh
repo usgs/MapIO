@@ -1,7 +1,6 @@
 #!/bin/bash
 
 VENV=mapio
-PYVER=3.5
 
 # Is the reset flag set?
 reset=0
@@ -14,103 +13,69 @@ while getopts r FLAG; do
   esac
 done
 
-
-
-unamestr=`uname`
-if [[ "$unamestr" == 'Linux' ]]; then
-    DEPARRAY=(numpy=1.13.3 \
-              scipy=1.0.0 \
-              matplotlib=1.5.3 \
-              rasterio=0.36.0 \
-              pandas=0.21.0 \
-              shapely=1.6.2 \
-              h5py=2.7.1 \
-              gdal=2.1.4 \
-              pytest=3.2.5 \
-              pytest-cov=2.5.1 \
-              ipython=6.2.1 \
-              cartopy=0.15.1 \
-              fiona=1.7.10 \
-              pycrypto=2.6.1 \
-              paramiko=2.3.1 \
-              psutil=5.4.0 \
-              beautifulsoup4=4.6.0)
-elif [[ "$unamestr" == 'FreeBSD' ]] || [[ "$unamestr" == 'Darwin' ]]; then
-    if [ $reset -eq 0 ]; then
-        DEPARRAY=(numpy=1.13.3 \
-                  scipy=1.0.0 \
-                  matplotlib=1.5.3 \
-                  rasterio=0.36.0 \
-                  pandas=0.21.0 \
-                  shapely=1.6.2 \
-                  h5py=2.7.1 \
-                  gdal=2.1.4 \
-                  pytest=3.2.5 \
-                  pytest-cov=2.5.1 \
-                  ipython=6.2.1 \
-                  cartopy=0.15.1 \
-                  fiona=1.7.10 \
-                  pycrypto=2.6.1 \
-                  paramiko=2.3.1 \
-                  psutil=5.4.0 \
-                  beautifulsoup4=4.6.0)
-    else
-        echo "Letting conda sort out dependencies..."
-        DEPARRAY=(numpy \
-                  scipy \
-                  matplotlib \
-                  rasterio \
-                  pandas \
-                  shapely \
-                  h5py \
-                  gdal \
-                  pytest \
-                  pytest-cov \
-                  ipython \
-                  cartopy \
-                  fiona \
-                  pycrypto \
-                  paramiko \
-                  psutil \
-                  beautifulsoup4)
-    fi
+# Is conda installed?
+conda=$(which conda)
+if [ ! "$conda" ] ; then
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
+        -O miniconda.sh;
+    bash miniconda.sh -f -b -p $HOME/miniconda
+    export PATH="$HOME/miniconda/bin:$PATH"
 fi
 
-#if we're already in an environment called pager, switch out of it so we can remove it
-source activate root
+# Choose an environment file based on platform
+unamestr=`uname`
+if [ "$unamestr" == 'Linux' ]; then
+    env_file=environment_linux.yml
+elif [ "$unamestr" == 'FreeBSD' ] || [ "$unamestr" == 'Darwin' ]; then
+    env_file=environment_osx.yml
+fi
 
-#add channels
-conda update -q -y conda
-conda config --prepend channels conda-forge
-conda config --append channels digitalglobe # for rasterio v 1.0a9
-conda config --append channels ioos # for rasterio v 1.0a2
+# If the user has specified the -r (reset) flag, then create an
+# environment based on only the named dependencies, without
+# any versions of packages specified.
+if [ $reset == 1 ]; then
+    echo "Ignoring platform, letting conda sort out dependencies..."
+    env_file=environment.yml
+fi
 
-#remove any previous virtual environments called libcomcat
-CWD=`pwd`
-cd $HOME;
-conda remove --name $VENV --all -y
-cd $CWD
-    
-#create a new virtual environment called $VENV with the below list of dependencies installed into it
-conda create --name $VENV --yes --channel conda-forge python=$PYVER ${DEPARRAY[*]} -y
+echo "Environment file: $env_file"
 
+# Turn off whatever other virtual environment user might be in
+source deactivate
+
+# Download dependencies not in conda or pypi
+curl --max-time 60 --retry 3 -L \
+    https://github.com/usgs/libcomcat/archive/master.zip -o libcomcat.zip
+curl --max-time 60 --retry 3 -L \
+    https://github.com/usgs/earthquake-impact-utils/archive/master.zip -o impact.zip
+
+
+# Create a conda virtual environment
+echo "Creating the $VENV virtual environment:"
+conda env create -f $env_file --force
+
+# Bail out at this point if the conda create command fails.
+# Clean up zip files we've downloaded
 if [ $? -ne 0 ]; then
     echo "Failed to create conda environment.  Resolve any conflicts, then try again."
+    echo "Cleaning up zip files..."
+    rm libcomcat.zip
+    rm impact.zip
     exit
 fi
 
-#activate the new environment
+# Activate the new environment
+echo "Activating the $VENV virtual environment"
 source activate $VENV
 
-#install openquake from github
-curl --max-time 300 --retry 3 -L https://github.com/gem/oq-engine/archive/master.zip -o openquake.zip
-pip -v install --no-deps openquake.zip
-rm openquake.zip
+# Install OpenQuake -- note that I have pulled this out of environment.yml
+# because the requirements are too narrow to work with our other dependencies,
+# but the openquake.hazardlib tests pass with this environment. We need to
+# remember to check this when we change the environemnt.yml file though.
+conda install -y --no-deps -c conda-forge openquake.engine
 
-#install impactutils library
-echo "Installing impactutils..."
-curl --retry 3 -L https://github.com/usgs/earthquake-impact-utils/archive/master.zip -o impact.zip
-pip install impact.zip
+# Clean up downloaded packages
+rm libcomcat.zip
 rm impact.zip
 
 # This package
