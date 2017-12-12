@@ -47,7 +47,7 @@ source deactivate
 curl --max-time 60 --retry 3 -L \
     https://github.com/usgs/libcomcat/archive/master.zip -o libcomcat.zip
 curl --max-time 60 --retry 3 -L \
-    https://github.com/usgs/earthquake-impact-utils/archive/master.zip -o impact.zip
+    https://github.com/usgs/earthquake-impact-utils/archive/0.7.zip -o impact.zip
 
 
 # Create a conda virtual environment
