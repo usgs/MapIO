@@ -1,0 +1,24 @@
+name: mapio
+channels:
+- conda-forge
+- defaults
+- digitalglobe
+- ioos
+dependencies:
+- beautifulsoup4
+- cartopy
+- fiona
+- gdal
+- h5py
+- ipython
+- matplotlib
+- pandas
+- paramiko
+- psutil
+- pycrypto
+- python=3.5
+- pytest
+- pytest-cov
+- rasterio
+- scipy
+- shapely
