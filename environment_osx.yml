@@ -138,5 +138,7 @@ dependencies:
   - backports.functools-lru-cache==1.4
   - ipython-genutils==0.2.0
   - prompt-toolkit==1.0.15
+  - ./libcomcat.zip
+  - ./impact.zip
 prefix: /Users/mhearne/anaconda3/envs/mapio
 
