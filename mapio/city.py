@@ -11,7 +11,7 @@ else:
 import io
 import os.path
 
-from .extern.geodetic import geodetic_distance
+from impactutils.extern.openquake.geodetic import geodetic_distance
 import pandas as pd
 from .dataset import DataSetException,DataSetWarning
 
