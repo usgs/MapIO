@@ -752,10 +752,10 @@ class Grid2D(Grid):
             raise NotImplementedError('nearest is the only interpolation method currently supported.')
         ny,nx = self._data.shape
         if isinstance(row,np.ndarray):
-            outidx = np.where((row < 0) | (row > ny-1) | (col < 0) | (col > nx-1))[0]
-            inidx = np.where((row >= 0) & (row <= ny-1) & (col >= 0) & (col <= nx-1))[0]
-            value = np.ones_like(row).astype(self._data.dtype)
-            if len(outidx):
+            outidx = np.where((row < 0) | (row > ny-1) | (col < 0) | (col > nx-1))
+            inidx = np.where((row >= 0) & (row <= ny-1) & (col >= 0) & (col <= nx-1))
+            value = np.empty_like(row).astype(self._data.dtype)
+            if len(outidx[0]):
                 if default is None:
                     msg = 'One of more of your lat/lon values is outside Grid boundaries: %s' % (str(self.getBounds()))
                     raise DataSetException(msg)

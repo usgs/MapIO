@@ -146,6 +146,29 @@ def test_basics():
     np.testing.assert_almost_equal(value,output)
     
     print('Passed basic Grid2D functionality (retrieving data, lat/lon to pixel coordinates, etc...')
+
+def test_getvalue():
+    array = np.arange(1,26).reshape(5,5)
+    gdict = GeoDict({'xmin':1.0,
+                     'xmax':5.0,
+                     'ymin':1.0,
+                     'ymax':5.0,
+                     'dx':1.0,
+                     'dy':1.0,
+                     'nx':5,
+                     'ny':5})
+    grid = Grid2D(array,gdict)
+    assert grid.getValue(3.0,3.0) == 13
+    lat = np.array([3.0,4.0])
+    lon = np.array([3.0,3.0])
+    test = grid.getValue(lat,lon)
+    np.testing.assert_almost_equal(test,np.array([13,8]))
+    lat = np.array([[3.0,4.0],
+                    [4.0,5.0]])
+    lon = np.array([[3.0,3.0],
+                    [4.0,4.0]])
+    test = grid.getValue(lat,lon)
+    np.testing.assert_almost_equal(test,np.array([[13,  8],[ 9,  4]]))
     
 def test_cut():
     geodict = GeoDict({'xmin':0.5,'xmax':4.5,'ymin':0.5,'ymax':4.5,'dx':1.0,'dy':1.0,'ny':5,'nx':5})
@@ -396,6 +419,7 @@ def test_project():
     
     
 if __name__ == '__main__':
+    test_getvalue()
     test_project()
     test_subdivide()
     test_rasterize()
