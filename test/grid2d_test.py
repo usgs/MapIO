@@ -5,6 +5,7 @@ from __future__ import print_function
 import os.path
 import sys
 import shutil
+import time
 
 #stdlib imports
 import abc
@@ -231,6 +232,7 @@ def test_interpolate():
                               'dx':1.0,'dy':1.0,
                               'ny':2,'nx':2})
         grid = grid.interpolateToGrid(sampledict,method=method)
+        tgrid = grid.interpolate2(sampledict,method=method)
         if method == 'nearest':
             output = np.array([[30.0,31.0],[37.0,38.0]])
         elif method == 'linear':
@@ -241,7 +243,23 @@ def test_interpolate():
             pass
         np.testing.assert_almost_equal(grid.getData(),output)
         print('Passed interpolate with method "%s".' % method)
+        np.testing.assert_almost_equal(tgrid.getData(),output)
+        print('Passed interpolate2 with method "%s".' % method)
 
+    # speed test of interpolateToGrid and interpolate2
+    geodict = GeoDict.createDictFromBox(0,10,0,10,0.01,0.01)
+    data = np.random.rand(geodict.ny,geodict.nx)
+    grid = Grid2D(data,geodict)
+    sampledict = GeoDict.createDictFromBox(2,8,2,8,0.098,0.098)
+    t1 = time.time()
+    grid2 = grid.interpolateToGrid(sampledict,method='linear')
+    t2 = time.time()
+    grid3 = grid.interpolate2(sampledict,method='linear')
+    t3 = time.time()
+    #np.testing.assert_almost_equal(grid2._data.sum(),grid3._data.sum())
+    print('scipy method: %.3f seconds' % (t2-t1))
+    print('gdal  method: %.3f seconds' % (t3-t2))
+        
 def test_rasterize():
     geodict = GeoDict({'xmin':0.5,'xmax':3.5,
                        'ymin':0.5,'ymax':3.5,

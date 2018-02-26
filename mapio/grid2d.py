@@ -23,6 +23,7 @@ from rasterio import features
 from shapely.geometry import MultiPoint,Polygon,mapping
 from rasterio.warp import reproject, Resampling, calculate_default_transform
 from rasterio.crs import CRS
+from rasterio.enums import Resampling
 from osgeo import osr
 
 
@@ -858,6 +859,71 @@ class Grid2D(Grid):
         yi = np.array(sorted(((hostymax - gyi)/hostdy)))
 
         return (xi,yi)
+
+    def interpolate2(self,geodict,method='linear'):
+        """
+        Given a geodict specifying another grid extent and resolution, resample current grid to match.
+        
+        This method uses the rasterio reproject method instead of scipy.  In tests with small grids
+        that can be replicated easily by hand, the results from this method match interpolateToGrid.
+        Limited tests with larger, random grids indicate some differences, the extent of which 
+        has not been documented.  These same limited tests indicate this method is 5 to 7 times
+        faster than interpolateToGrid.
+
+        :param geodict: 
+            geodict dictionary from another grid whose extents are inside the extent of this grid.
+        :param method: 
+            Optional interpolation method - ['linear', 'cubic','nearest']
+        :raises DataSetException: 
+           If the Grid object upon which this function is being called is not completely contained by the grid to which this Grid is being resampled.
+        :raises DataSetException: 
+           If the method is not one of ['nearest','linear','cubic']
+           If the resulting interpolated grid shape does not match input geodict.
+        :returns:
+          A new instance of the Grid2D class or subclass with interpolated data.
+        """
+        resampling = None
+        if method == 'linear':
+            resampling = Resampling.bilinear
+        elif method == 'cubic':
+            resampling = Resampling.cubic
+        elif method == 'nearest':
+            resampling = Resampling.nearest
+        else:
+            raise DataSetException('Unknown interpolation method %s' % method)
+
+        destination = np.zeros((geodict.ny,geodict.nx))
+        src_transform = Affine.from_gdal(self._geodict.xmin - self._geodict.dx/2.0,
+                                         self._geodict.dx,
+                                         0.0, #x rotation, not used by us
+                                         self._geodict.ymax + self._geodict.dy/2.0,
+                                         0.0, #y rotation, not used by us
+                                         -1*self._geodict.dy) #their dy is negative
+        dst_transform = Affine.from_gdal(geodict.xmin - geodict.dx/2.0,
+                                         geodict.dx,
+                                         0.0, #x rotation, not used by us
+                                         geodict.ymax + geodict.dy/2.0,
+                                         0.0, #y rotation, not used by us
+                                         -1*geodict.dy) #their dy is negative
+        src_crs = CRS().from_string(GeoDict.DEFAULT_PROJ4).to_dict()
+        dst_crs = CRS().from_string(GeoDict.DEFAULT_PROJ4).to_dict()
+        width = geodict.nx
+        height = geodict.ny
+        left = geodict.xmin
+        right = geodict.xmax
+        bottom = geodict.ymin
+        top = geodict.ymax
+        resolution = (geodict.dx,geodict.ny)
+        reproject(self._data.astype(np.float64), destination,
+                  src_transform=src_transform,
+                  src_crs=src_crs,
+                  src_nodata=np.nan,
+                  dst_transform=dst_transform,
+                  dst_crs=dst_crs,
+                  dst_nodata=np.nan,
+                  resampling=resampling)
+        
+        return self.__class__(destination,geodict)
     
     def interpolateToGrid(self,geodict,method='linear'):
         """
