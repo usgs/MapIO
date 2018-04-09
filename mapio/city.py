@@ -101,8 +101,9 @@ class Cities(object):
                   'lon':[],
                   'iscap':[],
                   'pop':[]}
-        f = open(cityfile,'rt')
+        f = open(cityfile,'rb')
         for line in f.readlines():
+            line = line.decode('utf-8')
             parts = line.split('\t')
             tname = parts[2].strip()
             if not tname:
@@ -136,14 +137,6 @@ class Cities(object):
         """
         df = pd.read_csv(csvfile)
         return cls(df)
-
-    def len(self):
-        """Get the number of cities contained in this object.
-
-        :returns:
-          Number of cities contained in this object.
-        """
-        return len(df)
     
     def save(self,filename):
         """Save City internal dataframe to CSV file.

@@ -43,34 +43,13 @@ echo "Environment file: $env_file"
 # Turn off whatever other virtual environment user might be in
 source deactivate
 
-# Download dependencies not in conda or pypi
-curl --max-time 60 --retry 3 -L \
-    https://github.com/usgs/libcomcat/archive/master.zip -o libcomcat.zip
-curl --max-time 60 --retry 3 -L \
-    https://github.com/usgs/earthquake-impact-utils/archive/0.7.zip -o impact.zip
-
-
 # Create a conda virtual environment
 echo "Creating the $VENV virtual environment:"
 conda env create -f $env_file --force
 
-# Bail out at this point if the conda create command fails.
-# Clean up zip files we've downloaded
-if [ $? -ne 0 ]; then
-    echo "Failed to create conda environment.  Resolve any conflicts, then try again."
-    echo "Cleaning up zip files..."
-    rm libcomcat.zip
-    rm impact.zip
-    exit
-fi
-
 # Activate the new environment
 echo "Activating the $VENV virtual environment"
 source activate $VENV
-
-# Clean up downloaded packages
-rm libcomcat.zip
-rm impact.zip
 
 # This package
 echo "Installing mapio..."
