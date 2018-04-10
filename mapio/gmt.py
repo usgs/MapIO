@@ -430,7 +430,10 @@ class GMTGrid(Grid2D):
         ilrx1 = data_range['ilrx1']
         ilry1 = data_range['ilry1']
         cdf = netcdf.netcdf_file(filename)
-        zvar = cdf.variables['z']
+        if 'z' in cdf.variables:
+            zvar = cdf.variables['z']
+        else:
+            zvar = cdf.variables['elevation']
         isScanLine = len(zvar.shape) == 1
         if isScanLine:
             data = indexArray(zvar,(gny,gnx),0,gny,0,gnx)
