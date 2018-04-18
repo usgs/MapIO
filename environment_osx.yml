@@ -43,7 +43,7 @@ dependencies:
 - hdf5=1.10.1
 - icu=58.2
 - idna=2.6
-- impactutils=0.8.1
+- impactutils=0.8.2
 - ipython=6.3.1
 - ipython_genutils=0.2.0
 - jdcal=1.3

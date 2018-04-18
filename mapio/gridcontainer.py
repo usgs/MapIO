@@ -10,17 +10,19 @@ import copy
 # third party imports
 import h5py
 import numpy as np
-from impactutils.io.container import HDFContainer,_get_type_list,_drop_item
+from impactutils.io.container import HDFContainer
 
-#local imports
+# local imports
 from mapio.grid2d import Grid2D
 from mapio.geodict import GeoDict
 
+GROUPS = {'grid': '__grids__'}
+
 
 class GridHDFContainer(HDFContainer):
-    def setGrid(self,name,grid,metadata=None,compression=True):
+    def setGrid(self, name, grid, metadata=None, compression=True):
         """Store a Grid2D object as a dataset.
-        
+
         Args:
           name (str): Name of the Grid2D object to be stored.
           grid (Grid2D): Grid2D object to be stored.
@@ -35,18 +37,24 @@ class GridHDFContainer(HDFContainer):
             compression = 'gzip'
         else:
             compression = None
-        
-        grid_name = '__grid_%s__' % name
+
+        grid_name = '__%s__' % name
+        if GROUPS['grid'] not in self._hdfobj:
+            grid_group = self._hdfobj.create_group(GROUPS['grid'])
+        else:
+            grid_group = self._hdfobj[GROUPS['grid']]
+
         array_metadata = grid.getGeoDict().asDict()
         data = grid.getData()
         if metadata is not None:
             array_metadata.update(metadata)
-        dset = self._hdfobj.create_dataset(grid_name, data=data, compression=compression)
+        dset = grid_group.create_dataset(
+            grid_name, data=data, compression=compression)
         for key, value in array_metadata.items():
             dset.attrs[key] = value
         return dset
 
-    def getGrid(self,name):
+    def getGrid(self, name):
         """
         Retrieve a Grid2D object and any associated metadata from the container.
 
@@ -57,15 +65,18 @@ class GridHDFContainer(HDFContainer):
         Returns:
             (tuple) Grid2D object, and a dictionary of metadata.
         """
-        array_name = '__grid_%s__' % name
-        if array_name not in self._hdfobj:
-            raise LookupError('Array %s not in %s' % (name,self.getFileName()))
-        dset = self._hdfobj[array_name]
+        grid_name = '__%s__' % name
+        grid_group = self._hdfobj[GROUPS['grid']]
+        if grid_name not in grid_group:
+            raise LookupError('Grid %s not in %s'
+                              % (name, self.getFileName()))
+
+        dset = grid_group[grid_name]
         data = dset[()]
-        array_metadata,meta_metadata = _split_dset_attrs(dset)
+        array_metadata, meta_metadata = _split_dset_attrs(dset)
         geodict = GeoDict(array_metadata)
-        grid = Grid2D(data,geodict)
-        return grid,meta_metadata
+        grid = Grid2D(data, geodict)
+        return grid, meta_metadata
 
     def getGrids(self):
         """
@@ -74,11 +85,12 @@ class GridHDFContainer(HDFContainer):
         Returns:
           (list) List of names of Grid2D objects stored in container.
         """
-        
-        grids = _get_type_list(self._hdfobj,'grid')
+
+        grids = list(self._hdfobj[GROUPS['grid']].keys())
+        grids = [name.replace('__', '') for name in grids]
         return grids
 
-    def dropGrid(self,name):
+    def dropGrid(self, name):
         """
         Delete Grid2D object from container.
 
@@ -87,17 +99,21 @@ class GridHDFContainer(HDFContainer):
                 The name of the Grid2D object to be deleted.
 
         """
-        _drop_item(self._hdfobj,name,'grid')
-
+        mgrid = '__%s__' % name
+        grid_group = self._hdfobj[GROUPS['grid']]
+        if mgrid not in grid_group:
+            raise LookupError('Grid %s not in %s'
+                              % (name, self._hdfobj.filename))
+        del grid_group[mgrid]
 
 
 def _split_dset_attrs(dset):
     geodict = {}
     metadata = {}
-    grid_keys = ['xmin','xmax','ymin','ymax','nx','ny','dx','dy']
-    for key,value in dset.attrs.items():
+    grid_keys = ['xmin', 'xmax', 'ymin', 'ymax', 'nx', 'ny', 'dx', 'dy']
+    for key, value in dset.attrs.items():
         if key in grid_keys:
             geodict[key] = value
         else:
             metadata[key] = value
-    return (geodict,metadata)
+    return (geodict, metadata)
