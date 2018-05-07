@@ -32,10 +32,10 @@ class Grid2D(Grid):
     def __init__(self,data=None,geodict=None):
         """
         Construct a Grid object.
-        
-        :param data: 
+
+        :param data:
             A 2D numpy array (can be None).
-        :param geodict: 
+        :param geodict:
             A GeoDict Object (or None) containing the following fields:
         :returns:
             A Grid2D object.
@@ -63,7 +63,7 @@ class Grid2D(Grid):
         :param geodict:
           GeoDict object which may have duplicate column.
         :returns:
-          Tuple containing: 
+          Tuple containing:
            - GeoDict object representing a grid with the last column removed.
            - Boolean indicating whether the last column was a duplicate.
         """
@@ -85,9 +85,9 @@ class Grid2D(Grid):
                                       'ny':geodict.ny,
                                       'dx':geodict.dx,
                                       'dy':geodict.dy})
-        
+
         return (newgeodict,first_column_duplicated)
-            
+
     @staticmethod
     def getDataRange(fgeodict,sampledict,first_column_duplicated=False,padding=None):
         """For a given set of input bounds and information about a file, determine the rows and columns for bounds.
@@ -174,7 +174,7 @@ class Grid2D(Grid):
             data_range['ilry2'] = int(ilry2)
 
         return data_range
-            
+
     @staticmethod
     def verifyBounds(filegeodict,samplegeodict,resample=False):
         """Ensure that the two grids represented at least 1) intersect and 2) are aligned if resampling is True.
@@ -196,7 +196,7 @@ class Grid2D(Grid):
             ddx = np.abs(filegeodict.dx - samplegeodict.dx)
             ddy = np.abs(filegeodict.dy - samplegeodict.dy)
             if ddx > GeoDict.EPS or ddx > GeoDict.EPS:
-                raise DataSetException('File dimensions are different from sampledict dimensions.') 
+                raise DataSetException('File dimensions are different from sampledict dimensions.')
 
     @staticmethod
     def bufferBounds(samplegeodict,filegeodict,resample=False,buffer_pixels=1,doPadding=False):
@@ -217,7 +217,7 @@ class Grid2D(Grid):
         """
         if not resample:
             return samplegeodict
-        
+
         dx = filegeodict.dx
         dy = filegeodict.dy
         fxmin,fxmax = filegeodict.xmin,filegeodict.xmax
@@ -231,7 +231,7 @@ class Grid2D(Grid):
                 raise DataSetException(msg)
             else:
                 return samplegeodict
-        
+
         buffer_geo_x = buffer_pixels * dx
         buffer_geo_y = buffer_pixels * dy
 
@@ -239,7 +239,7 @@ class Grid2D(Grid):
         xmax = sxmax + buffer_geo_x
         ymin = symin - buffer_geo_y
         ymax = symax + buffer_geo_y
-        
+
         #assign the "most minimum" x value, taking 180 meridian into account
         is_180 = fxmin >= -180 and fxmax <= 180
         if xmin < fxmin:
@@ -259,7 +259,7 @@ class Grid2D(Grid):
         if ymax > fymax:
             ymax = fymax
 
-        #make sure that boundaries are on filegeodict boundaries - 
+        #make sure that boundaries are on filegeodict boundaries -
         #if not, go outwards until we hit one
         ddxmin = xmin/dx
         if int(ddxmin) != ddxmin:
@@ -273,7 +273,7 @@ class Grid2D(Grid):
         ddymax = ymax/dy
         if int(ddymax) != ddymax:
             ymax = np.ceil(ddymax) * dy
-            
+
         geodict = GeoDict.createDictFromBox(xmin,xmax,ymin,ymax,dx,dy,inside=True)
         return geodict
 
@@ -312,7 +312,7 @@ class Grid2D(Grid):
         ny,nx = newdata.shape
         toprows = np.ones((pad_dict['padtop'],nx)) * np.inf
         newdata = np.vstack((toprows,newdata))
-        
+
         ny,nx = newdata.shape
 
         #get the shapes of the pads - sometimes these can have a shape of (3,0) and a length of 3
@@ -320,7 +320,7 @@ class Grid2D(Grid):
         rightheight,rightwidth = rightcols.shape
         bottomheight,bottomwidth = bottomrows.shape
         topheight,topwidth = toprows.shape
-        
+
         newxmin = geodict.xmin - leftwidth*dx
         newxmax = geodict.xmax + rightwidth*dx
         newymin = geodict.ymin - bottomheight*dy
@@ -334,8 +334,8 @@ class Grid2D(Grid):
                            'dx':dx,
                            'dy':dy},adjust='res')
         return (newdata,newdict)
-                           
-    
+
+
     @staticmethod
     def getPadding(filegeodict,samplegeodict,doPadding=False):
         """Determine how many pixels of padding there need to be on each side of requested grid.
@@ -388,8 +388,8 @@ class Grid2D(Grid):
                        'padbottom':padbottomrows,
                        'padtop':padtoprows}
         return pad_dict
-                   
-    
+
+
     def __repr__(self):
         """
         String representation of a Grid2D object.
@@ -445,7 +445,7 @@ class Grid2D(Grid):
 
     @abc.abstractmethod
     def getFileGeoDict(filename):
-        #this should return a geodict and a boolean indicating whether the first 
+        #this should return a geodict and a boolean indicating whether the first
         #column is duplicated at the end of each row (some data providers do this).
         raise NotImplementedError('Load method not implemented in base class')
 
@@ -487,7 +487,7 @@ class Grid2D(Grid):
     @abc.abstractmethod
     def save(self,filename): #would we ever want to save a subset of the data?
         raise NotImplementedError('Save method not implemented in base class')
-    
+
     @classmethod
     def _createSections(self,bounds,geodict,firstColumnDuplicated,isScanLine=False):
         """Given a grid that goes from -180 to 180 degrees, figure out the two pixel regions that up both sides of the subset.
@@ -533,19 +533,19 @@ class Grid2D(Grid):
         region1 = (iulx1,iuly1,ilrx1,ilry1)
         region2 = (iulx2,iuly2,ilrx2,ilry2)
         return(region1,region2)
-    
+
     def getData(self):
         """Return a reference to the data inside the Grid.
-        
-        :returns: 
+
+        :returns:
           A reference to a 2D numpy array.
         """
         return self._data #should we return a copy of the data?
 
     def setData(self,data):
         """Set the data inside the Grid.
-        
-        :param data: 
+
+        :param data:
           A 2D numpy array.
         :raises:
           DataSetException if the number of rows and columns do not match the the internal GeoDict, or if the input
@@ -573,7 +573,7 @@ class Grid2D(Grid):
     def getBounds(self):
         """
         Return the lon/lat range of the data.
-        
+
         :returns:
            Tuple of (lonmin,lonmax,latmin,latmax)
         """
@@ -585,8 +585,8 @@ class Grid2D(Grid):
         :param finerdict:
           GeoDict object defining a grid with a finer resolution than the host grid.
         :param cellFill:
-          String defining how to fill cells that span more than one host grid cell. 
-          Choices are: 
+          String defining how to fill cells that span more than one host grid cell.
+          Choices are:
             'max': Choose maximum value of host grid cells.
             'min': Choose minimum value of host grid cells.
             'mean': Choose mean value of host grid cells.
@@ -636,7 +636,7 @@ class Grid2D(Grid):
             for i in range(0,self._geodict.ny):
                 for j in range(0,self._geodict.nx):
                     cellvalue = self._data[i,j]
-                    #get the indices of all cells that are 
+                    #get the indices of all cells that are
                     #completely contained inside this one.
                     clat,clon = self.getLatLon(i,j) #coordinates of center of host cell
                     #what is the longitude of of our first approximated left edge fine
@@ -657,7 +657,7 @@ class Grid2D(Grid):
 
                     finedata[itop:ibottom+1,jleft:jright+1] = cellvalue
                     #now what do I do about cells that aren't completely contained?
-        
+
             #we have to now find all rows/columns where there are NaN values and deal with them
             #accordingly - let's look at output rows first, looking for a row that is all NaN
             #and doesn't have an all NaN row above or below it.
@@ -703,7 +703,7 @@ class Grid2D(Grid):
 
         finegrid = Grid2D(finedata,finerdict)
         return finegrid
-    
+
     def cut(self,xmin,xmax,ymin,ymax,align=False):
         """Cut out a section of Grid and return it.
 
@@ -729,24 +729,24 @@ class Grid2D(Grid):
         data = self._data[uly:lry+1,ulx:lrx+1]
         grid = Grid2D(data,td)
         return grid
-    
+
     def getValue(self,lat,lon,method='nearest',default=None): #return nearest neighbor value
         """Return numpy array at given latitude and longitude (using nearest neighbor).
-        
-        :param lat: 
+
+        :param lat:
            Latitude (in decimal degrees) of desired data value.
-        :param lon: 
+        :param lon:
            Longitude (in decimal degrees) of desired data value.
         :param method:
            Interpolation method, one of ('nearest','linear','cubic','quintic')
         :param default:
            Default value to return when lat/lon is outside of grid bounds.
-        :return: 
+        :return:
            Value at input latitude,longitude position.
         :raises DataSetException:
           When lat/lon is outside of bounds and default is None.
         """
-        
+
         if method == 'nearest':
             row,col = self.getRowCol(lat,lon)
         else:
@@ -769,31 +769,31 @@ class Grid2D(Grid):
                     raise DataSetException(msg)
                 else:
                     return default
-            value = self._data[row,col]        
+            value = self._data[row,col]
         return value
 
     def getLatLon(self,row,col):
         """Return geographic coordinates (lat/lon decimal degrees) for given data row and column.
-        
-        :param row: 
+
+        :param row:
            Row dimension index into internal data array.
-        :param col: 
+        :param col:
            Column dimension index into internal data array.
-        :returns: 
+        :returns:
            Tuple of latitude and longitude.
         """
         return self._geodict.getLatLon(row,col)
 
     def getRowCol(self,lat,lon,returnFloat=False):
         """Return data row and column from given geographic coordinates (lat/lon decimal degrees).
-        
-        :param lat: 
+
+        :param lat:
            Input latitude.
-        :param lon: 
+        :param lon:
            Input longitude.
-        :param returnFloat: 
+        :param returnFloat:
            Boolean indicating whether floating point row/col coordinates should be returned.
-        :returns: 
+        :returns:
            Tuple of row and column.
         """
         return self._geodict.getRowCol(lat,lon,returnFloat)
@@ -838,7 +838,7 @@ class Grid2D(Grid):
                 samplexmin -= 360
             if samplexmax > 180:
                 samplexmax -= 360
-        
+
         #extract the geographic information about the grid we're sampling to
         sampleny = geodict.ny
         samplenx = geodict.nx
@@ -851,7 +851,7 @@ class Grid2D(Grid):
         #make sure that the grid we're resampling TO is completely contained by host
         if samplexmin < hostxmin or samplexmax > hostxmax or sampleymin < hostymin or sampleymax > hostymax:
             raise DataSetException('Grid you are resampling TO is not completely contained by base grid.')
-        
+
         gxi = np.linspace(samplexmin,samplexmax,num=samplenx)
         gyi = np.linspace(sampleymin,sampleymax,num=sampleny)
 
@@ -863,20 +863,20 @@ class Grid2D(Grid):
     def interpolate2(self,geodict,method='linear'):
         """
         Given a geodict specifying another grid extent and resolution, resample current grid to match.
-        
+
         This method uses the rasterio reproject method instead of scipy.  In tests with small grids
         that can be replicated easily by hand, the results from this method match interpolateToGrid.
-        Limited tests with larger, random grids indicate some differences, the extent of which 
+        Limited tests with larger, random grids indicate some differences, the extent of which
         has not been documented.  These same limited tests indicate this method is 5 to 7 times
         faster than interpolateToGrid.
 
-        :param geodict: 
+        :param geodict:
             geodict dictionary from another grid whose extents are inside the extent of this grid.
-        :param method: 
+        :param method:
             Optional interpolation method - ['linear', 'cubic','nearest']
-        :raises DataSetException: 
+        :raises DataSetException:
            If the Grid object upon which this function is being called is not completely contained by the grid to which this Grid is being resampled.
-        :raises DataSetException: 
+        :raises DataSetException:
            If the method is not one of ['nearest','linear','cubic']
            If the resulting interpolated grid shape does not match input geodict.
         :returns:
@@ -922,20 +922,20 @@ class Grid2D(Grid):
                   dst_crs=dst_crs,
                   dst_nodata=np.nan,
                   resampling=resampling)
-        
+
         return self.__class__(destination,geodict)
-    
+
     def interpolateToGrid(self,geodict,method='linear'):
         """
         Given a geodict specifying another grid extent and resolution, resample current grid to match.
-        
-        :param geodict: 
+
+        :param geodict:
             geodict dictionary from another grid whose extents are inside the extent of this grid.
-        :param method: 
+        :param method:
             Optional interpolation method - ['linear', 'cubic','nearest']
-        :raises DataSetException: 
+        :raises DataSetException:
            If the Grid object upon which this function is being called is not completely contained by the grid to which this Grid is being resampled.
-        :raises DataSetException: 
+        :raises DataSetException:
            If the method is not one of ['nearest','linear','cubic']
            If the resulting interpolated grid shape does not match input geodict.
         :returns:
@@ -961,6 +961,7 @@ class Grid2D(Grid):
                 f = interpolate.interp2d(basex,basey,self._data,kind=method)
                 #self._data = f(xi,yi)
                 newdata = f(xi,yi)
+                newdata = newdata.reshape((yi.size,xi.size))
             else:
                 #is Nan values are present, use griddata (slower by ~2 orders of magnitude but supports NaN).
                 xi,yi = np.meshgrid(xi,yi)
@@ -984,7 +985,7 @@ class Grid2D(Grid):
             x,y = np.meshgrid(basex,basey)
             #in Python2, list doesn't do anything
             #in python3, it makes result of zip from iterator into list
-            xy = list(zip(x.flatten(),y.flatten())) 
+            xy = list(zip(x.flatten(),y.flatten()))
             f = interpolate.NearestNDInterpolator(xy,self._data.flatten())
             newrows = geodict.ny
             newcols = geodict.nx
@@ -994,8 +995,8 @@ class Grid2D(Grid):
             #self._data = self._data.reshape(xi.shape)
             newdata = f(list(zip(xi.flatten(),yi.flatten())))
             newdata = newdata.reshape(xi.shape)
-                                                  
-            
+
+
         ny,nx = geodict.ny,geodict.nx
         #dims = self._data.shape
         dims = newdata.shape
@@ -1021,9 +1022,9 @@ class Grid2D(Grid):
     def rasterizeFromGeometry(cls,shapes,geodict,burnValue=1.0,fillValue=np.nan,
                               mustContainCenter=False,attribute=None):
         """
-        Create a Grid2D object from vector shapes, where the presence of a shape 
+        Create a Grid2D object from vector shapes, where the presence of a shape
         (point, line, polygon) inside a cell turns that cell "on".
-        
+
         :param shapes:
           One of:
             - One shapely geometry object (Point, Polygon, etc.) or a sequence of such objects
@@ -1032,7 +1033,7 @@ class Grid2D(Grid):
         :param geodict:
           GeoDict object which defines the grid onto which the shape values should be "burned".
         :param burnValue:
-          Optional value which will be used to set the value of the pixels if there is no 
+          Optional value which will be used to set the value of the pixels if there is no
           value in the geometry field.
         :param fillValue:
           Optional value which will be used to fill the cells not touched by any geometry.
@@ -1060,7 +1061,7 @@ class Grid2D(Grid):
             types = (int,float,long)
         else:
             types = (int,float)
-        
+
         #figure out whether this is a single shape or a sequence of shapes
         isGeoJSON = False
         isGeometry = False
@@ -1101,8 +1102,8 @@ class Grid2D(Grid):
                     value = burnValue
                 shapes2.append((geometry,value))
             shapes = shapes2
-        
-                                   
+
+
         xmin,xmax,ymin,ymax = (geodict.xmin,geodict.xmax,geodict.ymin,geodict.ymax)
         dx,dy = (geodict.dx,geodict.dy)
 
@@ -1112,12 +1113,12 @@ class Grid2D(Grid):
         yvar = np.arange(ymin,ymax+(dy*0.1),dy)
         nx = len(xvar)
         ny = len(yvar)
-        
+
         #the rasterize function assumes a pixel registered data set, where we are grid registered.  In order to make this work
-        #we need to adjust the edges of our grid out by half a cell width in each direction.  
+        #we need to adjust the edges of our grid out by half a cell width in each direction.
         txmin = xmin - dx/2.0
         tymax = ymax + dy/2.0
-        
+
         outshape = (ny,nx)
         transform = Affine.from_gdal(txmin,dx,0.0,tymax,0.0,-dy)
         allTouched = not mustContainCenter
@@ -1129,7 +1130,7 @@ class Grid2D(Grid):
         # gd['ny'] = ny
         # geodict = GeoDict(gd,adjust='bounds')
         return cls(img,geodict)
-        
+
     def project(self,projection,method='bilinear'):
         """Project Grid2D data into desired projection.
 
@@ -1155,7 +1156,7 @@ class Grid2D(Grid):
             int_method = getattr(Resampling,method)
         except AttributeError as ae:
             raise DataSetException('%s is not a valid resampling method.' % method)
-        
+
         #get the dimensions of the input data
         nrows, ncols = src_shape = self._data.shape
         #define the input Affine object
