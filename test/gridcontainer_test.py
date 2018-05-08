@@ -16,6 +16,10 @@ def test_grid_hdf_container():
         #test grid container
         container = GridHDFContainer.create(fname)
 
+        # before we put anything in here, let's make sure we get empty lists from
+        # all of the methods that are supposed to return lists of stuff.
+        assert container.getGrids() == []
+        
         #test grid2d
         geodict = GeoDict.createDictFromBox(-118.5,-114.5,32.1,36.7,0.01,0.02)
         nrows,ncols = geodict.ny,geodict.nx

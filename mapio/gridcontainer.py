@@ -85,7 +85,8 @@ class GridHDFContainer(HDFContainer):
         Returns:
           (list) List of names of Grid2D objects stored in container.
         """
-
+        if GROUPS['grid'] not in self._hdfobj:
+            return []
         grids = list(self._hdfobj[GROUPS['grid']].keys())
         grids = [name.replace('__', '') for name in grids]
         return grids
