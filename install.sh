@@ -2,6 +2,13 @@
 
 VENV=mapio
 
+unamestr=`uname`
+if [ "$unamestr" == 'Linux' ]; then
+    source ~/.bashrc
+elif [ "$unamestr" == 'FreeBSD' ] || [ "$unamestr" == 'Darwin' ]; then
+    source ~/.bash_profile
+fi
+
 # Is the reset flag set?
 reset=0
 while getopts r FLAG; do
@@ -14,12 +21,12 @@ while getopts r FLAG; do
 done
 
 # Is conda installed?
-conda=$(which conda)
-if [ ! "$conda" ] ; then
+conda --version
+if [ $? -ne 0 ]; then
     wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
         -O miniconda.sh;
     bash miniconda.sh -f -b -p $HOME/miniconda
-    export PATH="$HOME/miniconda/bin:$PATH"
+    . $HOME/miniconda/etc/profile.d/conda.sh
 fi
 
 # Choose an environment file based on platform
@@ -41,7 +48,7 @@ fi
 echo "Environment file: $env_file"
 
 # Turn off whatever other virtual environment user might be in
-source deactivate
+conda deactivate
 
 # Create a conda virtual environment
 echo "Creating the $VENV virtual environment:"
@@ -49,11 +56,11 @@ conda env create -f $env_file --force
 
 # Activate the new environment
 echo "Activating the $VENV virtual environment"
-source activate $VENV
+conda activate $VENV
 
 # This package
 echo "Installing mapio..."
 pip install -e .
 
 #tell the user they have to activate this environment
-echo "Type 'source activate ${VENV}' to use this new virtual environment."
+echo "Type 'conda activate ${VENV}' to use this new virtual environment."
