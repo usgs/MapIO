@@ -16,7 +16,7 @@ from impactutils.io.container import HDFContainer
 from mapio.grid2d import Grid2D
 from mapio.geodict import GeoDict
 
-GROUPS = {'grid': '__grids__'}
+GROUPS = {'grid': 'grids'}
 
 
 class GridHDFContainer(HDFContainer):
@@ -38,7 +38,7 @@ class GridHDFContainer(HDFContainer):
         else:
             compression = None
 
-        grid_name = '__%s__' % name
+        grid_name = '%s' % name
         if GROUPS['grid'] not in self._hdfobj:
             grid_group = self._hdfobj.create_group(GROUPS['grid'])
         else:
@@ -65,7 +65,7 @@ class GridHDFContainer(HDFContainer):
         Returns:
             (tuple) Grid2D object, and a dictionary of metadata.
         """
-        grid_name = '__%s__' % name
+        grid_name = '%s' % name
         grid_group = self._hdfobj[GROUPS['grid']]
         if grid_name not in grid_group:
             raise LookupError('Grid %s not in %s'
@@ -88,7 +88,6 @@ class GridHDFContainer(HDFContainer):
         if GROUPS['grid'] not in self._hdfobj:
             return []
         grids = list(self._hdfobj[GROUPS['grid']].keys())
-        grids = [name.replace('__', '') for name in grids]
         return grids
 
     def dropGrid(self, name):
@@ -100,7 +99,7 @@ class GridHDFContainer(HDFContainer):
                 The name of the Grid2D object to be deleted.
 
         """
-        mgrid = '__%s__' % name
+        mgrid = '%s' % name
         grid_group = self._hdfobj[GROUPS['grid']]
         if mgrid not in grid_group:
             raise LookupError('Grid %s not in %s'
