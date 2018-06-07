@@ -6,8 +6,8 @@ python:
 install:
     # Install mapio and requirements
     - bash install.sh
-    - export PATH="$HOME/miniconda/bin:$PATH"
-    - source activate mapio
+    - . $HOME/miniconda/etc/profile.d/conda.sh
+    - conda activate mapio
 before_script:
     # This is to take care of Invalid DISPLAY variable
     - "export DISPLAY=:99.0"
