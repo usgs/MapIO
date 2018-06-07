@@ -1,13 +1,26 @@
 #!/bin/bash
 
-VENV=mapio
-
 unamestr=`uname`
+env_file=environment.yml
 if [ "$unamestr" == 'Linux' ]; then
-    source ~/.bashrc
+    prof=~/.bashrc
+    mini_conda_url=https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    matplotlibdir=~/.config/matplotlib
 elif [ "$unamestr" == 'FreeBSD' ] || [ "$unamestr" == 'Darwin' ]; then
-    source ~/.bash_profile
+    prof=~/.bash_profile
+    mini_conda_url=https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+    matplotlibdir=~/.matplotlib
+else
+    echo "Unsupported environment. Exiting."
+    exit
 fi
+
+source $prof
+
+echo "Path:"
+echo $PATH
+
+VENV=mapio
 
 # Is the reset flag set?
 reset=0
@@ -15,27 +28,56 @@ while getopts r FLAG; do
   case $FLAG in
     r)
         reset=1
-        echo "Letting conda sort out dependencies..."
+        
       ;;
   esac
 done
 
+
+# create a matplotlibrc file with the non-interactive backend "Agg" in it.
+if [ ! -d "$matplotlibdir" ]; then
+    mkdir -p $matplotlibdir
+fi
+matplotlibrc=$matplotlibdir/matplotlibrc
+if [ ! -e "$matplotlibrc" ]; then
+    echo "backend : Agg" > "$matplotlibrc"
+    echo "NOTE: A non-interactive matplotlib backend (Agg) has been set for this user."
+elif grep -Fxq "backend : Agg" $matplotlibrc ; then
+    :
+elif [ ! grep -Fxq "backend" $matplotlibrc ]; then
+    echo "backend : Agg" >> $matplotlibrc
+    echo "NOTE: A non-interactive matplotlib backend (Agg) has been set for this user."
+else
+    sed -i '' 's/backend.*/backend : Agg/' $matplotlibrc
+    echo "###############"
+    echo "NOTE: $matplotlibrc has been changed to set 'backend : Agg'"
+    echo "###############"
+fi
+
+
 # Is conda installed?
 conda --version
 if [ $? -ne 0 ]; then
-    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh \
-        -O miniconda.sh;
+    echo "No conda detected, installing miniconda..."
+
+    curl $mini_conda_url -o miniconda.sh;
+    echo "Install directory: $HOME/miniconda"
+
     bash miniconda.sh -f -b -p $HOME/miniconda
+
+    # Need this to get conda into path
     . $HOME/miniconda/etc/profile.d/conda.sh
+else
+    echo "conda detected, installing $VENV environment..."
 fi
 
+echo "PATH:"
+echo $PATH
+echo ""
+
+
 # Choose an environment file based on platform
-unamestr=`uname`
-if [ "$unamestr" == 'Linux' ]; then
-    env_file=environment_linux.yml
-elif [ "$unamestr" == 'FreeBSD' ] || [ "$unamestr" == 'Darwin' ]; then
-    env_file=environment_osx.yml
-fi
+echo ". $HOME/miniconda/etc/profile.d/conda.sh" >> $prof
 
 # If the user has specified the -r (reset) flag, then create an
 # environment based on only the named dependencies, without
@@ -45,22 +87,32 @@ if [ $reset == 1 ]; then
     env_file=environment.yml
 fi
 
-echo "Environment file: $env_file"
-
-# Turn off whatever other virtual environment user might be in
-conda deactivate
+# Start in conda base environment
+echo "Activate base virtual environment"
+conda activate base
 
 # Create a conda virtual environment
 echo "Creating the $VENV virtual environment:"
 conda env create -f $env_file --force
+
+# Bail out at this point if the conda create command fails.
+# Clean up zip files we've downloaded
+if [ $? -ne 0 ]; then
+    echo "Failed to create conda environment.  Resolve any conflicts, then try again."
+    exit
+fi
+
 
 # Activate the new environment
 echo "Activating the $VENV virtual environment"
 conda activate $VENV
 
 # This package
-echo "Installing mapio..."
+echo "Installing MapIO..."
 pip install -e .
 
-#tell the user they have to activate this environment
-echo "Type 'conda activate ${VENV}' to use this new virtual environment."
+# Install default profile
+#python bin/sm_profile -c default -a
+
+# Tell the user they have to activate this environment
+echo "Type 'conda activate $VENV' to use this new virtual environment."
