@@ -309,9 +309,9 @@ class Cities(object):
         :returns:
           tuple of (lat,lon,names) where each is a numpy array.
         """
-        lat = self._dataframe['lat'].as_matrix()
-        lon = self._dataframe['lon'].as_matrix()
-        names = self._dataframe['name'].as_matrix()
+        lat = self._dataframe['lat'].values
+        lon = self._dataframe['lon'].values
+        names = self._dataframe['name'].values
         return (lat,lon,names)
 
     def project(self,mbasemap):
@@ -319,7 +319,7 @@ class Cities(object):
         :param mbasemap:
           Basemap instance.
         """
-        x,y = mbasemap(self._dataframe['lon'].as_matrix(),self._dataframe['lat'].as_matrix())
+        x,y = mbasemap(self._dataframe['lon'].values,self._dataframe['lat'].values)
         self._dataframe['x'] = x
         self._dataframe['y'] = y
     

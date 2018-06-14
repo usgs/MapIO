@@ -37,6 +37,9 @@ elif [ "$unamestr" == 'FreeBSD' ] || [ "$unamestr" == 'Darwin' ]; then
     env_file=environment_osx.yml
 fi
 
+# let's just always use the non-platform specific env file.
+reset=1
+
 # If the user has specified the -r (reset) flag, then create an
 # environment based on only the named dependencies, without
 # any versions of packages specified.
