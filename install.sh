@@ -79,6 +79,9 @@ echo ""
 # Choose an environment file based on platform
 echo ". $HOME/miniconda/etc/profile.d/conda.sh" >> $prof
 
+# let's just always use the non-platform specific env file.
+reset=1
+
 # If the user has specified the -r (reset) flag, then create an
 # environment based on only the named dependencies, without
 # any versions of packages specified.
