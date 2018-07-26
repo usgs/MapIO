@@ -883,8 +883,8 @@ class GMTGrid(Grid2D):
         if format == 'netcdf':
             f = netcdf.NetCDFFile(filename, 'w')
             m, n = self._data.shape
-            # dx = f.createDimension('x', n)
-            # dy = f.createDimension('y', m)
+            dx = f.createDimension('x', n)  # noqa
+            dy = f.createDimension('y', m)  # noqa
             x = f.createVariable('x', np.float64, ('x'))
             y = f.createVariable('y', np.float64, ('y'))
             x[:] = np.linspace(self._geodict.xmin,
