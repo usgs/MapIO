@@ -1049,11 +1049,14 @@ class GMTGrid(Grid2D):
             filegeodict, sampledict,
             first_column_duplicated=first_column_duplicated)
         data, geodict = cls.readFile(filename, data_range)
+        if (doPadding or resample) and 'float' not in str(data.dtype):
+            data = data.astype(np.float32)
         # parent static method
         pad_dict = cls.getPadding(
             filegeodict, samplegeodict, doPadding=doPadding)
         data, geodict = cls.padGrid(data, geodict, pad_dict)
-        data[np.isinf(data)] = padValue
+        if doPadding:
+            data[np.isinf(data)] = padValue
         grid = cls(data=data, geodict=geodict)
         if resample:
             grid = grid.interpolateToGrid(samplegeodict, method=method)
