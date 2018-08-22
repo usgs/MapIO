@@ -254,7 +254,7 @@ class ShakeGrid(MultiGrid):
           Dictionary with elements that have keys matching the layers keys, and values that are
            a tuple of that layer's uncertainty (float) and the number of stations used to determine that uncertainty (int).
         :param field_keys:
-          Dictionary containing keys matching at least some of input layers. For each key, 
+          Dictionary containing keys matching at least some of input layers. For each key,
           a tuple of (UNITS,DIGITS) where UNITS is a string indicating
           the units of the layer quantity (e.g, cm/s) and DIGITS is the number of significant digits
           that the layer column should be printed with.
@@ -369,14 +369,14 @@ class ShakeGrid(MultiGrid):
         """
         Given a geodict specifying another grid extent and resolution, resample all layers in ShakeGrid to match.
 
-        :param geodict: 
+        :param geodict:
         geodict dictionary from another grid whose extents are inside the extent of this ShakeGrid.
-        :param method: 
+        :param method:
         Optional interpolation method - ['linear', 'cubic','nearest']
-        :raises DataSetException: 
-          If the GeoDict object upon which this function is being called is not completely contained 
+        :raises DataSetException:
+          If the GeoDict object upon which this function is being called is not completely contained
           by the grid to which this ShakeGrid is being resampled.
-        :raises DataSetException: 
+        :raises DataSetException:
            If the method is not one of ['nearest','linear','cubic']
            If the resulting interpolated grid shape does not match input geodict.
         This function modifies the internal griddata and geodict object variables.
@@ -400,8 +400,8 @@ class ShakeGrid(MultiGrid):
         :param finerdict:
           GeoDict object defining a grid with a finer resolution than the host grid.
         :param cellFill:
-          String defining how to fill cells that span more than one host grid cell. 
-          Choices are: 
+          String defining how to fill cells that span more than one host grid cell.
+          Choices are:
             'max': Choose maximum value of host grid cells.
             'min': Choose minimum value of host grid cells.
             'mean': Choose mean value of host grid cells.
@@ -439,7 +439,7 @@ class ShakeGrid(MultiGrid):
         SCHEMA2 = 'http://earthquake.usgs.gov/eqcenter/shakemap'
         SCHEMA3 = 'http://earthquake.usgs.gov http://earthquake.usgs.gov/eqcenter/shakemap/xml/schemas/shakemap.xsd'
 
-        f.write(b'<?xml version="1.0" encoding="US-ASCII" standalone="yes"?>')
+        f.write(b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>')
         fmt = '<shakemap_grid xmlns:xsi="%s" xmlns="%s" xsi:schemaLocation="%s" event_id="%s" shakemap_id="%s" shakemap_version="%i" code_version="%s" process_timestamp="%s" shakemap_originator="%s" map_status="%s" shakemap_event_type="%s">\n'
         tpl = (SCHEMA1, SCHEMA2, SCHEMA3,
                self._shakeDict['event_id'], self._shakeDict['shakemap_id'], self._shakeDict['shakemap_version'],
@@ -447,7 +447,7 @@ class ShakeGrid(MultiGrid):
                    TIMEFMT),
                self._shakeDict['shakemap_originator'], self._shakeDict['map_status'], self._shakeDict['shakemap_event_type'])
         if isThree:
-            f.write(bytes(fmt % tpl, 'ascii'))
+            f.write(bytes(fmt % tpl, 'utf-8'))
         else:
             f.write(fmt % tpl)
         fmt = '<event event_id="%s" magnitude="%.1f" depth="%.1f" lat="%.4f" lon="%.4f" event_timestamp="%s" event_network="%s" event_description="%s"/>\n'
@@ -456,14 +456,14 @@ class ShakeGrid(MultiGrid):
                    TIMEFMT),
                self._eventDict['event_network'], self._eventDict['event_description'])
         if isThree:
-            f.write(bytes(fmt % tpl, 'ascii'))
+            f.write(bytes(fmt % tpl, 'utf-8'))
         else:
             f.write(fmt % tpl)
         fmt = '<grid_specification lon_min="%.4f" lat_min="%.4f" lon_max="%.4f" lat_max="%.4f" nominal_lon_spacing="%.4f" nominal_lat_spacing="%.4f" nlon="%i" nlat="%i"/>'
         tpl = (self._geodict.xmin, self._geodict.ymin, self._geodict.xmax, self._geodict.ymax,
                self._geodict.dx, self._geodict.dy, self._geodict.nx, self._geodict.ny)
         if isThree:
-            f.write(bytes(fmt % tpl, 'ascii'))
+            f.write(bytes(fmt % tpl, 'utf-8'))
         else:
             f.write(fmt % tpl)
         fmt = '<event_specific_uncertainty name="%s" value="%.4f" numsta="%i" />\n'
@@ -471,7 +471,7 @@ class ShakeGrid(MultiGrid):
             value, numsta = unctuple
             tpl = (key, value, numsta)
             if isThree:
-                f.write(bytes(fmt % tpl, 'ascii'))
+                f.write(bytes(fmt % tpl, 'utf-8'))
             else:
                 f.write(fmt % tpl)
         f.write(b'<grid_field index="1" name="LON" units="dd" />\n')
@@ -483,7 +483,7 @@ class ShakeGrid(MultiGrid):
             tpl = (idx, field.upper(), self._field_keys[field][0])
             data_formats.append(self._field_keys[field][1])
             if isThree:
-                db = bytes(fmt % tpl, 'ascii')
+                db = bytes(fmt % tpl, 'utf-8')
             else:
                 db = fmt % tpl
             f.write(db)
@@ -559,7 +559,7 @@ class ShakeGrid(MultiGrid):
         :param eventdict:
           Event dictionary (see constructor).
         :raises DataSetException:
-          When one of the values in the dictionary does not match its expected type.        
+          When one of the values in the dictionary does not match its expected type.
         """
         for (key, dtype) in EVENTKEYS.items():
             if key not in eventdict:
@@ -589,7 +589,7 @@ class ShakeGrid(MultiGrid):
         :param shakedict:
           Shake dictionary (see constructor).
         :raises DataSetException:
-          When one of the values in the dictionary does not match its expected type.        
+          When one of the values in the dictionary does not match its expected type.
         """
         for (key, dtype) in GRIDKEYS.items():
             if key not in shakedict:
