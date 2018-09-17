@@ -13,5 +13,6 @@ dependencies:
 - pytest
 - pytest-cov
 - rasterio
+- netcdf4
 - scipy
 - shapely
