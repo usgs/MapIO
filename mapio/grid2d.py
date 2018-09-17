@@ -7,6 +7,7 @@ from __future__ import print_function
 import abc
 import textwrap
 import sys
+import re
 
 # third party imports
 from .gridbase import Grid
@@ -22,6 +23,17 @@ from rasterio.warp import reproject, calculate_default_transform
 from rasterio.crs import CRS
 from rasterio.enums import Resampling
 from osgeo import osr
+
+
+def _center_projection(projection):
+    parts = projection.split('+')[1:]
+    newparts = []
+    for part in parts:
+        if 'lon_0' in part:
+            part = 'lon_0=0 '
+        newparts.append(part)
+    newprojection = '+' + '+'.join(newparts)
+    return newprojection
 
 
 class Grid2D(Grid):
@@ -1283,6 +1295,24 @@ class Grid2D(Grid):
         :returns:
           Re-projected Grid2D object.
         """
+        # hack to handle projections that wrap around the 180 meridian.
+        crosses = self._geodict.xmax < self._geodict.xmin
+        lon_set = 'lon_0' in projection
+        old_projection = projection
+        if crosses and lon_set:
+            # make a new geodict that keeps latitudes the same
+            # but centers around lon 0
+            tdict = self._geodict.asDict()
+            txrange = ((tdict['xmax']+360) - tdict['xmin'])
+            tdict['xmin'] = 0 - txrange/2.0
+            tdict['xmax'] = 0 + txrange/2.0
+            geodict = GeoDict(tdict)
+
+            # make a new projection string centered on lon 0
+            projection = _center_projection(projection)
+        else:
+            geodict = self._geodict
+
         # check to see if the input projection is valid
         srs = osr.SpatialReference()
         srs.ImportFromProj4(projection)
@@ -1301,30 +1331,30 @@ class Grid2D(Grid):
         # get the dimensions of the input data
         nrows, ncols = self._data.shape
         # define the input Affine object
-        src_transform = Affine.from_gdal(self._geodict.xmin -
-                                         self._geodict.dx/2.0,
-                                         self._geodict.dx,
+        src_transform = Affine.from_gdal(geodict.xmin -
+                                         geodict.dx/2.0,
+                                         geodict.dx,
                                          0.0,  # x rotation, not used by us
-                                         self._geodict.ymax +
-                                         self._geodict.dy/2.0,
+                                         geodict.ymax +
+                                         geodict.dy/2.0,
                                          0.0,  # y rotation, not used by us
                                          # their dy is negative
-                                         -1*self._geodict.dy)
+                                         -1*geodict.dy)
 
         # set the source and destination projections (have to be CRS
         # dictionaries)
-        src_crs = CRS().from_string(self._geodict.projection).to_dict()
+        src_crs = CRS().from_string(geodict.projection).to_dict()
         dst_crs = CRS().from_string(projection).to_dict()
 
         # determine the boundaries in src coordinates
-        if self._geodict.xmin < self._geodict.xmax:
-            right = self._geodict.xmax - (self._geodict.dx/2.0)
+        if geodict.xmin < geodict.xmax:
+            right = geodict.xmax - (geodict.dx/2.0)
         else:
-            txmax = self._geodict.xmax + 360
-            right = txmax - (self._geodict.dx/2.0)
-        left = self._geodict.xmin - (self._geodict.dx/2.0)
-        top = self._geodict.ymax + (self._geodict.dy/2.0)
-        bottom = self._geodict.ymin + (self._geodict.dy/2.0)
+            txmax = geodict.xmax + 360
+            right = txmax - (geodict.dx/2.0)
+        left = geodict.xmin - (geodict.dx/2.0)
+        top = geodict.ymax + (geodict.dy/2.0)
+        bottom = geodict.ymin + (geodict.dy/2.0)
 
         # use this convenience function to determine optimal output
         # transform and dimensions
@@ -1366,6 +1396,11 @@ class Grid2D(Grid):
         # correct for different pixel offsets
         xmin = xmin + (dx/2.0)
         ymax = ymax - (dy/2.0)
+
+        # if we crossed the meridian, we have to set the projection string
+        # to reflect where we actually are.
+        if crosses and lon_set:
+            projection = old_projection
 
         # Construct a new GeoDict
         gdict = {'xmin': xmin,
