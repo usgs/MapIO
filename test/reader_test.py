@@ -80,7 +80,7 @@ def test_read_subset_with_resample_and_padding():
     grid = read(datafile, samplegeodict=sampledict,
                 resample=True, doPadding=True)
     atest = np.array([[np.nan, np.nan],
-                      [np.inf,  3.]])
+                      [np.nan,  3.]])
     np.testing.assert_almost_equal(grid._data, atest)
 
 

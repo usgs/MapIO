@@ -304,11 +304,7 @@ def read(filename, samplegeodict=None, resample=False,
         padValue (float): Value to insert in ring of padding pixels.
     """
     # use rasterio to read all formats
-    try:
-        src = rasterio.open(filename)
-    except Exception:
-        isfile = os.path.isfile(filename)
-        x = 1
+    src = rasterio.open(filename)
 
     # first establish if we are subsetting the data.
     # if not, read the whole file and return.
@@ -350,6 +346,7 @@ def read(filename, samplegeodict=None, resample=False,
         # Pad one row/col on all sides.
         pd = grid.getPadding(filedict, samplegeodict, doPadding=True)
         data, gd = Grid2D.padGrid(grid._data, grid._geodict, pd)
+        data[np.isinf(data)] = padValue
         grid = Grid2D(data, gd)
 
     if resample:
