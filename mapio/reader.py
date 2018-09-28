@@ -203,11 +203,9 @@ def _read_data(src, samplegeodict, resample, method):
     dx = affine.a
     dy = -1*affine.e
     is_edge = samplegeodict.xmax < samplegeodict.xmin
-    # if we're resampling using anything other than nearest neighbor,
-    # then tell pixel2grid to give us an extra row/column in every direction
-    # , when possible.
+    # read an extra row/column in every direction when resampling
     pad = False
-    if resample and method != 'nearest':
+    if resample:
         pad = True
     if not is_edge:
         window = _geodict_to_window(samplegeodict,
