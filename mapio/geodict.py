@@ -46,6 +46,10 @@ class GeoDict(object):
         self._dy = float(geodict['dy'])
         self._ny = int(geodict['ny'])
         self._nx = int(geodict['nx'])
+        self._nodata = None
+        if 'nodata' in geodict:
+            self._nodata = geodict['nodata']
+
         if 'projection' in geodict:
             srs = osr.SpatialReference()
             srs.ImportFromProj4(geodict['projection'])
@@ -687,6 +691,14 @@ class GeoDict(object):
         """
         return self._projection
 
+    @property
+    def nodata(self):
+        """Get projection Proj4 string.
+        :returns:
+          Valid nodata value.
+        """
+        return self._nodata
+
     @xmin.setter
     def xmin(self, value):
         """Set xmin value, re-validate object.
@@ -774,6 +786,14 @@ class GeoDict(object):
         """
         self._nx = value
         self.validate()
+
+    @nodata.setter
+    def nodata(self, value):
+        """Set nodata value.
+        :param value:
+          Value to set.
+        """
+        self._nodata = value
 
     def getDeltas(self):
         # handle cases where we're crossing the meridian from the eastern hemisphere to the western

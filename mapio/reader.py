@@ -1,6 +1,3 @@
-# stdlib imports
-import os.path
-
 # third party imports
 import numpy as np
 import rasterio
@@ -22,9 +19,15 @@ def _is_hdf(filename):
     is_hdf = False
     with open(filename, 'rb') as f:
         f.seek(1)
-        header = f.read(3).decode()
-        if header == 'HDF':
-            is_hdf = True
+        bytes = header = f.read(3)
+        try:
+            header = bytes.decode()
+            if header == 'HDF':
+                is_hdf = True
+        except UnicodeDecodeError:
+            pass
+        except Exception as e:
+            raise e
     return is_hdf
 
 
@@ -182,6 +185,9 @@ def _read_pixels(src, window):
             # print('h5py read: %.3f seconds.' % (t2-t1))
         f.close()
         src = rasterio.open(fname)
+
+    # some kinds of files have NaN values encoded as special values like
+    # -9999. I would have thought that rasterio w
     return (data, src)
 
 
@@ -213,6 +219,7 @@ def _read_data(src, samplegeodict, resample, method):
                                     pad=pad)
         data, src = _read_pixels(src, window)
         gd = _get_geodict_from_window(affine, window, data)
+        gd.nodata = src.nodata
         grid = Grid2D(data, gd)
         return grid
     else:
@@ -276,7 +283,8 @@ def get_file_geodict(filename):
 
 
 def read(filename, samplegeodict=None, resample=False,
-         method='linear', doPadding=False, padValue=np.nan):
+         method='linear', doPadding=False, padValue=np.nan,
+         apply_nan=True, force_cast=True):
     """Read part or all of a rasterio file, resampling and padding as necessary.
 
     If samplegeodict is not provided, then the entire file will be read.
@@ -300,6 +308,8 @@ def read(filename, samplegeodict=None, resample=False,
         doPadding (bool): Whether to add ring of padValue pixels after reading
                           from file.
         padValue (float): Value to insert in ring of padding pixels.
+        apply_nan (bool): Convert nodata values to NaNs, upcasting to float if necessary.
+        force_cast (bool): If data values exceed 
     """
     # use rasterio to read all formats
     src = rasterio.open(filename)
@@ -346,6 +356,10 @@ def read(filename, samplegeodict=None, resample=False,
         data, gd = Grid2D.padGrid(grid._data, grid._geodict, pd)
         data[np.isinf(data)] = padValue
         grid = Grid2D(data, gd)
+
+    grid._geodict.nodata = src.nodata
+    if apply_nan:
+        grid.applyNaN(force=force_cast)
 
     if resample:
         grid = grid.interpolateToGrid(samplegeodict, method=method)
