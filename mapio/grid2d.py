@@ -638,6 +638,59 @@ class Grid2D(Grid):
         return (self._geodict.xmin, self._geodict.xmax, self._geodict.ymin,
                 self._geodict.ymax)
 
+    def applyNaN(self, force=False):
+        """Apply no data value to internal data, cast to float if necessary.
+
+        Intelligently cast data in grid to be able to handle NaN values.
+
+        Usage:
+        Integer data with a precision of 16 bits or less
+        will be cast to 32 bit floating point.
+
+        Integer data with precision of 32 bits will be cast to 32 bit
+        floating point if maximum/minimum values can be cast without
+        losing precision.
+
+        Integer data with precision of 64 bits or greater will be cast to
+        64 bit floating point if maximum/minimum values can be cast without
+        losing precision. Otherwise, this method will raise an OverflowError
+        unless the force option is set to True.
+
+        :param force:
+          Boolean indicating whether to override OverflowError (see Usage).
+        """
+        nodata = self._geodict.nodata
+        if nodata is None or np.isnan(nodata) or np.isnan(self._data).any():
+            return
+        isint = 'int' in str(self._data.dtype)
+        precision = self._data.dtype.itemsize
+        if not isint:
+            self._data[self._data == nodata] = np.nan
+        if isint:
+            if precision <= 2:
+                self._data = self._data.astype(np.float32)
+            elif precision <= 4:
+                dmax = self._data.max()
+                dmin = self._data.min()
+                fdmax = np.float32(dmax)
+                fdmin = np.float32(dmin)
+                if dmax == fdmax and dmin == fdmin:
+                    self._data = self._data.astype(np.float32)
+                else:
+                    self._data = self._data.astype(np.float64)
+            else:
+                dmax = self._data.max()
+                dmin = self._data.min()
+                fdmax = np.float64(dmax)
+                fdmin = np.float64(dmin)
+                if dmax == fdmax and dmin == fdmin:
+                    if not force:
+                        raise OverflowError(
+                            'Data cannot be represented as 64-bit float.')
+                self._data = self._data.astype(np.float64)
+            # if we've gotten this far, we have upcasted successfully
+            self._data[self._data == nodata] = np.nan
+
     def subdivide(self, finerdict, cellFill='max'):
         """Subdivide the cells of the host grid into finer-resolution cells.
 
@@ -661,8 +714,7 @@ class Grid2D(Grid):
         if cellFill not in fillvals:
             raise DataSetException('cellFill input must be one of %s.' %
                                    fillvals)
-        if finerdict.dx >= self._geodict.dx or \
-                finerdict.dy >= self._geodict.dy:
+        if finerdict.dx >= self._geodict.dx or finerdict.dy >= self._geodict.dy:
             raise DataSetException('subdivide() input GeoDict must be finer '
                                    'resolution than host grid.')
         if not finerdict.intersects(self._geodict):
@@ -866,7 +918,7 @@ class Grid2D(Grid):
             if len(outidx[0]):
                 if default is None:
                     msg = 'One of more of your lat/lon values is outside '\
-                          'Grid boundaries: %s' % (str(self.getBounds()))
+                        'Grid boundaries: %s' % (str(self.getBounds()))
                     raise DataSetException(msg)
                 value[outidx] = default
             value[inidx] = self._data[row[inidx], col[inidx]]
@@ -874,7 +926,7 @@ class Grid2D(Grid):
             if (row < 0 or row > ny-1 or col < 0 or col > nx-1):
                 if default is None:
                     msg = 'Your lat/lon value is outside Grid boundaries: %s'\
-                          % (str(self.getBounds()))
+                        % (str(self.getBounds()))
                     raise DataSetException(msg)
                 else:
                     return default
@@ -1135,7 +1187,7 @@ class Grid2D(Grid):
         nx_new = dims[1]
         if ny_new != ny or nx_new != nx:
             msg = "Interpolation failed!  Results (%i,%i) don't match "\
-                  "(%i,%i)!" % (ny_new, nx_new, ny, nx)
+                "(%i,%i)!" % (ny_new, nx_new, ny, nx)
             raise DataSetException(msg)
         # now the extents and resolution of the two grids should be
         # identical...
