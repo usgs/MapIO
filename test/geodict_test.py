@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from mapio.geodict import GeoDict
+from mapio.dataset import DataSetException
 
 # stdlib imports
 import os.path
@@ -14,9 +15,6 @@ homedir = os.path.dirname(os.path.abspath(__file__))  # where is this script?
 mapiodir = os.path.abspath(os.path.join(homedir, '..'))
 # put this at the front of the system path, ignoring any installed mapio stuff
 sys.path.insert(0, mapiodir)
-
-from mapio.dataset import DataSetException
-from mapio.geodict import GeoDict
 
 
 def test():
@@ -520,7 +518,34 @@ def test_bounds_meridian2():
     assert within.xmax == -174.770973683139
 
 
+def test_lat_lon_array():
+    gd = GeoDict({'xmin': 0, 'xmax': 4,
+                  'ymin': 0, 'ymax': 3,
+                  'dx': 1.0, 'dy': 1.0,
+                  'nx': 5, 'ny': 4})
+    lat = np.array([0, 1, 2], dtype=np.float32)
+    lon = np.array([2, 2, 2], dtype=np.float32)
+    trow = np.array([3, 2, 1])
+    tcol = np.array([2, 2, 2])
+    row, col = gd.getRowCol(lat, lon)
+    np.testing.assert_almost_equal(trow, row)
+    np.testing.assert_almost_equal(tcol, col)
+
+    gd = GeoDict({'xmin': 176, 'xmax': -176,
+                  'ymin': 0, 'ymax': 6,
+                  'nx': 5, 'ny': 4,
+                  'dx': 2, 'dy': 2})
+    lat = np.array([2, 4, 6], dtype=np.float32)
+    lon = np.array([178, 180, -178], dtype=np.float32)
+    row, col = gd.getRowCol(lat, lon)
+    trow = np.array([2, 1, 0])
+    tcol = np.array([1, 2, 3])
+    np.testing.assert_almost_equal(trow, row)
+    np.testing.assert_almost_equal(tcol, col)
+
+
 if __name__ == '__main__':
+    test_lat_lon_array()
     test_bounds_meridian2()
     test_shapes()
     test()

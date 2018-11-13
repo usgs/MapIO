@@ -605,8 +605,11 @@ class GeoDict(object):
         dx = self._dx
         dy = self._dy
         # check to see if we're in a scenario where the grid crosses the meridian
-        if self._xmax < ulx and lon < ulx:
-            lon += 360
+        if self._xmax < ulx and np.any(lon < 0):
+            if not isinstance(lat, scalar_types):
+                lon[lon < 0] += 360
+            else:
+                lon += 360
         col = (lon-ulx)/dx
         row = (uly-lat)/dy
         if returnFloat:
