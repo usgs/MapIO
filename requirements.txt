@@ -1,9 +1,0 @@
-affine == 1.1.0
-h5py == 2.5.0
-neicio == 0.1.dev0
-numpy == 1.9.2
-openquake.hazardlib == 0.15.0
-rasterio == 0.25.0
-scipy == 0.16.0
-Shapely == 1.5.9
-grid == 0.7.1
