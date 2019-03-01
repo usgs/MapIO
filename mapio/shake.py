@@ -450,11 +450,18 @@ class ShakeGrid(MultiGrid):
             f.write(bytes(fmt % tpl, 'utf-8'))
         else:
             f.write(fmt % tpl)
-        fmt = '<event event_id="%s" magnitude="%.1f" depth="%.1f" lat="%.4f" lon="%.4f" event_timestamp="%s" event_network="%s" event_description="%s"/>\n'
+        fmt = '<event event_id="%s" magnitude="%.1f" depth="%.1f" lat="%.4f" lon="%.4f" event_timestamp="%s" event_network="%s" event_description="%s"%s />\n'
+        event_extras = ''
+        if 'intensity_observations' in self._eventDict:
+            event_extras += ' intensity_observations="%s"' % self._eventDict['intensity_observations']
+        if 'seismic_stations' in self._eventDict:
+            event_extras += ' seismic_stations="%s"' % self._eventDict['seismic_stations']
+        if 'point_source' in self._eventDict:
+            event_extras += ' point_source="%s"' % self._eventDict['point_source']
         tpl = (self._eventDict['event_id'], self._eventDict['magnitude'], self._eventDict['depth'],
                self._eventDict['lat'], self._eventDict['lon'], self._eventDict['event_timestamp'].strftime(
                    TIMEFMT),
-               self._eventDict['event_network'], self._eventDict['event_description'])
+               self._eventDict['event_network'], self._eventDict['event_description'], event_extras)
         if isThree:
             f.write(bytes(fmt % tpl, 'utf-8'))
         else:
