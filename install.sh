@@ -70,6 +70,10 @@ if [ $? -ne 0 ]; then
     echo ". $_CONDA_ROOT/etc/profile.d/conda.sh" >> $prof
 fi
 
+# Remove existing shakemap environment if it exists
+conda remove -y -n $VENV --all
+
+
 package_list=(
     "h5py"
     "impactutils"
