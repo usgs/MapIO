@@ -56,18 +56,18 @@ def test():
     # make sure the lat/lon row/col calculations are correct
     ndec = int(np.abs(np.log10(GeoDict.EPS)))
     lat, lon = gd.getLatLon(0, 0)
-    dlat = np.abs(lat-gd.ymax)
-    dlon = np.abs(lon-gd.xmin)
+    dlat = np.abs(lat - gd.ymax)
+    dlon = np.abs(lon - gd.xmin)
     assert dlat < GeoDict.EPS and dlon < GeoDict.EPS
     row, col = gd.getRowCol(lat, lon)
     assert row == 0 and col == 0
 
-    lat, lon = gd.getLatLon(gd.ny-1, gd.nx-1)
-    dlat = np.abs(lat-gd.ymin)
-    dlon = np.abs(lon-gd.xmax)
+    lat, lon = gd.getLatLon(gd.ny - 1, gd.nx - 1)
+    dlat = np.abs(lat - gd.ymin)
+    dlon = np.abs(lon - gd.xmax)
     assert dlat < GeoDict.EPS and dlon < GeoDict.EPS
     row, col = gd.getRowCol(lat, lon)
-    assert row == (gd.ny-1) and col == (gd.nx-1)
+    assert row == (gd.ny - 1) and col == (gd.nx - 1)
     print('lat/lon and row/col calculations are correct.')
 
     print('Testing a dictionary for a global grid...')
@@ -81,9 +81,9 @@ def test():
                   'ymax': 83.99583333326376,
                   'ymin': -89.99583333333334}
     gd5 = GeoDict(globaldict)
-    lat, lon = gd5.getLatLon(gd5.ny-1, gd5.nx-1)
-    dlat = np.abs(lat-gd5.ymin)
-    dlon = np.abs(lon-gd5.xmax)
+    lat, lon = gd5.getLatLon(gd5.ny - 1, gd5.nx - 1)
+    dlat = np.abs(lat - gd5.ymin)
+    dlon = np.abs(lon - gd5.xmax)
     assert dlat < GeoDict.EPS and dlon < GeoDict.EPS
     print('Global grid is internally consistent.')
 
@@ -361,10 +361,10 @@ def test_bounds_within():
     fdy = 0.008333333333333333
     yminrow = 8684.0
     fymax = 84.0
-    newymin -= fdy/2  # bump it down
+    newymin -= fdy / 2  # bump it down
     while newymin <= ymin:
         yminrow = yminrow - 1
-        newymin = fymax - yminrow*fdy
+        newymin = fymax - yminrow * fdy
     assert newymin > ymin
 
 
@@ -544,7 +544,30 @@ def test_lat_lon_array():
     np.testing.assert_almost_equal(tcol, col)
 
 
+def test_intersect_meridian():
+    popd = {'xmin': -179.99583333333334,
+            'xmax': 179.99583333333192,
+            'ymin': -89.99583333333334,
+            'ymax': 89.99583333333263,
+            'dx': 0.0083333333333333,
+            'dy': 0.0083333333333333,
+            'ny': 21600,
+            'nx': 43200}
+    shaked = {'xmin': 180.0,
+              'xmax': -177.1333,
+              'ymin': -21.6667,
+              'ymax': -19.0,
+              'dx': 0.008333430232558165,
+              'dy': 0.008333437499999995,
+              'ny': 321,
+              'nx': 345}
+    popdict = GeoDict(popd)
+    shakedict = GeoDict(shaked)
+    assert popdict.intersects(shakedict)
+
+
 if __name__ == '__main__':
+    test_intersect_meridian()
     test_lat_lon_array()
     test_bounds_meridian2()
     test_shapes()

@@ -74,7 +74,6 @@ package_list=(
     "h5py"
     "impactutils"
     "ipython"
-    "libcomcat"
     "matplotlib"
     "pandas"
     "python>=3.6"
@@ -92,7 +91,7 @@ conda activate base
 
 # Create a conda virtual environment
 echo "Creating the $VENV virtual environment:"
-conda create -y -n $VENV -c conda-forge --channel-priority ${package_list[*]}
+conda create -y -n $VENV ${package_list[*]}
 
 # Bail out at this point if the conda create command fails.
 # Clean up zip files we've downloaded
