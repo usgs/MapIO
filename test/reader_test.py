@@ -49,17 +49,17 @@ def test_resample():
     homedir = os.path.dirname(os.path.abspath(__file__))
     # this is an HDF 5 file
     datafile = os.path.join(homedir, 'data', 'samplegrid_cdf.cdf')
-    sdict = {'xmin': 6.5,
-             'xmax': 7.5,
-             'ymin': 5.5,
-             'ymax': 6.5,
-             'nx': 2,
-             'ny': 2,
+    sdict = {'xmin': 6.0,
+             'xmax': 7.0,
+             'ymin': 6.0,
+             'ymax': 7.0,
+             'nx': 1,
+             'ny': 1,
              'dx': 1,
              'dy': 1}
     sampledict = GeoDict(sdict)
     grid = read(datafile, samplegeodict=sampledict, resample=True)
-    tdata = np.array([[9, 10], [14, 15]])
+    tdata = np.array([[6.0]])
     np.testing.assert_almost_equal(grid._data, tdata)
 
 
@@ -80,7 +80,7 @@ def test_read_subset_with_resample_and_padding():
     grid = read(datafile, samplegeodict=sampledict,
                 resample=True, doPadding=True)
     atest = np.array([[np.nan, np.nan],
-                      [np.nan,  3.]])
+                      [np.nan, 3.]])
     np.testing.assert_almost_equal(grid._data, atest)
 
 
@@ -129,8 +129,8 @@ def read_user_file_test(fname, xmin, xmax, ymin, ymax):
     grid = read(fname, samplegeodict=sample)
     t2 = time.time()
     nrows, ncols = grid._data.shape
-    npixels = nrows*ncols
-    print('%.2f seconds to read %i pixels using h5py' % (t2-t1, npixels))
+    npixels = nrows * ncols
+    print('%.2f seconds to read %i pixels using h5py' % (t2 - t1, npixels))
 
     west, east, south, north = (-105.00416666665,
                                 -102.98750000804999,
@@ -141,8 +141,8 @@ def read_user_file_test(fname, xmin, xmax, ymin, ymax):
     t1 = time.time()
     data = src.read(window=window)
     t2 = time.time()
-    print('%.2f seconds to read %i pixels using rasterio' % (t2-t1, npixels))
-    ratio = grid._data.sum()/data.sum()
+    print('%.2f seconds to read %i pixels using rasterio' % (t2 - t1, npixels))
+    ratio = grid._data.sum() / data.sum()
     print('Ratio of h5py data to rasterio data is %.4f' % ratio)
     src.close()
 
