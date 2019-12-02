@@ -14,6 +14,7 @@ if sys.version_info.major == 2:
 else:
     from io import StringIO
 import os.path
+from xml.sax import saxutils
 
 # third party
 from .gridbase import Grid
@@ -99,10 +100,10 @@ def _getXMLText(fileobj):
     tlineold = ''
     while not datamatch.search(tline) and tline != tlineold:
         tlineold = tline
-        xmltext = xmltext+tline
+        xmltext = xmltext + tline
         tline = fileobj.readline()
 
-    xmltext = xmltext+'</shakemap_grid>'
+    xmltext = xmltext + '</shakemap_grid>'
     return xmltext
 
 
@@ -143,6 +144,9 @@ def _getHeaderData(fileobj):
     griddict = _readElement(gridel, GRIDKEYS)
     eventel = root.getElementsByTagName('event')[0]
     eventdict = _readElement(eventel, EVENTKEYS)
+    # un-xmlify the location string (convert &amp; to &)
+    eventdict['event_description'] = saxutils.unescape(
+        eventdict['event_description'])
     specel = root.getElementsByTagName('grid_specification')[0]
     specdict = _readElement(specel, SPECKEYS)
     field_elements = root.getElementsByTagName('grid_field')
@@ -329,8 +333,8 @@ class ShakeGrid(MultiGrid):
             shakefile = shakefilename
 
         # read everything from the file
-        layers, fgeodict, eventDict, shakeDict, uncertaintyDict = readShakeFile(
-            shakefile, adjust=adjust)
+        (layers, fgeodict, eventDict,
+         shakeDict, uncertaintyDict) = readShakeFile(shakefile, adjust=adjust)
 
         # If the sample grid is aligned with the host grid, then resampling won't accomplish anything
         # if samplegeodict is not None and fgeodict.isAligned(samplegeodict):
@@ -450,6 +454,11 @@ class ShakeGrid(MultiGrid):
             f.write(bytes(fmt % tpl, 'utf-8'))
         else:
             f.write(fmt % tpl)
+
+        # location string could have non-valid XML characters in it (like &). Make that string safe
+        # for XML before we write it out
+        locstr = saxutils.escape(self._eventDict['event_description'])
+
         fmt = '<event event_id="%s" magnitude="%.1f" depth="%.1f" lat="%.4f" lon="%.4f" event_timestamp="%s" event_network="%s" event_description="%s"%s />\n'
         event_extras = ''
         if 'intensity_observations' in self._eventDict:
@@ -461,7 +470,7 @@ class ShakeGrid(MultiGrid):
         tpl = (self._eventDict['event_id'], self._eventDict['magnitude'], self._eventDict['depth'],
                self._eventDict['lat'], self._eventDict['lon'], self._eventDict['event_timestamp'].strftime(
                    TIMEFMT),
-               self._eventDict['event_network'], self._eventDict['event_description'], event_extras)
+               self._eventDict['event_network'], locstr, event_extras)
         if isThree:
             f.write(bytes(fmt % tpl, 'utf-8'))
         else:
@@ -522,7 +531,7 @@ class ShakeGrid(MultiGrid):
         # df.to_csv(f,sep=' ')
 
         nfields = 2 + len(self._layers)
-        data = np.zeros((self._geodict.ny*self._geodict.nx, nfields))
+        data = np.zeros((self._geodict.ny * self._geodict.nx, nfields))
         # the data are ordered from the top left, so we need to invert the latitudes to
         # start from the top left
         lat = lat[::-1]
