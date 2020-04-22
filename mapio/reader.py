@@ -98,16 +98,16 @@ def _geodict_to_window(geodict, src, pad=False):
     dx = geodict.dx
     dy = geodict.dy
 
-    # if padding requested, add one set of pixels all the way around
+    # if padding requested, add TWO sets of pixels all the way around
     xmin = geodict.xmin
     xmax = geodict.xmax
     ymin = geodict.ymin
     ymax = geodict.ymax
     if pad:
-        xmin -= dx
-        xmax += dx
-        ymin -= dy
-        ymax += dy
+        xmin -= dx * 2
+        xmax += dx * 2
+        ymin -= dy * 2
+        ymax += dy * 2
 
     # convert from pixel registered to gridline registered
     west = xmin - dx / 2.0
