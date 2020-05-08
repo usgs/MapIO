@@ -4,35 +4,20 @@
 from __future__ import print_function
 
 # stdlib imports
-from xml.dom import minidom
 from datetime import datetime
 from collections import OrderedDict
-import re
-import sys
 import tempfile
 import time
 import shutil
-
-if sys.version_info.major == 2:
-    import StringIO
-else:
-    from io import StringIO
 import os.path
-
-# hack the path so that I can debug these functions if I need to
-homedir = os.path.dirname(os.path.abspath(__file__))  # where is this script?
-mapiodir = os.path.abspath(os.path.join(homedir, '..'))
-# put this at the front of the system path, ignoring any installed mapio stuff
-sys.path.insert(0, mapiodir)
 
 # third party
 from mapio.shake import ShakeGrid
-from mapio.gridbase import Grid
-from mapio.multiple import MultiGrid
-from mapio.dataset import DataSetException
-from mapio.grid2d import Grid2D
 from mapio.geodict import GeoDict
 import numpy as np
+
+homedir = os.path.dirname(os.path.abspath(__file__))  # where is this script?
+mapiodir = os.path.abspath(os.path.join(homedir, '..'))
 
 
 def test_modify():
@@ -177,7 +162,7 @@ def test_save():
         print('Passed save/read functionality for shakemap grids.')
 
         print('Testing getFileGeoDict method...')
-        fgeodict = ShakeGrid.getFileGeoDict(testfile)
+        _ = ShakeGrid.getFileGeoDict(testfile)
         print('Passed save/read functionality for shakemap grids.')
 
         print('Testing loading with bounds (no resampling or padding)...')
@@ -186,7 +171,8 @@ def test_save():
                               'dx': 1.0, 'dy': 1.0,
                               'ny': 5, 'nx': 5})
         shake3 = ShakeGrid.load(testfile, samplegeodict=sampledict,
-                                resample=False, doPadding=False, padValue=np.nan)
+                                resample=False, doPadding=False,
+                                padValue=np.nan)
         tdata = shake3.getLayer('pga').getData()
         np.testing.assert_almost_equal(tdata, layers['pga'])
 
@@ -198,7 +184,8 @@ def test_save():
                            'dx': 1.0, 'dy': 1.0,
                            'ny': 6, 'nx': 6})
         shake4 = ShakeGrid.load(testfile, samplegeodict=newdict,
-                                resample=False, doPadding=True, padValue=np.nan)
+                                resample=False, doPadding=True,
+                                padValue=np.nan)
         output = np.array([[np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
                            [np.nan, 0.0, 1.0, 2.0, 3.0, np.nan],
                            [np.nan, 4.0, 5.0, 6.0, 7.0, np.nan],
@@ -230,7 +217,8 @@ def test_save():
                               'dx': 1.0, 'dy': 1.0,
                               'ny': 3, 'nx': 3})
         shake5 = ShakeGrid.load(testfile, samplegeodict=littledict,
-                                resample=True, doPadding=False, padValue=np.nan)
+                                resample=True, doPadding=False,
+                                padValue=np.nan)
         output = np.array([[10.5, 11.5, 12.5],
                            [16.5, 17.5, 18.5],
                            [22.5, 23.5, 24.5]])
@@ -257,7 +245,8 @@ def test_save():
                            'dx': 1.0, 'dy': 1.0,
                            'ny': 5, 'nx': 5})
         shake6 = ShakeGrid.load(
-            testfile, samplegeodict=bigdict, resample=True, doPadding=True, padValue=np.nan)
+            testfile, samplegeodict=bigdict, resample=True, doPadding=True,
+            padValue=np.nan)
         tdata = shake6.getLayer('pga').getData()
         output = np.array([[np.nan, np.nan, np.nan, np.nan, np.nan],
                            [np.nan, 2.5, 3.5, 4.5, np.nan],
@@ -268,14 +257,66 @@ def test_save():
         print('Passed resampling and padding...')
     except Exception as error:
         print('Failed to read grid.xml format file "%s". Error "%s".' %
-              (xmlfile, str(error)))
+              (testfile, str(error)))
         assert 0 == 1
     finally:
         if os.path.isdir(tdir):
             shutil.rmtree(tdir)
 
 
+def test_meridian():
+    shakeDict = {'event_id': 'usabcd1234',
+                 'shakemap_id': 'usabcd1234',
+                 'shakemap_version': 1,
+                 'code_version': '4.0',
+                 'process_timestamp': datetime.utcnow(),
+                 'shakemap_originator': 'us',
+                 'map_status': 'RELEASED',
+                 'shakemap_event_type': 'ACTUAL'}
+    eventDict = {'event_id': 'usabcd1234',
+                 'magnitude': 7.6,
+                 'depth': 1.4,
+                 'lat': 2.0,
+                 'lon': 2.0,
+                 'event_timestamp': datetime.utcnow(),
+                 'event_network': 'us',
+                 # line below tests escaping XML
+                 'event_description': 'sample event & stuff'}
+    uncDict = {'pga': (0.0, 0),
+               'pgv': (0.0, 0),
+               'mmi': (0.0, 0)}
+    mdict = {'digits': 4,
+             'dx': 0.033333333333333333,
+             'dy': 0.033333333333333333,
+             'nx': 442,
+             'ny': 319,
+             'units': 'ln(g)',
+             'xmax': 180.34999999999999,
+             'xmin': 165.65000000000001,
+             'ymax': -36.649999999999999,
+             'ymin': -47.25}
+    gdict = GeoDict(mdict)
+    pga = np.ones((gdict.ny, gdict.nx))
+    pgv = np.ones((gdict.ny, gdict.nx))
+    mmi = np.ones((gdict.ny, gdict.nx))
+    layers = OrderedDict()
+    layers['pga'] = pga
+    layers['pgv'] = pgv
+    layers['mmi'] = mmi
+    shake = ShakeGrid(layers, gdict, eventDict, shakeDict, uncDict)
+    tdir = tempfile.mkdtemp()
+    try:
+        fname = os.path.join(tdir, 'temp.xml')
+        shake.save(fname)
+        x = 1
+    except Exception:
+        assert False
+    finally:
+        shutil.rmtree(tdir)
+
+
 if __name__ == '__main__':
+    test_meridian()
     test_modify()
     test_interpolate()
     test_read()
