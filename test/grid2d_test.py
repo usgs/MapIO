@@ -47,17 +47,17 @@ def test_subdivide():
                        'dx': 1.0, 'dy': 1.0,
                        'ny': 2, 'nx': 2})
     hostgrid = Grid2D(data, geodict)
-    finedict = GeoDict({'xmin': 0.0-(1.0/3.0), 'xmax': 1.0+(1.0/3.0),
-                        'ymin': 0.0-(1.0/3.0), 'ymax': 1.0+(1.0/3.0),
-                        'dx': 1.0/3.0, 'dy': 1.0/3.0,
+    finedict = GeoDict({'xmin': 0.0 - (1.0 / 3.0), 'xmax': 1.0 + (1.0 / 3.0),
+                        'ymin': 0.0 - (1.0 / 3.0), 'ymax': 1.0 + (1.0 / 3.0),
+                        'dx': 1.0 / 3.0, 'dy': 1.0 / 3.0,
                         'ny': 6, 'nx': 6})
     finegrid = hostgrid.subdivide(finedict)
-    output = np.array([[0.,  0.,  0.,  1.,  1.,  1.],
-                       [0.,  0.,  0.,  1.,  1.,  1.],
-                       [0.,  0.,  0.,  1.,  1.,  1.],
-                       [2.,  2.,  2.,  3.,  3.,  3.],
-                       [2.,  2.,  2.,  3.,  3.,  3.],
-                       [2.,  2.,  2.,  3.,  3.,  3.]])
+    output = np.array([[0., 0., 0., 1., 1., 1.],
+                       [0., 0., 0., 1., 1., 1.],
+                       [0., 0., 0., 1., 1., 1.],
+                       [2., 2., 2., 3., 3., 3.],
+                       [2., 2., 2., 3., 3., 3.],
+                       [2., 2., 2., 3., 3., 3.]])
     np.testing.assert_almost_equal(finegrid.getData(), output)
     print('Passed subdivide method test - aligned grids.')
 
@@ -75,35 +75,35 @@ def test_subdivide():
     N = np.nan
     print('Testing subdivide with min parameter...')
     finegrid = hostgrid.subdivide(finedict, cellFill='min')
-    output = np.array([[N,   0.,   0.,   1.,   1.,   1.,   2.,   2.],
-                       [N,   0.,   0.,   1.,   1.,   1.,   2.,   2.],
-                       [N,   3.,   3.,   4.,   4.,   4.,   5.,   5.],
-                       [N,   3.,   3.,   4.,   4.,   4.,   5.,   5.],
-                       [N,   3.,   3.,   4.,   4.,   4.,   5.,   5.],
-                       [N,   6.,   6.,   7.,   7.,   7.,   8.,   8.],
-                       [N,   6.,   6.,   7.,   7.,   7.,   8.,   8.]])
+    output = np.array([[N, 0., 0., 1., 1., 1., 2., 2.],
+                       [N, 0., 0., 1., 1., 1., 2., 2.],
+                       [N, 3., 3., 4., 4., 4., 5., 5.],
+                       [N, 3., 3., 4., 4., 4., 5., 5.],
+                       [N, 3., 3., 4., 4., 4., 5., 5.],
+                       [N, 6., 6., 7., 7., 7., 8., 8.],
+                       [N, 6., 6., 7., 7., 7., 8., 8.]])
     np.testing.assert_almost_equal(finegrid.getData(), output)
     print('Passed subdivide with min parameter...')
     print('Testing subdivide with max parameter...')
     finegrid = hostgrid.subdivide(finedict, cellFill='max')
-    output = np.array([[N,   0.,   0.,   1.,   1.,   2.,   2.,   2.],
-                       [N,   0.,   0.,   1.,   1.,   2.,   2.,   2.],
-                       [N,   3.,   3.,   4.,   4.,   5.,   5.,   5.],
-                       [N,   3.,   3.,   4.,   4.,   5.,   5.,   5.],
-                       [N,   6.,   6.,   7.,   7.,   8.,   8.,   8.],
-                       [N,   6.,   6.,   7.,   7.,   8.,   8.,   8.],
-                       [N,   6.,   6.,   7.,   7.,   8.,   8.,   8.]])
+    output = np.array([[N, 0., 0., 1., 1., 2., 2., 2.],
+                       [N, 0., 0., 1., 1., 2., 2., 2.],
+                       [N, 3., 3., 4., 4., 5., 5., 5.],
+                       [N, 3., 3., 4., 4., 5., 5., 5.],
+                       [N, 6., 6., 7., 7., 8., 8., 8.],
+                       [N, 6., 6., 7., 7., 8., 8., 8.],
+                       [N, 6., 6., 7., 7., 8., 8., 8.]])
     np.testing.assert_almost_equal(finegrid.getData(), output)
     print('Passed subdivide with max parameter...')
     print('Testing subdivide with mean parameter...')
     finegrid = hostgrid.subdivide(finedict, cellFill='mean')
-    output = np.array([[N,   0.,   0.,   1.,   1.,   1.5,   2.,   2.],
-                       [N,   0.,   0.,   1.,   1.,   1.5,   2.,   2.],
-                       [N,   3.,   3.,   4.,   4.,   4.5,   5.,   5.],
-                       [N,   3.,   3.,   4.,   4.,   4.5,   5.,   5.],
-                       [N,   4.5,  4.5,  5.5,  5.5,  6.0,   6.5,  6.5],
-                       [N,   6.,   6.,   7.,   7.,   7.5,   8.,   8.],
-                       [N,   6.,   6.,   7.,   7.,   7.5,   8.,   8.]])
+    output = np.array([[N, 0., 0., 1., 1., 1.5, 2., 2.],
+                       [N, 0., 0., 1., 1., 1.5, 2., 2.],
+                       [N, 3., 3., 4., 4., 4.5, 5., 5.],
+                       [N, 3., 3., 4., 4., 4.5, 5., 5.],
+                       [N, 4.5, 4.5, 5.5, 5.5, 6.0, 6.5, 6.5],
+                       [N, 6., 6., 7., 7., 7.5, 8., 8.],
+                       [N, 6., 6., 7., 7., 7.5, 8., 8.]])
     np.testing.assert_almost_equal(finegrid.getData(), output)
     print('Passed subdivide with mean parameter...')
     print('Passed subdivide method test - non-aligned grids.')
@@ -174,7 +174,7 @@ def test_getvalue():
     lon = np.array([[3.0, 3.0],
                     [4.0, 4.0]])
     test = grid.getValue(lat, lon)
-    np.testing.assert_almost_equal(test, np.array([[13,  8], [9,  4]]))
+    np.testing.assert_almost_equal(test, np.array([[13, 8], [9, 4]]))
 
 
 def test_cut():
@@ -267,8 +267,8 @@ def test_interpolate():
     grid3 = grid.interpolate2(sampledict, method='linear')
     t3 = time.time()
     # np.testing.assert_almost_equal(grid2._data.sum(),grid3._data.sum())
-    print('scipy method: %.3f seconds' % (t2-t1))
-    print('gdal  method: %.3f seconds' % (t3-t2))
+    print('scipy method: %.3f seconds' % (t2 - t1))
+    print('gdal  method: %.3f seconds' % (t3 - t2))
 
 
 def test_rasterize():
@@ -435,7 +435,7 @@ def test_project():
             nrows, ncols = data.shape
             left = aff.xoff
             top = aff.yoff
-            right, bottom = aff * (ncols-1, nrows-1)
+            right, bottom = aff * (ncols - 1, nrows - 1)
             dst_transform, width, height = calculate_default_transform(src_crs, dst_crs,
                                                                        ncols, nrows,
                                                                        left, bottom,
@@ -476,7 +476,61 @@ def test_project():
     # assert cmpdict == newgrid._geodict
 
 
+def test_fiji():
+    host_dict = {'xmin': 176.8874999998576,
+                 'xmax': -178.23750000014437,
+                 'ymin': -20.770833333331773,
+                 'ymax': -16.154166666666953,
+                 'dx': 0.00833333333333,
+                 'dy': 0.00833333333333,
+                 'ny': 555,
+                 'nx': 586}
+    sample_dict = {'xmin': 176.90416666666522,
+                   'xmax': -178.25416666666814,
+                   'ymin': -20.729166666666934,
+                   'ymax': -16.154166666666953,
+                   'dx': 0.0083333333333333,
+                   'dy': 0.0083333333333333,
+                   'ny': 550,
+                   'nx': 582}
+    host_geodict = GeoDict(host_dict)
+    sample_geodict = GeoDict(sample_dict)
+    host_data = np.zeros((host_geodict.ny, host_geodict.nx))
+    host_grid = Grid2D(host_data, host_geodict)
+    xi, yi = host_grid._getInterpCoords(sample_geodict)
+    xcmp, ycmp = (2.0000000169155823, 0.0)
+    np.testing.assert_almost_equal(xi[0], xcmp)
+    np.testing.assert_almost_equal(yi[0], ycmp)
+
+    # this is a case where the host grid crosses
+    # the meridian but the sample grid is only on
+    # the east side of the meridian.
+    host_dict = {'xmin': 176.11235968666102,
+                 'xmax': -179.99597366223898,
+                 'ymin': -21.212639164039008,
+                 'ymax': -17.537639178739006,
+                 'dx': 0.008333333299999992,
+                 'dy': 0.008333333300000002,
+                 'ny': 442, 'nx': 468}
+    sample_dict = {'xmin': 176.15402635316102,
+                   'xmax': 179.94569300466102,
+                   'ymin': -21.162639164239007,
+                   'ymax': -17.587639178539007,
+                   'dx': 0.008333333299999992,
+                   'dy': 0.008333333300000002,
+                   'ny': 430, 'nx': 456}
+    host_geodict = GeoDict(host_dict)
+    sample_geodict = GeoDict(sample_dict)
+    host_data = np.zeros((host_geodict.ny, host_geodict.nx))
+    host_grid = Grid2D(host_data, host_geodict)
+    xi, yi = host_grid._getInterpCoords(sample_geodict)
+    xcmp, ycmp = (4.99999999999908, 6.000000000000082)
+    np.testing.assert_almost_equal(xi[0], xcmp)
+    np.testing.assert_almost_equal(yi[0], ycmp)
+
+
 if __name__ == '__main__':
+    test_fiji()
     test_getvalue()
     test_project()
     test_subdivide()

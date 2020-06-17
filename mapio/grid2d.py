@@ -82,16 +82,16 @@ class Grid2D(Grid):
            - Boolean indicating whether the last column was a duplicate.
         """
         first_column_duplicated = False
-        cols_per_degree = 1/geodict.dx
+        cols_per_degree = 1 / geodict.dx
         is_even = np.isclose(cols_per_degree, np.floor(cols_per_degree))
         is_global = (geodict.xmax - geodict.xmin) >= 360 or \
-            (geodict.xmax-geodict.xmin) < 0
+            (geodict.xmax - geodict.xmin) < 0
         newgeodict = geodict.copy()
         if is_even and is_global:
-            if np.floor(cols_per_degree)*360 == geodict.nx-1:
+            if np.floor(cols_per_degree) * 360 == geodict.nx - 1:
                 first_column_duplicated = True
-                nx = geodict.nx-1
-                xmax = geodict.xmin + (nx-1)*geodict.dx
+                nx = geodict.nx - 1
+                xmax = geodict.xmin + (nx - 1) * geodict.dx
                 newgeodict = GeoDict({'xmin': geodict.xmin,
                                       'xmax': xmax,
                                       'ymin': geodict.ymin,
@@ -172,7 +172,7 @@ class Grid2D(Grid):
         iuly2 = None
         ilry2 = None
         if ilrx1 > nx:
-            ilrx2 = ilrx1-nx
+            ilrx2 = ilrx1 - nx
             ilrx1 = nx
             iulx2 = 0
             iuly2 = iuly1
@@ -287,16 +287,16 @@ class Grid2D(Grid):
 
         # make sure that boundaries are on filegeodict boundaries -
         # if not, go outwards until we hit one
-        ddxmin = xmin/dx
+        ddxmin = xmin / dx
         if int(ddxmin) != ddxmin:
             xmin = np.floor(ddxmin) * dx
-        ddxmax = xmax/dx
+        ddxmax = xmax / dx
         if int(ddxmax) != ddxmax:
             xmax = np.ceil(ddxmax) * dx
-        ddymin = ymin/dy
+        ddymin = ymin / dy
         if int(ddymin) != ddymin:
             ymin = np.floor(ddymin) * dy
-        ddymax = ymax/dy
+        ddymax = ymax / dy
         if int(ddymax) != ddymax:
             ymax = np.ceil(ddymax) * dy
 
@@ -351,10 +351,10 @@ class Grid2D(Grid):
         bottomheight, bottomwidth = bottomrows.shape
         topheight, topwidth = toprows.shape
 
-        newxmin = geodict.xmin - leftwidth*dx
-        newxmax = geodict.xmax + rightwidth*dx
-        newymin = geodict.ymin - bottomheight*dy
-        newymax = geodict.ymax + topheight*dy
+        newxmin = geodict.xmin - leftwidth * dx
+        newxmax = geodict.xmax + rightwidth * dx
+        newymin = geodict.ymin - bottomheight * dy
+        newymax = geodict.ymax + topheight * dy
         newdict = GeoDict({'xmin': newxmin,
                            'xmax': newxmax,
                            'ymin': newymin,
@@ -406,10 +406,10 @@ class Grid2D(Grid):
                                           filegeodict.ymax)
             dx, dy = (filegeodict.dx, filegeodict.dy)
 
-            padleftcols = int(np.ceil((gxmin - pxmin)/dx))
-            padrightcols = int(np.ceil((pxmax - gxmax)/dx))
-            padbottomrows = int(np.ceil((gymin - pymin)/dy))
-            padtoprows = int(np.ceil((pymax - gymax)/dy))
+            padleftcols = int(np.ceil((gxmin - pxmin) / dx))
+            padrightcols = int(np.ceil((pxmax - gxmax) / dx))
+            padbottomrows = int(np.ceil((gymin - pymin) / dy))
+            padtoprows = int(np.ceil((pymax - gymax) / dy))
 
             # if any of these are negative, set them to zero
             if padleftcols < 0:
@@ -468,11 +468,11 @@ class Grid2D(Grid):
            from 0 to N-squared minus 1, and geodict
            lower left corner is at 0.5/0.5 and cell dimensions are 1.0.
         """
-        data = np.arange(0, M*N).reshape(M, N)
+        data = np.arange(0, M * N).reshape(M, N)
         # arange gives int64 by default, not supported by netcdf3
         data = data.astype(np.int32)
-        xvar = np.arange(0.5, 0.5+N, 1.0)
-        yvar = np.arange(0.5, 0.5+M, 1.0)
+        xvar = np.arange(0.5, 0.5 + N, 1.0)
+        yvar = np.arange(0.5, 0.5 + M, 1.0)
         geodict = {'ny': M,
                    'nx': N,
                    'xmin': 0.5,
@@ -566,19 +566,19 @@ class Grid2D(Grid):
         dy = geodict.dy
         nx = geodict.nx
         # section 1
-        iulx1 = int(np.floor((bxmin - ulx)/dx))
+        iulx1 = int(np.floor((bxmin - ulx) / dx))
         ilrx1 = int(nx)
 
         if not isScanLine:
-            iuly1 = int(np.ceil((uly - bymax)/dy))
-            ilry1 = int(np.floor((uly - bymin)/dy)) + 1
+            iuly1 = int(np.ceil((uly - bymax) / dy))
+            ilry1 = int(np.floor((uly - bymin) / dy)) + 1
         else:
-            ilry1 = int(np.ceil((uly - bymin)/dy))
-            iuly1 = int(np.floor((uly - bymax)/dy)) + 1
+            ilry1 = int(np.ceil((uly - bymin) / dy))
+            iuly1 = int(np.floor((uly - bymax) / dy)) + 1
 
         # section 2
         iulx2 = 0
-        ilrx2 = int(np.ceil((bxmax - ulx)/dx)) + 1
+        ilrx2 = int(np.ceil((bxmax - ulx) / dx)) + 1
         iuly2 = iuly1
         ilry2 = ilry1
 
@@ -725,18 +725,18 @@ class Grid2D(Grid):
         # of finer grid dx/dy and are
         # aligned in the sense that every host grid cell edge matches
         # an edge of finer grid cell.
-        resXMultiple = self._geodict.dx/finerdict.dx == \
-            int(self._geodict.dx/finerdict.dx)
-        resYMultiple = self._geodict.dy/finerdict.dy == \
-            int(self._geodict.dy/finerdict.dy)
+        resXMultiple = self._geodict.dx / finerdict.dx == \
+            int(self._geodict.dx / finerdict.dx)
+        resYMultiple = self._geodict.dy / finerdict.dy == \
+            int(self._geodict.dy / finerdict.dy)
         # this stuff below may not be right...?
-        dxmin = (self._geodict.xmin-finerdict.xmin)/finerdict.dx
+        dxmin = (self._geodict.xmin - finerdict.xmin) / finerdict.dx
         isXAligned = np.isclose(dxmin, int(dxmin))
-        dymin = (self._geodict.ymin-finerdict.ymin)/finerdict.dy
+        dymin = (self._geodict.ymin - finerdict.ymin) / finerdict.dy
         isYAligned = np.isclose(dymin, int(dymin))
         isAligned = resXMultiple and resYMultiple and isXAligned and isYAligned
         finedata = np.ones((finerdict.ny, finerdict.nx),
-                           dtype=self._data.dtype)*np.nan
+                           dtype=self._data.dtype) * np.nan
         if isAligned:
             for i in range(0, self._geodict.ny):
                 for j in range(0, self._geodict.nx):
@@ -746,10 +746,12 @@ class Grid2D(Grid):
                     # coordinates of center of host cell
                     clat, clon = self.getLatLon(i, j)
                     # get the left edge of the cell
-                    fleftlon = clon - (self._geodict.dx/2) + finerdict.dx/2
-                    ftoplat = clat + (self._geodict.dy/2) - finerdict.dy/2
-                    frightlon = clon + (self._geodict.dx/2) - finerdict.dx/2
-                    fbottomlat = clat - (self._geodict.dy/2) + finerdict.dy/2
+                    fleftlon = clon - (self._geodict.dx / 2) + finerdict.dx / 2
+                    ftoplat = clat + (self._geodict.dy / 2) - finerdict.dy / 2
+                    frightlon = clon + (self._geodict.dx /
+                                        2) - finerdict.dx / 2
+                    fbottomlat = clat - \
+                        (self._geodict.dy / 2) + finerdict.dy / 2
                     itop, jleft = finerdict.getRowCol(ftoplat, fleftlon)
                     itop = itop
                     jleft = jleft
@@ -757,7 +759,7 @@ class Grid2D(Grid):
                                                           frightlon)
                     ibottom = ibottom
                     jright = jright
-                    finedata[itop:ibottom+1, jleft:jright+1] = cellvalue
+                    finedata[itop:ibottom + 1, jleft:jright + 1] = cellvalue
         else:
             for i in range(0, self._geodict.ny):
                 for j in range(0, self._geodict.nx):
@@ -769,8 +771,8 @@ class Grid2D(Grid):
                     # what is the longitude of of our first approximated
                     # left edge fine
                     # cell that is contained by host cell?
-                    fleftlon = clon - self._geodict.dx/2.0 + finerdict.dx/2
-                    frightlon = clon + self._geodict.dx/2.0 - finerdict.dx/2
+                    fleftlon = clon - self._geodict.dx / 2.0 + finerdict.dx / 2
+                    frightlon = clon + self._geodict.dx / 2.0 - finerdict.dx / 2
                     jleft = int(np.ceil((fleftlon - finerdict.xmin) /
                                         finerdict.dx))
                     jright = int(np.floor((frightlon - finerdict.xmin) /
@@ -779,8 +781,8 @@ class Grid2D(Grid):
                     # what is the latitude of of our first approximated
                     # bottom edge fine
                     # cell that is contained by host cell?
-                    fbottomlat = clat - self._geodict.dy/2.0 + finerdict.dy/2
-                    ftoplat = clat + self._geodict.dy/2.0 - finerdict.dy/2
+                    fbottomlat = clat - self._geodict.dy / 2.0 + finerdict.dy / 2
+                    ftoplat = clat + self._geodict.dy / 2.0 - finerdict.dy / 2
                     ibottom = int(np.floor((finerdict.ymax - fbottomlat) /
                                            finerdict.dy))
                     itop = int(np.ceil((finerdict.ymax - ftoplat) /
@@ -790,7 +792,7 @@ class Grid2D(Grid):
                     # itop = int(np.floor((ftoplat - finerdict.ymin) /
                     # finerdict.dy))
 
-                    finedata[itop:ibottom+1, jleft:jright+1] = cellvalue
+                    finedata[itop:ibottom + 1, jleft:jright + 1] = cellvalue
                     # now what do I do about cells that aren't completely
                     # contained?
 
@@ -806,7 +808,7 @@ class Grid2D(Grid):
             # warnings in this
             # section where we use those methods.
             with np.errstate(invalid='ignore'):
-                colidx = finerdict.nx//2
+                colidx = finerdict.nx // 2
                 while colidx > -1:
                     col = finedata[:, colidx]
                     if not np.isnan(col).all():
@@ -814,19 +816,19 @@ class Grid2D(Grid):
                         break
                     colidx -= 1
                 for i in nanrows[0]:
-                    if i == 0 or i == finerdict.ny-1:
+                    if i == 0 or i == finerdict.ny - 1:
                         continue
                     if cellFill == 'min':
-                        finedata[i, :] = np.minimum(finedata[i-1, :],
-                                                    finedata[i+1, :])
+                        finedata[i, :] = np.minimum(finedata[i - 1, :],
+                                                    finedata[i + 1, :])
                     elif cellFill == 'max':
-                        finedata[i, :] = np.maximum(finedata[i-1, :],
-                                                    finedata[i+1, :])
+                        finedata[i, :] = np.maximum(finedata[i - 1, :],
+                                                    finedata[i + 1, :])
                     else:  # cellFill == 'mean':
-                        finedata[i, :] = (finedata[i-1, :] +
-                                          finedata[i+1, :]) / 2.0
+                        finedata[i, :] = (finedata[i - 1, :] +
+                                          finedata[i + 1, :]) / 2.0
                 # now look at output columns
-                rowidx = finerdict.ny//2
+                rowidx = finerdict.ny // 2
                 while rowidx > -1:
                     row = finedata[rowidx, :]
                     if not np.isnan(row).all():
@@ -834,17 +836,17 @@ class Grid2D(Grid):
                         break
                     rowidx -= 1
                 for j in nancols[0]:
-                    if j == 0 or j == finerdict.nx-1:
+                    if j == 0 or j == finerdict.nx - 1:
                         continue
                     if cellFill == 'min':
-                        finedata[:, j] = np.minimum(finedata[:, j-1],
-                                                    finedata[:, j+1])
+                        finedata[:, j] = np.minimum(finedata[:, j - 1],
+                                                    finedata[:, j + 1])
                     elif cellFill == 'max':
-                        finedata[:, j] = np.maximum(finedata[:, j-1],
-                                                    finedata[:, j+1])
+                        finedata[:, j] = np.maximum(finedata[:, j - 1],
+                                                    finedata[:, j + 1])
                     else:  # cellFill == 'mean':
-                        finedata[:, j] = (finedata[:, j-1] +
-                                          finedata[:, j+1]) / 2.0
+                        finedata[:, j] = (finedata[:, j - 1] +
+                                          finedata[:, j + 1]) / 2.0
 
         finegrid = Grid2D(finedata, finerdict)
         return finegrid
@@ -880,7 +882,7 @@ class Grid2D(Grid):
                                    'contained by this grid.')
         uly, ulx = self._geodict.getRowCol(td.ymax, td.xmin)
         lry, lrx = self._geodict.getRowCol(td.ymin, td.xmax)
-        data = self._data[uly:lry+1, ulx:lrx+1]
+        data = self._data[uly:lry + 1, ulx:lrx + 1]
         grid = Grid2D(data, td)
         return grid
 
@@ -910,10 +912,10 @@ class Grid2D(Grid):
                                       'method currently supported.')
         ny, nx = self._data.shape
         if isinstance(row, np.ndarray):
-            outidx = np.where((row < 0) | (row > ny-1) | (col < 0) |
-                              (col > nx-1))
-            inidx = np.where((row >= 0) & (row <= ny-1) & (col >= 0) &
-                             (col <= nx-1))
+            outidx = np.where((row < 0) | (row > ny - 1) | (col < 0) |
+                              (col > nx - 1))
+            inidx = np.where((row >= 0) & (row <= ny - 1) & (col >= 0) &
+                             (col <= nx - 1))
             value = np.empty_like(row).astype(self._data.dtype)
             if len(outidx[0]):
                 if default is None:
@@ -923,7 +925,7 @@ class Grid2D(Grid):
                 value[outidx] = default
             value[inidx] = self._data[row[inidx], col[inidx]]
         else:
-            if (row < 0 or row > ny-1 or col < 0 or col > nx-1):
+            if (row < 0 or row > ny - 1 or col < 0 or col > nx - 1):
                 if default is None:
                     msg = 'Your lat/lon value is outside Grid boundaries: %s'\
                         % (str(self.getBounds()))
@@ -963,6 +965,12 @@ class Grid2D(Grid):
         return self._geodict.getRowCol(lat, lon, returnFloat)
 
     def _getInterpCoords(self, geodict):
+        # make sure that the grid we're resampling TO is completely
+        # contained by host
+        if not self._geodict.contains(geodict):
+            raise DataSetException('Grid you are resampling TO is not '
+                                   'completely contained by base grid.')
+
         # translate geographic coordinates to 2 1-D arrays of X and Y
         # pixel coordinates
         # remember that pixel coordinates are (0,0) at the top left and
@@ -977,35 +985,40 @@ class Grid2D(Grid):
         hostxmax = self._geodict.xmax
         hostymin = self._geodict.ymin
         hostymax = self._geodict.ymax
-        host_normal = hostxmin >= -180 and hostxmin <= 180 and \
-            hostxmax >= -180 and hostxmax <= 180
-        host_360 = hostxmin >= 180 or hostxmax >= 180
+
+        # there are three cases for longitude coordinates we need to
+        # deal with here:
+        # 1) Both xmin/xmax are both positive (left)
+        # 2) Both xmin/xmax are both negative (right)
+        # 3) xmin is positive, xmax is negative (cross)
+        host_left = hostxmin > 0 and hostxmax > 0
+        host_right = hostxmin < 0 and hostxmax < 0
+        host_cross = hostxmin > 0 and hostxmax < 0
 
         samplexmin = geodict.xmin
         samplexmax = geodict.xmax
         sampleymin = geodict.ymin
         sampleymax = geodict.ymax
-        sample_normal = samplexmin >= -180 and samplexmin <= 180 and \
-            samplexmax >= -180 and samplexmax <= 180
-        sample_360 = samplexmin >= 180 or samplexmax >= 180
 
-        # get everything into negative mode
-        if host_normal:
-            if hostxmin > hostxmax:
-                hostxmin -= 360
-        if host_360:
-            if hostxmin > 180:
-                hostxmin -= 360
-            if hostxmax > 180:
-                hostxmax -= 360
-        if sample_normal:
-            if samplexmin > samplexmax:
-                samplexmin -= 360
-        if sample_360:
-            if samplexmin > 180:
-                samplexmin -= 360
-            if samplexmax > 180:
-                samplexmax -= 360
+        sample_left = samplexmin > 0 and samplexmax > 0
+        sample_right = samplexmin < 0 and samplexmax < 0
+        sample_cross = samplexmin > 0 and samplexmax < 0
+
+        # # if sets of longitudes are in a different system,
+        # # make them both left (positive)
+
+        if not host_left:
+            if host_right:
+                hostxmin += 360
+                hostxmax += 360
+            elif host_cross:
+                hostxmax += 360
+        if not sample_left:
+            if sample_right:
+                samplexmin += 360
+                samplexmax += 360
+            elif sample_cross:
+                samplexmax += 360
 
         # extract the geographic information about the grid we're sampling to
         sampleny = geodict.ny
@@ -1014,18 +1027,11 @@ class Grid2D(Grid):
         hostdx = self._geodict.dx
         hostdy = self._geodict.dy
 
-        # make sure that the grid we're resampling TO is completely
-        # contained by host
-        if samplexmin < hostxmin or samplexmax > hostxmax or \
-                sampleymin < hostymin or sampleymax > hostymax:
-            raise DataSetException('Grid you are resampling TO is not '
-                                   'completely contained by base grid.')
-
         gxi = np.linspace(samplexmin, samplexmax, num=samplenx)
         gyi = np.linspace(sampleymin, sampleymax, num=sampleny)
 
-        xi = (gxi - hostxmin)/hostdx
-        yi = np.array(sorted(((hostymax - gyi)/hostdy)))
+        xi = (gxi - hostxmin) / hostdx
+        yi = np.array(sorted(((hostymax - gyi) / hostdy)))
 
         return (xi, yi)
 
@@ -1073,20 +1079,20 @@ class Grid2D(Grid):
 
         destination = np.zeros((geodict.ny, geodict.nx))
         src_transform = Affine.from_gdal(self._geodict.xmin -
-                                         self._geodict.dx/2.0,
+                                         self._geodict.dx / 2.0,
                                          self._geodict.dx,
                                          0.0,  # x rotation, not used by us
                                          self._geodict.ymax +
-                                         self._geodict.dy/2.0,
+                                         self._geodict.dy / 2.0,
                                          0.0,  # y rotation, not used by us
                                          -1 * self._geodict.dy)  # their dy
         # is negative
-        dst_transform = Affine.from_gdal(geodict.xmin - geodict.dx/2.0,
+        dst_transform = Affine.from_gdal(geodict.xmin - geodict.dx / 2.0,
                                          geodict.dx,
                                          0.0,  # x rotation, not used by us
-                                         geodict.ymax + geodict.dy/2.0,
+                                         geodict.ymax + geodict.dy / 2.0,
                                          0.0,  # y rotation, not used by us
-                                         -1*geodict.dy)  # their dy is negative
+                                         -1 * geodict.dy)  # their dy is negative
         src_crs = CRS().from_string(GeoDict.DEFAULT_PROJ4).to_dict()
         dst_crs = CRS().from_string(GeoDict.DEFAULT_PROJ4).to_dict()
         reproject(self._data.astype(np.float64), destination,
@@ -1305,8 +1311,8 @@ class Grid2D(Grid):
 
         if xmax < xmin:
             xmax += 360
-        xvar = np.arange(xmin, xmax+(dx*0.1), dx)
-        yvar = np.arange(ymin, ymax+(dy*0.1), dy)
+        xvar = np.arange(xmin, xmax + (dx * 0.1), dx)
+        yvar = np.arange(ymin, ymax + (dy * 0.1), dy)
         nx = len(xvar)
         ny = len(yvar)
 
@@ -1314,8 +1320,8 @@ class Grid2D(Grid):
         # we are grid registered.  In order to make this work
         # we need to adjust the edges of our grid out by half a cell width
         # in each direction.
-        txmin = xmin - dx/2.0
-        tymax = ymax + dy/2.0
+        txmin = xmin - dx / 2.0
+        tymax = ymax + dy / 2.0
 
         outshape = (ny, nx)
         transform = Affine.from_gdal(txmin, dx, 0.0, tymax, 0.0, -dy)
@@ -1355,9 +1361,9 @@ class Grid2D(Grid):
             # make a new geodict that keeps latitudes the same
             # but centers around lon 0
             tdict = self._geodict.asDict()
-            txrange = ((tdict['xmax']+360) - tdict['xmin'])
-            tdict['xmin'] = 0 - txrange/2.0
-            tdict['xmax'] = 0 + txrange/2.0
+            txrange = ((tdict['xmax'] + 360) - tdict['xmin'])
+            tdict['xmin'] = 0 - txrange / 2.0
+            tdict['xmax'] = 0 + txrange / 2.0
             geodict = GeoDict(tdict)
 
             # make a new projection string centered on lon 0
@@ -1384,14 +1390,14 @@ class Grid2D(Grid):
         nrows, ncols = self._data.shape
         # define the input Affine object
         src_transform = Affine.from_gdal(geodict.xmin -
-                                         geodict.dx/2.0,
+                                         geodict.dx / 2.0,
                                          geodict.dx,
                                          0.0,  # x rotation, not used by us
                                          geodict.ymax +
-                                         geodict.dy/2.0,
+                                         geodict.dy / 2.0,
                                          0.0,  # y rotation, not used by us
                                          # their dy is negative
-                                         -1*geodict.dy)
+                                         -1 * geodict.dy)
 
         # set the source and destination projections (have to be CRS
         # dictionaries)
@@ -1400,13 +1406,13 @@ class Grid2D(Grid):
 
         # determine the boundaries in src coordinates
         if geodict.xmin < geodict.xmax:
-            right = geodict.xmax - (geodict.dx/2.0)
+            right = geodict.xmax - (geodict.dx / 2.0)
         else:
             txmax = geodict.xmax + 360
-            right = txmax - (geodict.dx/2.0)
-        left = geodict.xmin - (geodict.dx/2.0)
-        top = geodict.ymax + (geodict.dy/2.0)
-        bottom = geodict.ymin + (geodict.dy/2.0)
+            right = txmax - (geodict.dx / 2.0)
+        left = geodict.xmin - (geodict.dx / 2.0)
+        top = geodict.ymax + (geodict.dy / 2.0)
+        bottom = geodict.ymin + (geodict.dy / 2.0)
 
         # use this convenience function to determine optimal output
         # transform and dimensions
@@ -1443,11 +1449,11 @@ class Grid2D(Grid):
         xmin, dx, xrot, ymax, yrot, mdy = dst_transform.to_gdal()
 
         # affine dy is negative, so we have to flip it back
-        dy = -1*mdy
+        dy = -1 * mdy
 
         # correct for different pixel offsets
-        xmin = xmin + (dx/2.0)
-        ymax = ymax - (dy/2.0)
+        xmin = xmin + (dx / 2.0)
+        ymax = ymax - (dy / 2.0)
 
         # if we crossed the meridian, we have to set the projection string
         # to reflect where we actually are.
@@ -1456,8 +1462,8 @@ class Grid2D(Grid):
 
         # Construct a new GeoDict
         gdict = {'xmin': xmin,
-                 'xmax': xmin+width*dx,
-                 'ymin': ymax-height*dy,
+                 'xmax': xmin + width * dx,
+                 'ymin': ymax - height * dy,
                  'ymax': ymax,
                  'dx': dx,
                  'dy': dy,
