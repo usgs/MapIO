@@ -5,7 +5,7 @@ import h5py
 
 # local imports
 from .grid2d import Grid2D
-from .geodict import GeoDict
+from .geodict import GeoDict, geodict_from_src
 
 
 def _is_hdf(filename):
@@ -29,29 +29,6 @@ def _is_hdf(filename):
         except Exception as e:
             raise e
     return is_hdf
-
-
-def _get_geodict_from_src(src):
-    """Return a geodict from a dataset object.
-
-    Args:
-        src (DatasetReader): Open rasterio DatasetReader object.
-    Returns:
-        GeoDict: GeoDict describing the DatasetReader object.
-    """
-    affine = src.transform
-    geodict = {}
-    geodict['dx'] = affine.a
-    geodict['dy'] = -1 * affine.e
-    geodict['xmin'] = affine.xoff + geodict['dx'] / 2.0
-    geodict['ymax'] = affine.yoff - geodict['dy'] / 2.0
-    geodict['ny'] = src.height
-    geodict['nx'] = src.width
-    geodict['xmax'] = geodict['xmin'] + (geodict['nx'] - 1) * geodict['dx']
-    geodict['ymin'] = geodict['ymax'] - (geodict['ny'] - 1) * geodict['dy']
-
-    gd = GeoDict(geodict)
-    return gd
 
 
 def _get_geodict_from_window(affine, window, data):
@@ -229,6 +206,7 @@ def _read_data(src, samplegeodict, resample, method):
                                     pad=pad)
         data, src = _read_pixels(src, window)
         gd = _get_geodict_from_window(affine, window, data)
+
         gd.nodata = src.nodata
         grid = Grid2D(data, gd)
         return grid
@@ -255,6 +233,19 @@ def _read_data(src, samplegeodict, resample, method):
         left_block, src = _read_pixels(src, left_window)
 
         right_window = _geodict_to_window(sample_right, src, pad=pad)
+
+        # if the right window is a different width than expected,
+        # adjust the width to match the input number of columns
+        dwidth = (left_window.width + right_window.width) - samplegeodict.nx
+        if dwidth != 0:
+            col_off = right_window.col_off
+            row_off = right_window.row_off
+            width = right_window.width - dwidth
+            height = right_window.height
+            right_window = rasterio.windows.Window(col_off,
+                                                   row_off,
+                                                   width,
+                                                   height)
         right_block, src = _read_pixels(src, right_window)
 
         left_gd = _get_geodict_from_window(affine,
@@ -288,13 +279,13 @@ def get_file_geodict(filename):
         GeoDict: GeoDict: GeoDict describing the entire file.
     """
     src = rasterio.open(filename)
-    gd = _get_geodict_from_src(src)
+    gd = geodict_from_src(src)
     return gd
 
 
 def read(filename, samplegeodict=None, resample=False,
          method='linear', doPadding=False, padValue=np.nan,
-         apply_nan=True, force_cast=True):
+         apply_nan=True, force_cast=True, interp_approach='scipy'):
     """Read part or all of a rasterio file, resampling and padding as necessary.
 
     If samplegeodict is not provided, then the entire file will be read.
@@ -319,7 +310,8 @@ def read(filename, samplegeodict=None, resample=False,
                           from file.
         padValue (float): Value to insert in ring of padding pixels.
         apply_nan (bool): Convert nodata values to NaNs, upcasting to float if necessary.
-        force_cast (bool): If data values exceed 
+        force_cast (bool): If data values exceed range of values, cast upward.
+        interp_approach (str): One of 'scipy', 'rasterio'.
     """
     # use rasterio to read all formats
     src = rasterio.open(filename)
@@ -328,7 +320,7 @@ def read(filename, samplegeodict=None, resample=False,
     # if not, read the whole file and return.
     if samplegeodict is None:
         data, src = _read_pixels(src, None)
-        gd = _get_geodict_from_src(src)
+        gd = geodict_from_src(src)
         grid = Grid2D(data, gd)
         src.close()
         return grid
@@ -373,7 +365,10 @@ def read(filename, samplegeodict=None, resample=False,
         grid = Grid2D(data, gd)
 
     if resample:
-        grid = grid.interpolateToGrid(samplegeodict, method=method)
+        if interp_approach == 'scipy':
+            grid = grid.interpolateToGrid(samplegeodict, method=method)
+        else:
+            grid = grid.interpolate2(samplegeodict, method=method)
 
     src.close()
     return grid

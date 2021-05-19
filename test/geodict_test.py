@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
-from mapio.geodict import GeoDict
+from mapio.geodict import GeoDict, geodict_from_affine, affine_from_geodict, geodict_from_src
 from mapio.dataset import DataSetException
 
 # stdlib imports
 import os.path
 import sys
 
+# third party imports
 import numpy as np
 import pandas as pd
+import rasterio
 
 # hack the path so that I can debug these functions if I need to
 homedir = os.path.dirname(os.path.abspath(__file__))  # where is this script?
@@ -566,7 +568,48 @@ def test_intersect_meridian():
     assert popdict.intersects(shakedict)
 
 
+def test_affine():
+    lon_min = -125.4500
+    lat_min = 39.3667
+    lon_max = -123.1000
+    lat_max = 41.1667
+    dx = 0.0083
+    dy = 0.0083
+    nlon = 283
+    nlat = 217
+    geodict = GeoDict({'xmin': lon_min,
+                       'xmax': lon_max,
+                       'ymin': lat_min,
+                       'ymax': lat_max,
+                       'dx': dx,
+                       'dy': dy,
+                       'nx': nlon,
+                       'ny': nlat
+                       })
+    affine = affine_from_geodict(geodict)
+    geodict2 = geodict_from_affine(affine, nlat, nlon)
+    assert geodict2 == geodict
+
+    # where is this script?
+    homedir = os.path.dirname(os.path.abspath(__file__))
+    # this is an HDF 5 file
+    datafile = os.path.join(homedir, 'data', 'samplegrid_cdf.cdf')
+    src = rasterio.open(datafile)
+    cmpgeodict = GeoDict({'xmin': 5.0,
+                          'xmax': 9.0,
+                          'ymin': 4.0,
+                          'ymax': 8.0,
+                          'dx': 1.0,
+                          'dy': 1.0,
+                          'nx': 5,
+                          'ny': 5
+                          })
+    geodict = geodict_from_src(src)
+    assert geodict == cmpgeodict
+
+
 if __name__ == '__main__':
+    test_affine()
     test_intersect_meridian()
     test_lat_lon_array()
     test_bounds_meridian2()

@@ -270,6 +270,75 @@ def test_interpolate():
     print('scipy method: %.3f seconds' % (t2 - t1))
     print('gdal  method: %.3f seconds' % (t3 - t2))
 
+    # test interpolate2 when called with geodict that is aligned with
+    # enclosing geodict. This should just cut the grid.
+    lon_min = -125.4500
+    lat_min = 39.3667
+    lon_max = -123.1000
+    lat_max = 41.1667
+    nominal_lon_spacing = 0.0083
+    nominal_lat_spacing = 0.0083
+    nlon = 283
+    nlat = 217
+    host_geodict = GeoDict({'xmin': lon_min,
+                            'xmax': lon_max,
+                            'ymin': lat_min,
+                            'ymax': lat_max,
+                            'dx': nominal_lon_spacing,
+                            'dy': nominal_lat_spacing,
+                            'nx': nlon,
+                            'ny': nlat
+                            })
+    sample_xmin = host_geodict.xmin + host_geodict.dx * 5
+    sample_xmax = host_geodict.xmax - host_geodict.dx * 5
+    sample_ymin = host_geodict.ymin + host_geodict.dy * 5
+    sample_ymax = host_geodict.ymax - host_geodict.dy * 5
+    sample_geodict = GeoDict({'xmin': sample_xmin,
+                              'xmax': sample_xmax,
+                              'ymin': sample_ymin,
+                              'ymax': sample_ymax,
+                              'dx': host_geodict.dx,
+                              'dy': host_geodict.dy,
+                              'nx': nlon - 10,
+                              'ny': nlat - 10,
+                              })
+    assert host_geodict.isAligned(sample_geodict)
+    host_data = np.random.rand(nlat, nlon)
+    host_data = host_data.astype(np.float32)
+    host_grid = Grid2D(data=host_data, geodict=host_geodict)
+    sample_grid = host_grid.interpolate2(sample_geodict)
+    assert sample_grid._data.shape == (sample_geodict.ny, sample_geodict.nx)
+    # these should be identical - see notes below
+    assert sample_grid._data.dtype == host_grid._data.dtype
+
+    # test interpolate2 with different data types
+    # every input data type except for float64 should return float32
+    # unless the sample geodict is aligned, in which case data type should
+    # be identical to input
+    xmin = host_geodict.xmin + (host_geodict.xmax - host_geodict.xmin) / 5
+    xmax = host_geodict.xmax - (host_geodict.xmax - host_geodict.xmin) / 5
+    ymin = host_geodict.ymin + (host_geodict.ymax - host_geodict.ymin) / 5
+    ymax = host_geodict.ymax - (host_geodict.ymax - host_geodict.ymin) / 5
+    dx = host_geodict.dx * 1.1
+    dy = host_geodict.dy * 1.1
+    ncols = int(((xmax - xmin) / dx) + 1)
+    nrows = int(((ymax - ymin) / dy) + 1)
+    # right/bottom edges of geodict will be adjusted if necessary
+    sample_geodict = GeoDict({'xmin': xmin,
+                              'xmax': xmax,
+                              'ymin': ymin,
+                              'ymax': ymax,
+                              'dx': dx,
+                              'dy': dy,
+                              'nx': ncols,
+                              'ny': nrows}, adjust='bounds'
+                             )
+    assert not host_geodict.isAligned(sample_geodict)
+    host_data = np.random.randint(0, 100, size=(nlat, nlon), dtype=np.int16)
+    host_grid = Grid2D(data=host_data, geodict=host_geodict)
+    igrid1 = host_grid.interpolate2(sample_geodict)
+    assert igrid1._data.dtype == np.float32
+
 
 def test_rasterize():
     geodict = GeoDict({'xmin': 0.5, 'xmax': 3.5,

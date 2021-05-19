@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
+# third party imports
 import numpy as np
 from .dataset import DataSetException
 from osgeo import osr
+from rasterio.transform import Affine
 
 
 class GeoDict(object):
@@ -857,3 +859,41 @@ class GeoDict(object):
             self._xmin += 360
         # if self._xmin == 180.0 and self._xmax < 0:
         #     self._xmin = -180.0
+
+
+def geodict_from_src(src):
+    """Return a geodict from a dataset object.
+
+    Args:
+        src (DatasetReader): Open rasterio DatasetReader object.
+    Returns:
+        GeoDict: GeoDict describing the DatasetReader object.
+    """
+    affine = src.transform
+    nx = src.width
+    ny = src.height
+    return geodict_from_affine(affine, ny, nx)
+
+
+def geodict_from_affine(affine, ny, nx):
+    geodict = {}
+    geodict['dx'] = affine.a
+    geodict['dy'] = -1 * affine.e
+    geodict['xmin'] = affine.xoff + geodict['dx'] / 2.0
+    geodict['ymax'] = affine.yoff - geodict['dy'] / 2.0
+    geodict['ny'] = ny
+    geodict['nx'] = nx
+    geodict['xmax'] = geodict['xmin'] + (geodict['nx'] - 1) * geodict['dx']
+    geodict['ymin'] = geodict['ymax'] - (geodict['ny'] - 1) * geodict['dy']
+
+    gd = GeoDict(geodict)
+    return gd
+
+
+def affine_from_geodict(geodict):
+    xoff = geodict.xmin - geodict.dx / 2.0
+    yoff = geodict.ymax + geodict.dy / 2.0
+    xres = geodict.dx
+    yres = -1 * geodict.dy
+    src = Affine.translation(xoff, yoff) * Affine.scale(xres, yres)
+    return src
