@@ -199,7 +199,7 @@ def readShakeFile(fileobj, adjust='bounds'):
     columns.insert(0, 'lat')
     columns.insert(0, 'lon')
     dframe = pd.read_csv(fileobj, sep='\s+', names=columns,
-                         header=None, comment='<')
+                         header=None, comment='<', dtype=np.float32)
     for field in fields:
         layers[field] = dframe[field].values.reshape(ny, nx)
 

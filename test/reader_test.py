@@ -146,8 +146,35 @@ def read_user_file_test(fname, xmin, xmax, ymin, ymax):
     print('Ratio of h5py data to rasterio data is %.4f' % ratio)
     src.close()
 
+# TODO - fix this later
+# def test_read_approach():
+#     # where is this script?
+#     homedir = os.path.dirname(os.path.abspath(__file__))
+#     # this is an HDF 5 file
+#     datafile = os.path.join(homedir, 'data', 'samplegrid_cdf.cdf')
+#     sdict = {'xmin': 4.5,
+#              'xmax': 5.5,
+#              'ymin': 7.5,
+#              'ymax': 8.5,
+#              'nx': 2,
+#              'ny': 2,
+#              'dx': 1,
+#              'dy': 1}
+#     sampledict = GeoDict(sdict)
+#     t1 = time.time()
+#     grid1 = read(datafile, samplegeodict=sampledict,
+#                  resample=True, doPadding=False,
+#                  interp_approach='scipy')
+#     t2 = time.time()
+#     grid2 = read(datafile, samplegeodict=sampledict,
+#                  resample=True, doPadding=False,
+#                  interp_approach='rasterio')
+#     t3 = time.time()
+#     assert t3 - t2 > t2 - t1
+
 
 if __name__ == '__main__':
+    # test_read_approach()
     test_read_whole()
     test_read_subset_no_resample()
     test_resample()

@@ -7,12 +7,11 @@ from __future__ import print_function
 import abc
 import textwrap
 import sys
-import re
 
 # third party imports
-from .gridbase import Grid
-from .dataset import DataSetException
-from .geodict import GeoDict
+from mapio.gridbase import Grid
+from mapio.dataset import DataSetException
+from mapio.geodict import GeoDict, affine_from_geodict
 
 import numpy as np
 from scipy import interpolate
@@ -1067,6 +1066,17 @@ class Grid2D(Grid):
           A new instance of the Grid2D class or subclass with interpolated
           data.
         """
+        if not self._geodict.contains(geodict):
+            msg = ('Input geodict not fully contained by host geodict.')
+            raise Exception(msg)
+
+        if self.getGeoDict().isAligned(geodict):
+            # this grid is already aligned, so let's just cut it at
+            # the input bounds
+            xmin, xmax, ymin, ymax = (geodict.xmin, geodict.xmax,
+                                      geodict.ymin, geodict.ymax)
+            newgrid = self.cut(xmin, xmax, ymin, ymax)
+            return newgrid
         resampling = None
         if method == 'linear':
             resampling = Resampling.bilinear
@@ -1077,31 +1087,26 @@ class Grid2D(Grid):
         else:
             raise DataSetException('Unknown interpolation method %s' % method)
 
-        destination = np.zeros((geodict.ny, geodict.nx))
-        src_transform = Affine.from_gdal(self._geodict.xmin -
-                                         self._geodict.dx / 2.0,
-                                         self._geodict.dx,
-                                         0.0,  # x rotation, not used by us
-                                         self._geodict.ymax +
-                                         self._geodict.dy / 2.0,
-                                         0.0,  # y rotation, not used by us
-                                         -1 * self._geodict.dy)  # their dy
-        # is negative
-        dst_transform = Affine.from_gdal(geodict.xmin - geodict.dx / 2.0,
-                                         geodict.dx,
-                                         0.0,  # x rotation, not used by us
-                                         geodict.ymax + geodict.dy / 2.0,
-                                         0.0,  # y rotation, not used by us
-                                         -1 * geodict.dy)  # their dy is negative
+        # we want the output data type to be 32 bit float in all cases
+        # except where the input is 64 bit float, in which case we need to
+        # preserve the precision.
+        dtype = np.float32
+        if self._data.dtype == np.float64:
+            dtype = np.float64
+
+        destination = np.zeros((geodict.ny, geodict.nx),
+                               dtype=dtype)
+        src_transform = affine_from_geodict(self._geodict)
+        dst_transform = affine_from_geodict(geodict)
         src_crs = CRS().from_string(GeoDict.DEFAULT_PROJ4).to_dict()
         dst_crs = CRS().from_string(GeoDict.DEFAULT_PROJ4).to_dict()
-        reproject(self._data.astype(np.float64), destination,
+        reproject(self._data.astype(dtype), destination,
                   src_transform=src_transform,
                   src_crs=src_crs,
                   src_nodata=np.nan,
                   dst_transform=dst_transform,
                   dst_crs=dst_crs,
-                  dst_nodata=np.nan,
+                  dst_nodata=float('nan'),
                   resampling=resampling)
 
         return self.__class__(destination, geodict)
