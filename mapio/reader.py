@@ -17,12 +17,12 @@ def _is_hdf(filename):
         bool: True if HDF, False if not.
     """
     is_hdf = False
-    with open(filename, 'rb') as f:
+    with open(filename, "rb") as f:
         f.seek(1)
         bytes = header = f.read(3)
         try:
             header = bytes.decode()
-            if header == 'HDF':
+            if header == "HDF":
                 is_hdf = True
         except UnicodeDecodeError:
             pass
@@ -45,15 +45,15 @@ def _get_geodict_from_window(affine, window, data):
     """
     xmin, ymax = affine * (window.col_off, window.row_off)
     geodict = {}
-    geodict['dx'] = affine.a
-    geodict['dy'] = -1 * affine.e
-    geodict['xmin'] = xmin + geodict['dx'] / 2.0
-    geodict['ymax'] = ymax - geodict['dy'] / 2.0
+    geodict["dx"] = affine.a
+    geodict["dy"] = -1 * affine.e
+    geodict["xmin"] = xmin + geodict["dx"] / 2.0
+    geodict["ymax"] = ymax - geodict["dy"] / 2.0
     nrows, ncols = data.shape
-    geodict['ny'] = nrows
-    geodict['nx'] = ncols
-    geodict['xmax'] = geodict['xmin'] + (geodict['nx'] - 1) * geodict['dx']
-    geodict['ymin'] = geodict['ymax'] - (geodict['ny'] - 1) * geodict['dy']
+    geodict["ny"] = nrows
+    geodict["nx"] = ncols
+    geodict["xmax"] = geodict["xmin"] + (geodict["nx"] - 1) * geodict["dx"]
+    geodict["ymin"] = geodict["ymax"] - (geodict["ny"] - 1) * geodict["dy"]
 
     gd = GeoDict(geodict)
     return gd
@@ -154,20 +154,20 @@ def _read_pixels(src, window):
     """
     fname = src.files[0]
     is_hdf = _is_hdf(fname)
-    if src.driver != 'netCDF' or not is_hdf:
+    if src.driver != "netCDF" or not is_hdf:
         data = np.squeeze(src.read(window=window), axis=0)
     else:
         src.close()
-        f = h5py.File(fname, 'r')
+        f = h5py.File(fname, "r")
         if window is None:
-            data = np.flipud(f['z'])
+            data = np.flipud(f["z"])
         else:
             cstart = int(window.col_off)
             cend = cstart + int(window.width)
             rend = src.height - int(window.row_off)
             rstart = rend - int(window.height)
             # t1 = time.time()
-            data = np.flipud(f['z'][rstart:rend, cstart:cend])
+            data = np.flipud(f["z"][rstart:rend, cstart:cend])
             # t2 = time.time()
             # print('h5py read: %.3f seconds.' % (t2-t1))
         f.close()
@@ -201,9 +201,7 @@ def _read_data(src, samplegeodict, resample, method):
     if resample:
         pad = True
     if not is_edge:
-        window = _geodict_to_window(samplegeodict,
-                                    src,
-                                    pad=pad)
+        window = _geodict_to_window(samplegeodict, src, pad=pad)
         data, src = _read_pixels(src, window)
         gd = _get_geodict_from_window(affine, window, data)
 
@@ -219,15 +217,13 @@ def _read_data(src, samplegeodict, resample, method):
         lxmax += dx / 2.0
         ymin = samplegeodict.ymin
         ymax = samplegeodict.ymax
-        sample_left = GeoDict.createDictFromBox(lxmin, lxmax,
-                                                ymin, ymax, dx, dy)
+        sample_left = GeoDict.createDictFromBox(lxmin, lxmax, ymin, ymax, dx, dy)
         # get the left edge of the grid
         rxmin, _ = affine * (0, 0)
         # convert to pixel registered
         rxmin += dx / 2.0
         rxmax = samplegeodict.xmax
-        sample_right = GeoDict.createDictFromBox(rxmin, rxmax,
-                                                 ymin, ymax, dx, dy)
+        sample_right = GeoDict.createDictFromBox(rxmin, rxmax, ymin, ymax, dx, dy)
         left_window = _geodict_to_window(sample_left, src, pad=pad)
 
         left_block, src = _read_pixels(src, left_window)
@@ -242,29 +238,24 @@ def _read_data(src, samplegeodict, resample, method):
             row_off = right_window.row_off
             width = right_window.width - dwidth
             height = right_window.height
-            right_window = rasterio.windows.Window(col_off,
-                                                   row_off,
-                                                   width,
-                                                   height)
+            right_window = rasterio.windows.Window(col_off, row_off, width, height)
         right_block, src = _read_pixels(src, right_window)
 
-        left_gd = _get_geodict_from_window(affine,
-                                           left_window,
-                                           left_block)
+        left_gd = _get_geodict_from_window(affine, left_window, left_block)
 
-        right_gd = _get_geodict_from_window(affine,
-                                            right_window,
-                                            right_block)
+        right_gd = _get_geodict_from_window(affine, right_window, right_block)
         data = np.concatenate((left_block, right_block), axis=1)
         nrows, ncols = data.shape
-        geodict = {'xmin': left_gd.xmin,
-                   'xmax': right_gd.xmax,
-                   'ymin': ymin,
-                   'ymax': ymax,
-                   'dx': dx,
-                   'dy': dy,
-                   'nx': ncols,
-                   'ny': nrows}
+        geodict = {
+            "xmin": left_gd.xmin,
+            "xmax": right_gd.xmax,
+            "ymin": ymin,
+            "ymax": ymax,
+            "dx": dx,
+            "dy": dy,
+            "nx": ncols,
+            "ny": nrows,
+        }
         gd = GeoDict(geodict)
         grid = Grid2D(data, gd)
         return grid
@@ -283,9 +274,17 @@ def get_file_geodict(filename):
     return gd
 
 
-def read(filename, samplegeodict=None, resample=False,
-         method='linear', doPadding=False, padValue=np.nan,
-         apply_nan=True, force_cast=True, interp_approach='scipy'):
+def read(
+    filename,
+    samplegeodict=None,
+    resample=False,
+    method="linear",
+    doPadding=False,
+    padValue=np.nan,
+    apply_nan=True,
+    force_cast=True,
+    interp_approach="scipy",
+):
     """Read part or all of a rasterio file, resampling and padding as necessary.
 
     If samplegeodict is not provided, then the entire file will be read.
@@ -312,6 +311,8 @@ def read(filename, samplegeodict=None, resample=False,
         apply_nan (bool): Convert nodata values to NaNs, upcasting to float if necessary.
         force_cast (bool): If data values exceed range of values, cast upward.
         interp_approach (str): One of 'scipy', 'rasterio'.
+    Returns:
+        Grid2D: Object containing desired data and a Geodict matching samplegeodict.
     """
     # use rasterio to read all formats
     src = rasterio.open(filename)
@@ -325,6 +326,16 @@ def read(filename, samplegeodict=None, resample=False,
         src.close()
         return grid
 
+    # shortcut out here to return NaN grid if samplegeodict is completely outside the
+    # source data grid.
+    fdict = get_file_geodict(filename)
+    if not fdict.intersects(samplegeodict):
+        nx = samplegeodict.nx
+        ny = samplegeodict.ny
+        data = np.ones((ny, nx)) * padValue
+        grid = Grid2D(data=data, geodict=samplegeodict)
+        return grid
+
     # if non-nearest resampling, this grid may have a ring of padding pixels
     # around the outside.
     grid = _read_data(src, samplegeodict, resample, method)
@@ -333,7 +344,7 @@ def read(filename, samplegeodict=None, resample=False,
     # if padding is turned off
     rdict = grid.getGeoDict()
     if resample:
-        if method == 'nearest':
+        if method == "nearest":
             c1 = rdict.xmin <= samplegeodict.xmin
             c2 = rdict.xmax >= samplegeodict.xmax
             c3 = rdict.ymin <= samplegeodict.ymin
@@ -346,8 +357,7 @@ def read(filename, samplegeodict=None, resample=False,
             c3 = rdict.ymin > samplegeodict.ymin - dy
             c4 = rdict.ymax < samplegeodict.ymax + dy
         if (c1 or c2 or c3 or c4) and not doPadding:
-            msg = ('Without padding you cannot ask to resample from '
-                   'edge of grid.')
+            msg = "Without padding you cannot ask to resample from " "edge of grid."
             raise IndexError(msg)
 
     grid._geodict.nodata = src.nodata
@@ -365,7 +375,7 @@ def read(filename, samplegeodict=None, resample=False,
         grid = Grid2D(data, gd)
 
     if resample:
-        if interp_approach == 'scipy':
+        if interp_approach == "scipy":
             grid = grid.interpolateToGrid(samplegeodict, method=method)
         else:
             grid = grid.interpolate2(samplegeodict, method=method)
