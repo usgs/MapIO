@@ -3,17 +3,25 @@
 # third party imports
 import numpy as np
 from .dataset import DataSetException
-from osgeo import osr
+import pyproj
 from rasterio.transform import Affine
+
+
+def is_valid_projection(projstr):
+    try:
+        pyproj.Proj(projstr)
+    except:
+        return False
+    return True
 
 
 class GeoDict(object):
     EPS = 1e-12
     DEFAULT_PROJ4 = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-    DIST_THRESH = .01 / (111.191 * 1000)  # 1 centimeter in decimal degrees
-    REQ_KEYS = ['xmin', 'xmax', 'ymin', 'ymax', 'dx', 'dy', 'ny', 'nx']
+    DIST_THRESH = 0.01 / (111.191 * 1000)  # 1 centimeter in decimal degrees
+    REQ_KEYS = ["xmin", "xmax", "ymin", "ymax", "dx", "dy", "ny", "nx"]
 
-    def __init__(self, geodict, adjust='bounds'):
+    def __init__(self, geodict, adjust="bounds"):
         """
         An object which represents the spatial information for a grid and is guaranteed to be self-consistent.
 
@@ -38,27 +46,27 @@ class GeoDict(object):
         for key in self.REQ_KEYS:
             if key not in geodict.keys():
                 raise DataSetException(
-                    'Missing required key "%s" from input geodict dictionary' % key)
+                    'Missing required key "%s" from input geodict dictionary' % key
+                )
 
-        self._xmin = float(geodict['xmin'])
-        self._xmax = float(geodict['xmax'])
-        self._ymin = float(geodict['ymin'])
-        self._ymax = float(geodict['ymax'])
-        self._dx = float(geodict['dx'])
-        self._dy = float(geodict['dy'])
-        self._ny = int(geodict['ny'])
-        self._nx = int(geodict['nx'])
+        self._xmin = float(geodict["xmin"])
+        self._xmax = float(geodict["xmax"])
+        self._ymin = float(geodict["ymin"])
+        self._ymax = float(geodict["ymax"])
+        self._dx = float(geodict["dx"])
+        self._dy = float(geodict["dy"])
+        self._ny = int(geodict["ny"])
+        self._nx = int(geodict["nx"])
         self._nodata = None
-        if 'nodata' in geodict:
-            self._nodata = geodict['nodata']
+        if "nodata" in geodict:
+            self._nodata = geodict["nodata"]
 
-        if 'projection' in geodict:
-            srs = osr.SpatialReference()
-            srs.ImportFromProj4(geodict['projection'])
-            if srs.ExportToProj4() == '':
-                raise DataSetException(
-                    '%s is not a valid proj4 string.' % geodict['projection'])
-            self._projection = geodict['projection']
+        if "projection" in geodict:
+            projstr = geodict["projection"]
+            if is_valid_projection(projstr):
+                self._projection = projstr
+            else:
+                raise DataSetException(f"Projection string '{projstr}' is invalid.")
         else:
             self._projection = self.DEFAULT_PROJ4
         self.validate(adjust)
@@ -91,10 +99,18 @@ class GeoDict(object):
             ny = np.ceil(((ymax - ymin - GeoDict.EPS) / dy) + 1)
         xmax2 = xmin + (nx - 1) * dx
         ymin2 = ymax - (ny - 1) * dy
-        return cls({'xmin': xmin, 'xmax': xmax2,
-                    'ymin': ymin2, 'ymax': ymax,
-                    'dx': dx, 'dy': dy,
-                    'nx': nx, 'ny': ny})
+        return cls(
+            {
+                "xmin": xmin,
+                "xmax": xmax2,
+                "ymin": ymin2,
+                "ymax": ymax,
+                "dx": dx,
+                "dy": dy,
+                "nx": nx,
+                "ny": ny,
+            }
+        )
 
     @classmethod
     def createDictFromCenter(cls, cx, cy, dx, dy, xspan, yspan):
@@ -123,11 +139,12 @@ class GeoDict(object):
         :raises DataSetException:
           When input is not valid proj4.
         """
-        srs = osr.SpatialReference()
-        srs.ImportFromProj4(projection)
-        if srs.ExportToProj4() == '':
+        try:
+            pyproj.Proj(projection)
+        except:
             raise DataSetException(
-                '%s is not a valid proj4 string.' % geodict['projection'])
+                "%s is not a valid proj4 string." % geodict["projection"]
+            )
         self._projection = projection
 
     def getAligned(self, geodict, inside=False):
@@ -181,10 +198,18 @@ class GeoDict(object):
         nx = int(np.round((newxmax - newxmin) / dx + 1))
         ny = int(np.round((newymax - newymin) / dy + 1))
 
-        gd = GeoDict({'xmin': newxmin, 'xmax': newxmax,
-                      'ymin': newymin, 'ymax': newymax,
-                      'dx': dx, 'dy': dy,
-                      'nx': nx, 'ny': ny})
+        gd = GeoDict(
+            {
+                "xmin": newxmin,
+                "xmax": newxmax,
+                "ymin": newymin,
+                "ymax": newymax,
+                "dx": dx,
+                "dy": dy,
+                "nx": nx,
+                "ny": ny,
+            }
+        )
         return gd
 
     def getIntersection(self, geodict):
@@ -201,11 +226,14 @@ class GeoDict(object):
         # return modified input geodict where bounds have been adjusted to be inside self.
         # output should align with input.
         if not self.intersects(geodict):
-            raise DataSetException('Input geodict has no overlap.')
-        fxmin, fxmax, fymin, fymax = (
-            self.xmin, self.xmax, self.ymin, self.ymax)
+            raise DataSetException("Input geodict has no overlap.")
+        fxmin, fxmax, fymin, fymax = (self.xmin, self.xmax, self.ymin, self.ymax)
         xmin, xmax, ymin, ymax = (
-            geodict.xmin, geodict.xmax, geodict.ymin, geodict.ymax)
+            geodict.xmin,
+            geodict.xmax,
+            geodict.ymin,
+            geodict.ymax,
+        )
 
         # handle the cases when the xmin is less than -180
         # we're set up to handle xmin > xmax, so let's add 360 to it.
@@ -235,10 +263,18 @@ class GeoDict(object):
         if newxmax > 180:
             newxmax = newxmax - 360
 
-        outdict = GeoDict({'xmin': newxmin, 'xmax': newxmax,
-                           'ymin': newymin, 'ymax': newymax,
-                           'dx': dx, 'dy': dy,
-                           'nx': nx, 'ny': ny})
+        outdict = GeoDict(
+            {
+                "xmin": newxmin,
+                "xmax": newxmax,
+                "ymin": newymin,
+                "ymax": newymax,
+                "dx": dx,
+                "dy": dy,
+                "nx": nx,
+                "ny": ny,
+            }
+        )
         return outdict
 
     def getBoundsWithin(self, geodict):
@@ -255,7 +291,8 @@ class GeoDict(object):
         """
         if not self.contains(geodict):
             raise DataSetException(
-                'Input geodict not fully contained by this GeoDict object.')
+                "Input geodict not fully contained by this GeoDict object."
+            )
 
         # if the input geodict is identical to the host grid, then just return
         # that geodict.
@@ -266,8 +303,12 @@ class GeoDict(object):
         fxmin, fymax = (self.xmin, self.ymax)
 
         # xmin etc. are the geodict bounds
-        xmin, xmax, ymin, ymax = (geodict.xmin, geodict.xmax,
-                                  geodict.ymin, geodict.ymax)
+        xmin, xmax, ymin, ymax = (
+            geodict.xmin,
+            geodict.xmax,
+            geodict.ymin,
+            geodict.ymax,
+        )
         fdx, fdy = (self.dx, self.dy)
         fnx = self.nx
 
@@ -344,19 +385,29 @@ class GeoDict(object):
             newxmax = tmp_new_xmax
             nx = tmp_nx
 
-        outgeodict = GeoDict({'xmin': newxmin, 'xmax': newxmax,
-                              'ymin': newymin, 'ymax': newymax,
-                              'dx': fdx, 'dy': fdy,
-                              'ny': ny, 'nx': nx})
+        outgeodict = GeoDict(
+            {
+                "xmin": newxmin,
+                "xmax": newxmax,
+                "ymin": newymin,
+                "ymax": newymax,
+                "dx": fdx,
+                "dy": fdy,
+                "ny": ny,
+                "nx": nx,
+            }
+        )
         isaligned = self.isAligned(outgeodict)
         if not isaligned:
             raise DataSetException(
-                'getBoundsWithin() cannot create an aligned geodict.')
+                "getBoundsWithin() cannot create an aligned geodict."
+            )
 
         isinside = geodict.contains(outgeodict)
         if not isinside:
             raise DataSetException(
-                'getBoundsWithin() cannot create an geodict inside input.')
+                "getBoundsWithin() cannot create an geodict inside input."
+            )
 
         return outgeodict
 
@@ -469,7 +520,9 @@ class GeoDict(object):
                 if self.xmax > self.xmin:
                     inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
                 else:
-                    inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax + 360
+                    inside_x = (
+                        geodict.xmin >= self._xmin and geodict.xmax <= self._xmax + 360
+                    )
         inside_y = geodict.ymin >= self._ymin and geodict.ymax <= self._ymax
         if inside_x and inside_y:
             return True
@@ -481,22 +534,30 @@ class GeoDict(object):
           Dictionary containing the same fields as found in constructor.
         """
         tdict = {}
-        tdict['xmin'] = self._xmin
-        tdict['xmax'] = self._xmax
-        tdict['ymin'] = self._ymin
-        tdict['ymax'] = self._ymax
-        tdict['dx'] = self._dx
-        tdict['dy'] = self._dy
-        tdict['ny'] = self._ny
-        tdict['nx'] = self._nx
+        tdict["xmin"] = self._xmin
+        tdict["xmax"] = self._xmax
+        tdict["ymin"] = self._ymin
+        tdict["ymax"] = self._ymax
+        tdict["dx"] = self._dx
+        tdict["dy"] = self._dy
+        tdict["ny"] = self._ny
+        tdict["nx"] = self._nx
         return tdict
 
     def __repr__(self):
         """Return a string representation of the object."""
 
-        rfmt = '''Bounds: (%.4f,%.4f,%.4f,%.4f)\nDims: (%.4f,%.4f)\nShape: (%i,%i)'''
-        rtpl = (self._xmin, self._xmax, self._ymin, self._ymax,
-                self._dx, self._dy, self._ny, self._nx)
+        rfmt = """Bounds: (%.4f,%.4f,%.4f,%.4f)\nDims: (%.4f,%.4f)\nShape: (%i,%i)"""
+        rtpl = (
+            self._xmin,
+            self._xmax,
+            self._ymin,
+            self._ymax,
+            self._dx,
+            self._dy,
+            self._ny,
+            self._nx,
+        )
         return rfmt % rtpl
 
     def copy(self):
@@ -506,17 +567,19 @@ class GeoDict(object):
           A GeoDict object whose elements (xmin, xmax, ...) are an exact copy of
           this object's elements.
         """
-        if not hasattr(self.__class__, 'projection'):
+        if not hasattr(self.__class__, "projection"):
             self._projection = self.DEFAULT_PROJ4
-        geodict = {'xmin': self._xmin,
-                   'xmax': self._xmax,
-                   'ymin': self._ymin,
-                   'ymax': self._ymax,
-                   'dx': self._dx,
-                   'dy': self._dy,
-                   'ny': self._ny,
-                   'nx': self._nx,
-                   'projection': self._projection}
+        geodict = {
+            "xmin": self._xmin,
+            "xmax": self._xmax,
+            "ymin": self._ymin,
+            "ymax": self._ymax,
+            "dx": self._dx,
+            "dy": self._dy,
+            "ny": self._ny,
+            "nx": self._nx,
+            "projection": self._projection,
+        }
         return GeoDict(geodict)
 
     def __eq__(self, other):
@@ -548,25 +611,27 @@ class GeoDict(object):
     def getLatLon(self, row, col):
         """Return geographic coordinates (lat/lon decimal degrees) for given data row and column.
 
-        :param row: 
+        :param row:
            Row dimension index into internal data array.
-        :param col: 
+        :param col:
            Column dimension index into internal data array.
-        :returns: 
+        :returns:
            Tuple of latitude and longitude.
         """
         scalar_types = (int, float)
         if type(row) != type(col):
-            raise DataSetException('Input row/col types must be the same')
+            raise DataSetException("Input row/col types must be the same")
 
         if not isinstance(row, scalar_types):  # is this a sequence type thing?
             if isinstance(row, np.ndarray):
                 if row.shape == () or col.shape == ():
                     raise DataSetException(
-                        'Input row/col values must be scalars or dimensioned numpy arrays.')
+                        "Input row/col values must be scalars or dimensioned numpy arrays."
+                    )
             else:
                 raise DataSetException(
-                    'Input row/col values must be scalars or dimensioned numpy arrays.')
+                    "Input row/col values must be scalars or dimensioned numpy arrays."
+                )
 
         ulx = self._xmin
         uly = self._ymax
@@ -576,37 +641,38 @@ class GeoDict(object):
         lat = uly - row * dy
         return (lat, lon)
 
-    def getRowCol(self, lat, lon, returnFloat=False, intMethod='round'):
+    def getRowCol(self, lat, lon, returnFloat=False, intMethod="round"):
         """Return data row and column from given geographic coordinates (lat/lon decimal degrees).
 
-        :param lat: 
+        :param lat:
            Input latitude.
-        :param lon: 
+        :param lon:
            Input longitude.
-        :param returnFloat: 
+        :param returnFloat:
            Boolean indicating whether floating point row/col coordinates should be returned.
         :param intMethod:
            String indicating the desired method by which floating point row/col values should
            be converted to integers.  Choices are 'round' (default), 'floor', or 'ceil'.
-        :returns: 
+        :returns:
            Tuple of row and column.
         """
         scalar_types = (int, float)
         if type(lat) != type(lon):
-            raise DataSetException('Input lat/lon types must be the same')
+            raise DataSetException("Input lat/lon types must be the same")
 
         if not isinstance(lat, scalar_types):  # is this a sequence type thing?
             if isinstance(lat, np.ndarray):
                 if lat.shape == () or lon.shape == ():
                     raise DataSetException(
-                        'Input lat/lon values must be scalars or dimensioned numpy arrays.')
+                        "Input lat/lon values must be scalars or dimensioned numpy arrays."
+                    )
             else:
                 raise DataSetException(
-                    'Input lat/lon values must be scalars or dimensioned numpy arrays.')
+                    "Input lat/lon values must be scalars or dimensioned numpy arrays."
+                )
 
-        if intMethod not in ['round', 'floor', 'ceil']:
-            raise DataSetException(
-                'intMethod %s is not supported.' % intMethod)
+        if intMethod not in ["round", "floor", "ceil"]:
+            raise DataSetException("intMethod %s is not supported." % intMethod)
 
         ulx = self._xmin
         uly = self._ymax
@@ -622,9 +688,9 @@ class GeoDict(object):
         row = (uly - lat) / dy
         if returnFloat:
             return (row, col)
-        if intMethod == 'round':
+        if intMethod == "round":
             return (np.round(row).astype(int), np.round(col).astype(int))
-        elif intMethod == 'floor':
+        elif intMethod == "floor":
             return (np.floor(row).astype(int), np.floor(col).astype(int))
         else:
             return (np.ceil(row).astype(int), np.ceil(col).astype(int))
@@ -814,43 +880,42 @@ class GeoDict(object):
             txmax = self._xmax
         # try calculating xmax from xmin, dx, and nx
         xmax = self._xmin + self._dx * (self._nx - 1)
-        #dxmax = np.abs(xmax - txmax)
+        # dxmax = np.abs(xmax - txmax)
         dxmax = np.abs(float(xmax) / txmax - 1.0)
 
         # try calculating dx from bounds and nx
         dx = np.abs((txmax - self._xmin) / (self._nx - 1))
-        #ddx = np.abs((dx - self._dx))
+        # ddx = np.abs((dx - self._dx))
         ddx = np.abs(float(dx) / self._dx - 1.0)
 
         # try calculating ymax from ymin, dy, and ny
         ymax = self._ymin + self._dy * (self._ny - 1)
-        #dymax = np.abs(ymax - self._ymax)
+        # dymax = np.abs(ymax - self._ymax)
         dymax = np.abs(float(ymax) / self._ymax - 1.0)
 
         # try calculating dx from bounds and nx
         dy = np.abs((self._ymax - self._ymin) / (self._ny - 1))
-        #ddy = np.abs(dy - self._dy)
+        # ddy = np.abs(dy - self._dy)
         ddy = np.abs(float(dy) / self._dy - 1.0)
 
         return (dxmax, ddx, dymax, ddy)
 
     def validate(self, adjust):
-        #dxmax,ddx,dymax,ddy = self.getDeltas()
+        # dxmax,ddx,dymax,ddy = self.getDeltas()
 
-        if adjust == 'bounds':
+        if adjust == "bounds":
             if self._xmin > self._xmax:
                 txmax = self._xmax + 360
             else:
                 txmax = self._xmax
             self._xmax = self._xmin + self._dx * (self._nx - 1)
             self._ymin = self._ymax - self._dy * (self._ny - 1)
-        elif adjust == 'res':
-            self._dx = ((self._xmax - self._xmin) / (self._nx - 1))
+        elif adjust == "res":
+            self._dx = (self._xmax - self._xmin) / (self._nx - 1)
             if self._dx < 0:
                 if self._xmin > self._xmax:
-                    self._dx = ((self._xmax + 360) -
-                                self._xmin) / (self._nx - 1)
-            self._dy = ((self._ymax - self._ymin) / (self._ny - 1))
+                    self._dx = ((self._xmax + 360) - self._xmin) / (self._nx - 1)
+            self._dy = (self._ymax - self._ymin) / (self._ny - 1)
         else:
             raise DataSetException('Unsupported adjust option "%s"' % adjust)
         if self._xmax > 180:
@@ -877,14 +942,14 @@ def geodict_from_src(src):
 
 def geodict_from_affine(affine, ny, nx):
     geodict = {}
-    geodict['dx'] = affine.a
-    geodict['dy'] = -1 * affine.e
-    geodict['xmin'] = affine.xoff + geodict['dx'] / 2.0
-    geodict['ymax'] = affine.yoff - geodict['dy'] / 2.0
-    geodict['ny'] = ny
-    geodict['nx'] = nx
-    geodict['xmax'] = geodict['xmin'] + (geodict['nx'] - 1) * geodict['dx']
-    geodict['ymin'] = geodict['ymax'] - (geodict['ny'] - 1) * geodict['dy']
+    geodict["dx"] = affine.a
+    geodict["dy"] = -1 * affine.e
+    geodict["xmin"] = affine.xoff + geodict["dx"] / 2.0
+    geodict["ymax"] = affine.yoff - geodict["dy"] / 2.0
+    geodict["ny"] = ny
+    geodict["nx"] = nx
+    geodict["xmax"] = geodict["xmin"] + (geodict["nx"] - 1) * geodict["dx"]
+    geodict["ymin"] = geodict["ymax"] - (geodict["ny"] - 1) * geodict["dy"]
 
     gd = GeoDict(geodict)
     return gd
