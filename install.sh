@@ -1,5 +1,8 @@
 #!/bin/bash
 
+cwd=$(pwd)
+echo "Installing MapIO...${cwd}"
+
 unamestr=`uname`
 env_file=environment.yml
 if [ "$unamestr" == 'Linux' ]; then
@@ -76,7 +79,7 @@ package_list=(
     "ipython"
     "matplotlib"
     "pandas"
-    "python>=3.6"
+    "python<3.10"
     "pytest"
     "pytest-cov"
     "rasterio"
@@ -107,7 +110,8 @@ echo "Activating the $VENV virtual environment"
 conda activate $VENV
 
 # This package
-echo "Installing MapIO..."
+cd "${cwd}"
+echo "Installing MapIO...${cwd}"
 pip install -e .
 
 # Install default profile

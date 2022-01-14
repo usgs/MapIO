@@ -394,9 +394,8 @@ class Grid2D(Grid):
         :param samplegeodict:
           GeoDict object specifying the spatial information for a desired
           sampling regime.
-        :param resampling:
-          Boolean indicating that user wants to resample the data from
-          the file to the samplegeodict.
+        :param doPadding:
+          Boolean indicating that user does or does not want to add any padding.
         :raises DataSetException:
           When resampling is False and filegeodict and samplegeodict are
           not pixel aligned.
@@ -412,24 +411,45 @@ class Grid2D(Grid):
         else:
             # get pad left columns - go outside specified bounds if not
             # exact edge
+            txmax = samplegeodict.xmax
+            if samplegeodict.xmin > samplegeodict.xmax:
+                txmax = samplegeodict.xmax + 360
             pxmin, pxmax, pymin, pymax = (
                 samplegeodict.xmin,
-                samplegeodict.xmax,
+                txmax,
                 samplegeodict.ymin,
                 samplegeodict.ymax,
             )
+            txmax = filegeodict.xmax
+            if filegeodict.xmin > filegeodict.xmax:
+                txmax = filegeodict.xmax + 360
             gxmin, gxmax, gymin, gymax = (
                 filegeodict.xmin,
-                filegeodict.xmax,
+                txmax,
                 filegeodict.ymin,
                 filegeodict.ymax,
             )
             dx, dy = (filegeodict.dx, filegeodict.dy)
 
-            padleftcols = int(np.ceil((gxmin - pxmin) / dx))
-            padrightcols = int(np.ceil((pxmax - gxmax) / dx))
-            padbottomrows = int(np.ceil((gymin - pymin) / dy))
-            padtoprows = int(np.ceil((pymax - gymax) / dy))
+            # very small differences between bounds can wind up
+            # still being ceil'd up to 1. Check for very small numbers here
+            dleft = gxmin - pxmin
+            dright = pxmax - gxmax
+            dbottom = gymin - pymin
+            dtop = pymax - gymax
+            if dleft < GeoDict.EPS:
+                dleft = 0.0
+            if dright < GeoDict.EPS:
+                dright = 0.0
+            if dtop < GeoDict.EPS:
+                dtop = 0.0
+            if dbottom < GeoDict.EPS:
+                dbottom = 0.0
+
+            padleftcols = int(np.ceil(dleft / dx))
+            padrightcols = int(np.ceil(dright / dx))
+            padbottomrows = int(np.ceil(dbottom / dy))
+            padtoprows = int(np.ceil(dtop / dy))
 
             # if any of these are negative, set them to zero
             if padleftcols < 0:
