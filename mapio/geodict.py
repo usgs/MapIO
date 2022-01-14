@@ -5,6 +5,9 @@ import numpy as np
 from .dataset import DataSetException
 import pyproj
 from rasterio.transform import Affine
+import rasterio
+
+GLOBE_SPAN = 359.0
 
 
 def is_valid_projection(projstr):
@@ -235,17 +238,17 @@ class GeoDict(object):
             geodict.ymax,
         )
 
-        # handle the cases when the xmin is less than -180
-        # we're set up to handle xmin > xmax, so let's add 360 to it.
-        if xmin < -180 and fxmin > -180:
-            fxmin -= 360
+        # there are some weird special cases here with longitudes (180 meridian)
+        # handling these in separate testable function
+        txmin, txmax = get_longitude_intersection(xmin, xmax, fxmin, fxmax)
 
-        dx, dy = (geodict.dx, geodict.dy)
-        # get the intersected bounds
-        txmin = max(fxmin, xmin)
-        txmax = min(fxmax, xmax)
+        # calculate latitude intersection
         tymin = max(fymin, ymin)
         tymax = min(fymax, ymax)
+
+        # we're using the input geodict resolution for output
+        dx, dy = (geodict.dx, geodict.dy)
+
         # now align those bounds with the input geodict
         trow, tcol = geodict.getRowCol(tymax, txmin, returnFloat=True)
         fleftcol = int(np.round(tcol))
@@ -477,28 +480,44 @@ class GeoDict(object):
           True if input geodict intersects with this GeoDict,
           False if not.
         """
-        if self.xmin > self.xmax:
-            c, d = (self.xmax + 360, self.ymin)
-        else:
-            c, d = (self.xmax, self.ymin)
-
-        a, b = (self.xmin, self.ymax)
-        e, f = (geodict.xmin, geodict.ymax)
-
-        if geodict.xmin == 180 and geodict.xmax < 0:
-            e, f = (-geodict.xmin, geodict.ymax)
-        else:
-            e, f = (geodict.xmin, geodict.ymax)
-
-        g, h = (geodict.xmax, geodict.ymin)
-
-        inside_x = (e >= a and e < c) or (a >= e and a < c)
-        inside_y = (h >= d and h < b) or (d >= h and d < f)
-        # inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
-        # inside_y = geodict.ymin >= self._ymin and geodict.ymax <= self._ymax
-        if inside_x and inside_y:
+        try:
+            xmin = self.xmin
+            xmax = self.xmax
+            fxmin = geodict.xmin
+            fxmax = geodict.xmax
+            txmin, txmax = get_longitude_intersection(xmin, xmax, fxmin, fxmax)
+        except Exception:
+            return False
+        ymin = self.ymin
+        ymax = self.ymax
+        fymin = geodict.ymin
+        fymax = geodict.ymax
+        self_inside_input = ymin <= fymin and ymax >= fymin
+        input_inside_self = fymin <= ymin and fymax >= ymin
+        if self_inside_input or input_inside_self:
             return True
-        return False
+        # if self.xmin > self.xmax:
+        #     c, d = (self.xmax + 360, self.ymin)
+        # else:
+        #     c, d = (self.xmax, self.ymin)
+
+        # a, b = (self.xmin, self.ymax)
+        # e, f = (geodict.xmin, geodict.ymax)
+
+        # if geodict.xmin == 180 and geodict.xmax < 0:
+        #     e, f = (-geodict.xmin, geodict.ymax)
+        # else:
+        #     e, f = (geodict.xmin, geodict.ymax)
+
+        # g, h = (geodict.xmax, geodict.ymin)
+
+        # inside_x = (e >= a and e < c) or (a >= e and a < c)
+        # inside_y = (h >= d and h < b) or (d >= h and d < f)
+        # # inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
+        # # inside_y = geodict.ymin >= self._ymin and geodict.ymax <= self._ymax
+        # if inside_x and inside_y:
+        #     return True
+        # return False
 
     def contains(self, geodict):
         """Determine if input geodict is completely outside this GeoDict.
@@ -904,10 +923,6 @@ class GeoDict(object):
         # dxmax,ddx,dymax,ddy = self.getDeltas()
 
         if adjust == "bounds":
-            if self._xmin > self._xmax:
-                txmax = self._xmax + 360
-            else:
-                txmax = self._xmax
             self._xmax = self._xmin + self._dx * (self._nx - 1)
             self._ymin = self._ymax - self._dy * (self._ny - 1)
         elif adjust == "res":
@@ -918,12 +933,21 @@ class GeoDict(object):
             self._dy = (self._ymax - self._ymin) / (self._ny - 1)
         else:
             raise DataSetException('Unsupported adjust option "%s"' % adjust)
-        if self._xmax > 180:
-            self._xmax -= 360
-        if self._xmin < -180:
-            self._xmin += 360
+        if (self._xmax - self._xmin) < 359:  # TODO - think about this more!
+            if self._xmax > 180:
+                self._xmax -= 360
+            if self._xmin < -180:
+                self._xmin += 360
         # if self._xmin == 180.0 and self._xmax < 0:
         #     self._xmin = -180.0
+
+
+def get_affine(src):
+    if rasterio.__version__ < "1.0.0":
+        affine = src.affine
+    else:
+        affine = src.transform
+    return affine
 
 
 def geodict_from_src(src):
@@ -934,7 +958,7 @@ def geodict_from_src(src):
     Returns:
         GeoDict: GeoDict describing the DatasetReader object.
     """
-    affine = src.transform
+    affine = get_affine(src)
     nx = src.width
     ny = src.height
     return geodict_from_affine(affine, ny, nx)
@@ -962,3 +986,28 @@ def affine_from_geodict(geodict):
     yres = -1 * geodict.dy
     src = Affine.translation(xoff, yoff) * Affine.scale(xres, yres)
     return src
+
+
+def get_longitude_intersection(xmin, xmax, fxmin, fxmax):
+    # if we're straddling the 180 meridian, adjust the xmax value so that our
+    # new range of longitudes is 0-360. We'll adjust back at the end
+    if fxmin > fxmax:
+        fxmax += 360
+    if xmin > xmax:
+        xmax += 360
+
+    # get the intersected bounds
+    # detect if either geodict spans the globe
+    if (fxmax - fxmin) >= GLOBE_SPAN:
+        txmin = xmin
+        txmax = xmax
+    elif (xmax - xmin) >= GLOBE_SPAN:
+        txmin = fxmin
+        txmax = fxmax
+    else:  # neither geodict spans the globe
+        txmin = max(fxmin, xmin)
+        txmax = min(fxmax, xmax)
+
+    if txmin > txmax:
+        raise Exception("No longitude intersection")
+    return txmin, txmax

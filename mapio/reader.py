@@ -5,7 +5,7 @@ import h5py
 
 # local imports
 from .grid2d import Grid2D
-from .geodict import GeoDict, geodict_from_src
+from .geodict import GeoDict, geodict_from_src, get_affine
 
 
 def _is_hdf(filename):
@@ -71,7 +71,7 @@ def _geodict_to_window(geodict, src, pad=False):
         Window: Object describing the subset of the data that
                 we wish to read from the file.
     """
-    affine = src.transform
+    affine = get_affine(src)
     dx = geodict.dx
     dy = geodict.dy
 
@@ -110,7 +110,10 @@ def _geodict_to_window(geodict, src, pad=False):
         north = src_ymax
 
     window = src.window(west, south, east, north)
-    row_range, col_range = window.toranges()
+    if not isinstance(window, tuple):
+        row_range, col_range = window.toranges()
+    else:
+        row_range, col_range = window
 
     # due to floating point rounding errors,
     # we may not get the integer row/col offsets we
@@ -192,7 +195,7 @@ def _read_data(src, samplegeodict, resample, method):
     Returns:
         Grid2D: Object containing data and geospatial information.
     """
-    affine = src.transform
+    affine = get_affine(src)
     dx = affine.a
     dy = -1 * affine.e
     is_edge = samplegeodict.xmax < samplegeodict.xmin
@@ -230,15 +233,36 @@ def _read_data(src, samplegeodict, resample, method):
 
         right_window = _geodict_to_window(sample_right, src, pad=pad)
 
+        # it is possible sometimes to have this code return (usually) one more
+        # or maybe one less pixel's worth of data. This adjustment tries to fix that.
+        if not pad:
+            dwidth = (left_window.width + right_window.width) - samplegeodict.nx
+            new_width = right_window.width
+            if dwidth > 0:
+                new_width -= dwidth
+            if dwidth < 0:
+                new_width += dwidth * -1
+
+            right_window = rasterio.windows.Window(
+                right_window.col_off,
+                right_window.row_off,
+                new_width,
+                right_window.height,
+            )
+
+        # Leaving this in place b/c this caused an issue but I can't remember
+        # what problem this block of code solved in the first place.
         # if the right window is a different width than expected,
         # adjust the width to match the input number of columns
-        dwidth = (left_window.width + right_window.width) - samplegeodict.nx
-        if dwidth != 0:
-            col_off = right_window.col_off
-            row_off = right_window.row_off
-            width = right_window.width - dwidth
-            height = right_window.height
-            right_window = rasterio.windows.Window(col_off, row_off, width, height)
+        # dwidth = (left_window.width + right_window.width) - (
+        #     sample_left.nx + sample_right.nx
+        # )
+        # if dwidth != 0:
+        #     col_off = right_window.col_off
+        #     row_off = right_window.row_off
+        #     width = right_window.width - dwidth
+        #     height = right_window.height
+        #     right_window = rasterio.windows.Window(col_off, row_off, width, height)
         right_block, src = _read_pixels(src, right_window)
 
         left_gd = _get_geodict_from_window(affine, left_window, left_block)
@@ -284,6 +308,7 @@ def read(
     apply_nan=True,
     force_cast=True,
     interp_approach="scipy",
+    adjust="bounds",
 ):
     """Read part or all of a rasterio file, resampling and padding as necessary.
 
@@ -311,6 +336,9 @@ def read(
         apply_nan (bool): Convert nodata values to NaNs, upcasting to float if necessary.
         force_cast (bool): If data values exceed range of values, cast upward.
         interp_approach (str): One of 'scipy', 'rasterio'.
+        adjust (str): One of "res" or "bounds".
+              'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin will be recalculated.
+              'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will be recalculated.
     Returns:
         Grid2D: Object containing desired data and a Geodict matching samplegeodict.
     """
@@ -368,7 +396,8 @@ def read(
         filedict = get_file_geodict(filename)
         # use the padDict method of Grid2D to create our padded grid
         # Pad one row/col on all sides.
-        pd = grid.getPadding(filedict, samplegeodict, doPadding=True)
+        pd = grid.getPadding(grid._geodict, samplegeodict, doPadding=True)
+
         data, gd = Grid2D.padGrid(grid._data, grid._geodict, pd)
         if len(data[np.isinf(data)]):
             data[np.isinf(data)] = padValue
