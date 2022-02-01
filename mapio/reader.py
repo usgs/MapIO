@@ -235,20 +235,20 @@ def _read_data(src, samplegeodict, resample, method):
 
         # it is possible sometimes to have this code return (usually) one more
         # or maybe one less pixel's worth of data. This adjustment tries to fix that.
-        if not pad:
-            dwidth = (left_window.width + right_window.width) - samplegeodict.nx
-            new_width = right_window.width
-            if dwidth > 0:
-                new_width -= dwidth
-            if dwidth < 0:
-                new_width += dwidth * -1
+        # if not resample:
+        #     dwidth = (left_window.width + right_window.width) - samplegeodict.nx
+        #     new_width = right_window.width
+        #     if dwidth > 0:
+        #         new_width -= dwidth
+        #     if dwidth < 0:
+        #         new_width += dwidth * -1
 
-            right_window = rasterio.windows.Window(
-                right_window.col_off,
-                right_window.row_off,
-                new_width,
-                right_window.height,
-            )
+        #     right_window = rasterio.windows.Window(
+        #         right_window.col_off,
+        #         right_window.row_off,
+        #         new_width,
+        #         right_window.height,
+        #     )
 
         # Leaving this in place b/c this caused an issue but I can't remember
         # what problem this block of code solved in the first place.
