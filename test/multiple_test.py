@@ -6,9 +6,6 @@ import os.path
 import sys
 
 # stdlib imports
-import abc
-import textwrap
-import glob
 import os
 from collections import OrderedDict
 
@@ -21,17 +18,10 @@ sys.path.insert(
 
 
 # third party imports
-from mapio.gridbase import Grid
 from mapio.multiple import MultiGrid
 from mapio.grid2d import Grid2D
-from mapio.dataset import DataSetException
 from mapio.geodict import GeoDict
 import numpy as np
-from scipy import interpolate
-import shapely
-from affine import Affine
-from rasterio import features
-from shapely.geometry import MultiPoint, Polygon, mapping
 
 
 def test():
@@ -39,10 +29,10 @@ def test():
     data = np.arange(14, 56).reshape(6, 7)
     geodict = GeoDict(
         {
-            "xmin": 0.5,
-            "xmax": 6.5,
-            "ymin": 1.5,
-            "ymax": 6.5,
+            "xmin": 0.25,
+            "xmax": 6.25,
+            "ymin": 1.25,
+            "ymax": 6.25,
             "dx": 1.0,
             "dy": 1.0,
             "ny": 6,
@@ -67,11 +57,11 @@ def test():
     for method in ["nearest", "linear", "cubic"]:
         mgrid2 = mgrid.interpolateToGrid(sampledict, method=method)
         if method == "nearest":
-            output = np.array([[30.0, 32.0], [37.0, 39.0]])
+            output = np.array([[31.0, 32.0], [38.0, 39.0]])
         elif method == "linear":
-            output = np.array([[34.0, 35.0], [41.0, 42.0]])
+            output = np.array([[32.5, 33.5], [39.5, 40.5]])
         elif method == "cubic":
-            output = np.array([[34.0, 35.0], [41.0, 42.0]])
+            output = np.array([[32.5, 33.5], [39.5, 40.5]])
         else:
             pass
         np.testing.assert_almost_equal(mgrid2.getLayer("layer1").getData(), output)
