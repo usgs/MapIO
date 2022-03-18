@@ -38,19 +38,24 @@ class BasemapCities(MapCities):
                     resolution='l',area_thresh=1000.,projection='lcc',\
                     lat_1=50.,lon_0=-107.,ax=ax)
         #######################################
-        :param fontsize:
-          Desired font size for city labels.
-        :param fontname:
-          Desired font name for city labels.
-        :param basemap:
-          Basemap object.
-        :raises DataSetException:
-          When font name is not one of the supported Matplotlib font names OR
-          when (if placement column exists) placement columns contain any values
-          not in E,W,N,S,SE,SW,NE,N OR
-          when cities have not been projected (project() has not been called.)
-        :returns:
-          New Cities instance where smaller colliding cities have been removed.
+
+        Args:
+            fontsize (float):
+                Desired font size for city labels.
+            fontname (str):
+                Desired font name for city labels.
+            basemap (Basemap):
+                Basemap object.
+
+        Raises:
+            DataSetException:
+                When font name is not one of the supported Matplotlib font names OR
+                when (if placement column exists) placement columns contain any values
+                not in E,W,N,S,SE,SW,NE,N OR
+                when cities have not been projected (project() has not been called.)
+
+        Returns:
+              New Cities instance where smaller colliding cities have been removed.
         """
         if basemap.ax is None:
             raise DataSetException(
@@ -108,7 +113,7 @@ class BasemapCities(MapCities):
                 newdf["left"] = lefts[ikeep]
                 newdf["right"] = rights[ikeep]
             except Exception as e:
-                print(e)
+                raise e
         return type(self)(newdf)
 
     def renderToMap(
@@ -116,16 +121,17 @@ class BasemapCities(MapCities):
     ):
         """Render cities on Basemap axes.
 
-        :param ax:
-          Matplotlib Axes instance.
-        :param fontname:
-          String name of font.
-        :param fontsize:
-          Font size in points.
-        :param zorder:
-          Matplotlib plotting order - higher zorder is on top.
-        :param shadow:
-          Boolean indicating whether "drop-shadow" effect should be used.
+        Args:
+            ax (Axis):
+                Matplotlib Axes instance.
+            fontname (str):
+                Name of font.
+            fontsize (float):
+                Font size in points.
+            zorder (float):
+                Matplotlib plotting order - higher zorder is on top.
+            shadow (bool):
+                Boolean indicating whether "drop-shadow" effect should be used.
         """
         if "x" not in self._dataframe.columns and "y" not in self._dataframe.columns:
             raise DataSetException("Cities object has not had project() called yet.")
@@ -135,20 +141,24 @@ class BasemapCities(MapCities):
         self._display_to_data_transform = ax.transData.inverted()
 
         for index, row in self._dataframe.iterrows():
+            self._renderRow(row, ax, fontname, fontsize, shadow=shadow, zorder=zorder)
             ax.plot(row["x"], row["y"], "k.")
 
     def _getCityBoundingBoxes(self, df, fontname, fontsize, ax):
         """Get the axes coordinate system bounding boxes for each city.
-        :param df:
-          DataFrame containing information about cities.
-        :param fontname:
-          fontname ('Arial','Helvetica', etc.)
-        :param fontsize:
-          Font size in points.
-        :param ax:
-          Axes object.
-        :returns:
-          Numpy arrays of top,bottom,left and right edges of city bounding boxes.
+
+        Args:
+            df (DataFrame):
+                DataFrame containing information about cities.
+            fontname (str):
+                fontname ('Arial','Helvetica', etc.)
+            fontsize (float):
+                Font size in points.
+            ax (Axis):
+                Axes object.
+
+        Returns:
+            Numpy arrays of top,bottom,left and right edges of city bounding boxes.
         """
         fig = ax.get_figure()
         fwidth, fheight = fig.get_figwidth(), fig.get_figheight()
@@ -192,20 +202,23 @@ class BasemapCities(MapCities):
 
     def _renderRow(self, row, ax, fontname, fontsize, zorder=10, shadow=False):
         """Internal method to consistently render city names.
-        :param row:
-          pandas dataframe row.
-        :param ax:
-          Matplotlib Axes instance.
-        :param fontname:
-          String name of desired font.
-        :param fontsize:
-          Font size in points.
-        :param zorder:
-          Matplotlib plotting order - higher zorder is on top.
-        :param shadow:
-          Boolean indicating whether "drop-shadow" effect should be used.
-        :returns:
-          Matplotlib Text instance.
+
+        Args:
+            row (pandas.core.series.Series):
+                pandas dataframe row.
+            ax (matplotlib.axes._subplots.AxesSubplot):
+                Matplotlib Axes instance.
+            fontname (str):
+                String name of desired font.
+            fontsize (float):
+                Font size in points.
+            zorder (float):
+                Matplotlib plotting order - higher zorder is on top.
+            shadow (bool):
+                Boolean indicating whether "drop-shadow" effect should be used.
+
+        Returns:
+            Matplotlib Text instance.
         """
         ha = "left"
         va = "center"
@@ -266,16 +279,18 @@ class BasemapCities(MapCities):
 
     def _getCityEdges(self, row, ax, fig, fontname, fontsize):
         """Return the edges of a city label on a given map axes.
-        :param row:
-          Row of a dataframe containing city information.
-        :param ax:
-          Axes instance.
-        :param fig:
-          Figure instance.
-        :param fontname:
-          Matplotlib compatible font name.
-        :param fontsize:
-          Font size in points.
+
+        Args:
+            row (pandas.core.series.Series):
+                Row of a dataframe containing city information.
+            ax (matplotlib.axes._subplots.AxesSubplot):
+                Axes instance.
+            fig (matplotlib.figure.Figure):
+                Figure instance.
+            fontname (str):
+                Matplotlib compatible font name.
+            fontsize (float):
+                Font size in points.
         """
         th = self._renderRow(row, ax, fontname, fontsize)
         bbox = th.get_window_extent(fig.canvas.renderer)
