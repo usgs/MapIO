@@ -32,26 +32,35 @@ def get_affine(src):
 class GDALGrid(Grid2D):
     def __init__(self, data, geodict):
         """Construct a GMTGrid object.
-        :param data:
-           2D numpy data array (must match geodict spec)
-        :param geodict:
-           GeoDict Object specifying the spatial extent,resolution and shape
-           of the data.
-        :returns:
-           A GMTGrid object.
-        :raises DataSetException:
-          When data and geodict dimensions do not match.
+
+        Args:
+            data (np array):
+                2D numpy data array (must match geodict spec)
+            geodict (GeoDict):
+                GeoDict Object specifying the spatial extent,resolution and shape
+                of the data.
+        Returns:
+            A GMTGrid object.
+        Raises:
+            DataSetException:
+                When data and geodict dimensions do not match.
         """
         m, n = data.shape
         if m != geodict.ny or n != geodict.nx:
-            raise DataSetException(
-                'Input geodict does not match shape of input data.')
+            raise DataSetException("Input geodict does not match shape of input data.")
         self._data = data
         self._geodict = geodict
 
     @classmethod
-    def load(cls, filename, samplegeodict=None, resample=False,
-             method='linear', doPadding=False, padValue=np.nan):
+    def load(
+        cls,
+        filename,
+        samplegeodict=None,
+        resample=False,
+        method="linear",
+        doPadding=False,
+        padValue=np.nan,
+    ):
         """
         This method should do the following:
         1) If resampling, buffer bounds outwards.
@@ -78,20 +87,21 @@ class GDALGrid(Grid2D):
         # filegeodict.isAligned(samplegeodict):
         #     resample = False
 
-        if samplegeodict is not None and \
-                not filegeodict.intersects(samplegeodict):
+        if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
             if not doPadding:
-                raise DataSetException('Your sampling grid is not contained '
-                                       'by the file.  To load anyway, '
-                                       'use doPadding=True.')
+                raise DataSetException(
+                    "Your sampling grid is not contained "
+                    "by the file.  To load anyway, "
+                    "use doPadding=True."
+                )
 
         # buffer out the sample geodict (if resampling) enough to allow
         # interpolation.
         if samplegeodict is not None:
             # parent static method
-            sampledict = cls.bufferBounds(samplegeodict, filegeodict,
-                                          resample=resample,
-                                          doPadding=doPadding)
+            sampledict = cls.bufferBounds(
+                samplegeodict, filegeodict, resample=resample, doPadding=doPadding
+            )
         else:
             sampledict = filegeodict
 
@@ -105,8 +115,10 @@ class GDALGrid(Grid2D):
         except DataSetException:
             if doPadding:
                 if not filegeodict.contains(sampledict):
-                    data = np.ones((sampledict.ny, sampledict.nx),
-                                   dtype=np.float32)*padValue
+                    data = (
+                        np.ones((sampledict.ny, sampledict.nx), dtype=np.float32)
+                        * padValue
+                    )
                     return cls(data=data, geodict=sampledict)
 
         sampledict = filegeodict.getIntersection(sampledict)
@@ -114,14 +126,13 @@ class GDALGrid(Grid2D):
         #           sampledict.ymin, sampledict.ymax)
 
         data_range = cls.getDataRange(
-            filegeodict, sampledict,
-            first_column_duplicated=first_column_duplicated)
+            filegeodict, sampledict, first_column_duplicated=first_column_duplicated
+        )
         data, geodict = cls.readFile(filename, data_range)
-        if (doPadding or resample) and 'float' not in str(data.dtype):
+        if (doPadding or resample) and "float" not in str(data.dtype):
             data = data.astype(np.float32)
         # parent static method
-        pad_dict = cls.getPadding(filegeodict, samplegeodict,
-                                  doPadding=doPadding)
+        pad_dict = cls.getPadding(filegeodict, samplegeodict, doPadding=doPadding)
         data, geodict = cls.padGrid(data, geodict, pad_dict)
         if doPadding:
             data[np.isinf(data)] = padValue
@@ -135,65 +146,70 @@ class GDALGrid(Grid2D):
     def getFileGeoDict(cls, filename):
         """Get the spatial extent, resolution, and shape of grid inside ESRI
         grid file.
-        :param filename:
-           File name of ESRI grid file.
-        :returns:
-           - GeoDict object specifying spatial extent, resolution, and
-             shape of grid inside ESRI grid file.
-        :raises DataSetException:
-          When the file contains a grid with more than one band.
-          When the file geodict is internally inconsistent.
+
+        Args:
+            filename (str):
+                File name of ESRI grid file.
+        Returns:
+            GeoDict object specifying spatial extent, resolution, and
+            shape of grid inside ESRI grid file.
+        Raises:
+            DataSetException:
+                When the file contains a grid with more than one band.
+                When the file geodict is internally inconsistent.
         """
         geodict = {}
 
         with rasterio.open(filename) as src:
             aff = get_affine(src)
             if aff is None:
-                fmt = 'Could not find .transform attribute from GDAL dataset.'
+                fmt = "Could not find .transform attribute from GDAL dataset."
                 raise AttributeError(fmt)
 
-            geodict['dx'] = aff.a
-            geodict['dy'] = -1*aff.e
-            geodict['xmin'] = aff.xoff + geodict['dx']/2.0
-            geodict['ymax'] = aff.yoff - geodict['dy']/2.0
+            geodict["dx"] = aff.a
+            geodict["dy"] = -1 * aff.e
+            geodict["xmin"] = aff.xoff + geodict["dx"] / 2.0
+            geodict["ymax"] = aff.yoff - geodict["dy"] / 2.0
 
             shp = src.shape
             if len(shp) > 2:
-                raise DataSetException(
-                    'Cannot support grids with more than one band')
-            geodict['ny'] = src.height
-            geodict['nx'] = src.width
-            geodict['xmax'] = geodict['xmin'] + (geodict['nx']-1)*geodict['dx']
-            if geodict['xmax'] == geodict['xmin']:
+                raise DataSetException("Cannot support grids with more than one band")
+            geodict["ny"] = src.height
+            geodict["nx"] = src.width
+            geodict["xmax"] = geodict["xmin"] + (geodict["nx"] - 1) * geodict["dx"]
+            if geodict["xmax"] == geodict["xmin"]:
                 pass
 
-            geodict['ymin'] = geodict['ymax'] - (geodict['ny']-1)*geodict['dy']
+            geodict["ymin"] = geodict["ymax"] - (geodict["ny"] - 1) * geodict["dy"]
 
             gd = GeoDict(geodict)
 
-        newgeodict, first_column_duplicated = cls.checkFirstColumnDuplicated(
-            gd)
+        newgeodict, first_column_duplicated = cls.checkFirstColumnDuplicated(gd)
         return (newgeodict, first_column_duplicated)
 
     @classmethod
     def _subsetRegions(self, src, sampledict, fgeodict, firstColumnDuplicated):
         """Internal method used to do subsampling of data for all three GMT
         formats.
-        :param zvar:
-          A numpy array-like thing (CDF/HDF variable, or actual numpy array)
-        :param sampledict:
-          GeoDict object with bounds and row/col information.
-        :param fgeodict:
-          GeoDict object with the file information.
-        :param firstColumnDuplicated:
-          Boolean - is this a file where the last column of data is the same
-          as the first (for grids that span entire globe).
-        :returns:
-          Tuple of (data,geodict) (subsetted data and geodict describing that
-          data).
+
+        Args:
+            sampledict (GeoDict object):
+                with bounds and row/col information.
+            fgeodict (GeoDict object):
+                with the file information.
+            firstColumnDuplicated (boolean):
+                is this a file where the last column of data is the same
+                as the first (for grids that span entire globe).
+        Returns:
+            Tuple of (data,geodict) (subsetted data and geodict describing that
+            data).
         """
         txmin, txmax, tymin, tymax = (
-            sampledict.xmin, sampledict.xmax, sampledict.ymin, sampledict.ymax)
+            sampledict.xmin,
+            sampledict.xmax,
+            sampledict.ymin,
+            sampledict.ymax,
+        )
         # trows, tcols = (sampledict.ny, sampledict.nx)
         if fgeodict.xmin > fgeodict.xmax:
             fxmax = fgeodict.xmax + 360
@@ -223,8 +239,8 @@ class GDALGrid(Grid2D):
             data = np.squeeze(data)
             if firstColumnDuplicated:
                 data = data[:, 0:-1]
-                tfdict['xmax'] -= geodict.dx
-                tfdict['nx'] -= 1
+                tfdict["xmax"] -= geodict.dx
+                tfdict["nx"] -= 1
             geodict = GeoDict(tfdict)
         else:
             # what are the nearest grid coordinates to our desired bounds?
@@ -236,10 +252,10 @@ class GDALGrid(Grid2D):
             # txmin = 1.5 and
             # txmax = 4.5.
             if not fgeodict.isAligned(sampledict):
-                txmin2 = gxmin + dx*np.floor((txmin - gxmin)/dx)
-                txmax2 = gxmin + dx*np.ceil((txmax - gxmin)/dx)
-                tymin2 = gymin + dy*np.floor((tymin - gymin)/dy)
-                tymax2 = gymin + dy*np.ceil((tymax - gymin)/dy)
+                txmin2 = gxmin + dx * np.floor((txmin - gxmin) / dx)
+                txmax2 = gxmin + dx * np.ceil((txmax - gxmin) / dx)
+                tymin2 = gymin + dy * np.floor((tymin - gymin) / dy)
+                tymax2 = gymin + dy * np.ceil((tymax - gymin) / dy)
             else:
                 txmin2 = xmin
                 txmax2 = xmax
@@ -263,21 +279,21 @@ class GDALGrid(Grid2D):
                 # tny = (ilry1 - iuly1)+1
                 # tnx = (ilrx1 - iulx1)+1 + (ilrx2 - iulx2)+1
 
-                window1 = ((iuly1, ilry1+1), (iulx1, ilrx1+1))
-                window2 = ((iuly2, ilry2+1), (iulx2, ilrx2+1))
+                window1 = ((iuly1, ilry1 + 1), (iulx1, ilrx1 + 1))
+                window2 = ((iuly2, ilry2 + 1), (iulx2, ilrx2 + 1))
                 section1 = src.read(1, window=window1)
                 section2 = src.read(1, window=window2)
                 data = np.hstack((section1, section2))
                 tfdict = {}
                 newymax, newxmin = fgeodict.getLatLon(iuly1, iulx1)
                 newymin, newxmax = fgeodict.getLatLon(ilry2, ilrx2)
-                tfdict['xmin'] = newxmin
-                tfdict['xmax'] = newxmax
-                tfdict['ymin'] = newymin
-                tfdict['ymax'] = newymax
-                tfdict['dx'] = dx
-                tfdict['dy'] = dy
-                tfdict['ny'], tfdict['nx'] = data.shape
+                tfdict["xmin"] = newxmin
+                tfdict["xmax"] = newxmax
+                tfdict["ymin"] = newymin
+                tfdict["ymax"] = newymax
+                tfdict["dx"] = dx
+                tfdict["dy"] = dy
+                tfdict["ny"], tfdict["nx"] = data.shape
                 geodict = GeoDict(tfdict)
             else:
                 iuly, iulx = fgeodict.getRowCol(tymax2, txmin2)
@@ -285,20 +301,20 @@ class GDALGrid(Grid2D):
                 # tny = (ilry - iuly)+1
                 # tnx = (ilrx - iulx)+1
 
-                window = ((iuly, ilry+1), (iulx, ilrx+1))
+                window = ((iuly, ilry + 1), (iulx, ilrx + 1))
                 tfdict = {}
                 newymax, newxmin = fgeodict.getLatLon(iuly, iulx)
                 newymin, newxmax = fgeodict.getLatLon(ilry, ilrx)
-                tfdict['xmin'] = newxmin
-                tfdict['xmax'] = newxmax
-                tfdict['ymin'] = newymin
-                tfdict['ymax'] = newymax
-                tfdict['dx'] = dx
-                tfdict['dy'] = dy
+                tfdict["xmin"] = newxmin
+                tfdict["xmax"] = newxmax
+                tfdict["ymin"] = newymin
+                tfdict["ymax"] = newymax
+                tfdict["dx"] = dx
+                tfdict["dy"] = dy
                 # window = ((iymin,iymax+1),(ixmin,ixmax+1))
                 data = src.read(1, window=window)
                 data = np.squeeze(data)
-                tfdict['ny'], tfdict['nx'] = data.shape
+                tfdict["ny"], tfdict["nx"] = data.shape
                 geodict = GeoDict(tfdict)
 
         return (data, geodict)
@@ -308,33 +324,35 @@ class GDALGrid(Grid2D):
         """
         Read an ESRI flt/bip/bil/bsq formatted file using rasterIO (GDAL
         Python wrapper).
-        :param filename:
-          Input ESRI formatted grid file.
-        :param data_range:
-          Dictionary containing fields:
-            - iulx1 Upper left X of first (perhaps only) segment.
-            - iuly1 Upper left Y of first (perhaps only) segment.
-            - ilrx1 Lower right X of first (perhaps only) segment.
-            - ilry1 Lower right Y of first (perhaps only) segment.
-            (if bounds cross 180 meridian...)
-            - iulx2 Upper left X of second segment.
-            - iuly2 Upper left Y of second segment.
-            - ilrx2 Lower right X of second segment.
-            - ilry2 Lower right Y of second segment.
-        :returns:
-          A tuple of (data,geodict) where data is a 2D numpy array of all
-          data found inside bounds, and
-          geodict gives the geo-referencing information for the data.
+
+        Args:
+            filename (str):
+                Input ESRI formatted grid file.
+            data_range (dict):
+                containing fields:
+                - iulx1 Upper left X of first (perhaps only) segment.
+                - iuly1 Upper left Y of first (perhaps only) segment.
+                - ilrx1 Lower right X of first (perhaps only) segment.
+                - ilry1 Lower right Y of first (perhaps only) segment.
+                (if bounds cross 180 meridian...)
+                - iulx2 Upper left X of second segment.
+                - iuly2 Upper left Y of second segment.
+                - ilrx2 Lower right X of second segment.
+                - ilry2 Lower right Y of second segment.
+        Returns:
+            A tuple of (data,geodict) where data is a 2D numpy array of all
+            data found inside bounds, and
+            geodict gives the geo-referencing information for the data.
         """
-        iulx1 = data_range['iulx1']
-        ilrx1 = data_range['ilrx1']
-        iuly1 = data_range['iuly1']
-        ilry1 = data_range['ilry1']
-        if 'iulx2' in data_range:
-            iulx2 = data_range['iulx2']
-            ilrx2 = data_range['ilrx2']
-            iuly2 = data_range['iuly2']
-            ilry2 = data_range['ilry2']
+        iulx1 = data_range["iulx1"]
+        ilrx1 = data_range["ilrx1"]
+        iuly1 = data_range["iuly1"]
+        ilry1 = data_range["ilry1"]
+        if "iulx2" in data_range:
+            iulx2 = data_range["iulx2"]
+            ilrx2 = data_range["ilrx2"]
+            iuly2 = data_range["iuly2"]
+            ilry2 = data_range["ilry2"]
         else:
             iulx2 = None
             ilrx2 = None
@@ -343,12 +361,10 @@ class GDALGrid(Grid2D):
         data = None
 
         with rasterio.open(filename) as src:
-            window1 = ((iuly1, ilry1),
-                       (iulx1, ilrx1))
+            window1 = ((iuly1, ilry1), (iulx1, ilrx1))
             section1 = src.read(1, window=window1)
-            if 'iulx2' in data_range:
-                window2 = ((iuly2, ilry2),
-                           (iulx2, ilrx2))
+            if "iulx2" in data_range:
+                window2 = ((iuly2, ilry2), (iulx2, ilrx2))
                 section2 = src.read(1, window=window2)
                 data = np.hstack((section1, section2))
             else:
@@ -364,75 +380,81 @@ class GDALGrid(Grid2D):
         ny, nx = data.shape
         filegeodict, first_column_duplicated = cls.getFileGeoDict(filename)
         ymax1, xmin1 = filegeodict.getLatLon(iuly1, iulx1)
-        ymin1, xmax1 = filegeodict.getLatLon(ilry1-1, ilrx1-1)
+        ymin1, xmax1 = filegeodict.getLatLon(ilry1 - 1, ilrx1 - 1)
         xmin = xmin1
         ymax = ymax1
         ymin = ymin1
         xmax = xmax1
         if iulx2 is not None:
-            ymin2, xmax2 = filegeodict.getLatLon(ilry2-1, ilrx2-1)
+            ymin2, xmax2 = filegeodict.getLatLon(ilry2 - 1, ilrx2 - 1)
             xmax = xmax2
 
         dx = filegeodict.dx
         dy = filegeodict.dy
-        geodict = GeoDict({'xmin': xmin,
-                           'xmax': xmax,
-                           'ymin': ymin,
-                           'ymax': ymax,
-                           'nx': nx,
-                           'ny': ny,
-                           'dx': dx,
-                           'dy': dy}, adjust='res')
+        geodict = GeoDict(
+            {
+                "xmin": xmin,
+                "xmax": xmax,
+                "ymin": ymin,
+                "ymax": ymax,
+                "nx": nx,
+                "ny": ny,
+                "dx": dx,
+                "dy": dy,
+            },
+            adjust="res",
+        )
 
         return (data, geodict)
 
     def _getHeader(self):
         hdr = {}
-        if sys.byteorder == 'little':
-            hdr['BYTEORDER'] = 'LSBFIRST'
+        if sys.byteorder == "little":
+            hdr["BYTEORDER"] = "LSBFIRST"
         else:
-            hdr['BYTEORDER'] = 'MSBFIRST'
-        hdr['LAYOUT'] = 'BIL'
-        hdr['NROWS'], hdr['NCOLS'] = self._data.shape
-        hdr['NBANDS'] = 1
+            hdr["BYTEORDER"] = "MSBFIRST"
+        hdr["LAYOUT"] = "BIL"
+        hdr["NROWS"], hdr["NCOLS"] = self._data.shape
+        hdr["NBANDS"] = 1
         if self._data.dtype == np.uint8:
-            hdr['NBITS'] = 8
-            hdr['PIXELTYPE'] = 'UNSIGNEDINT'
+            hdr["NBITS"] = 8
+            hdr["PIXELTYPE"] = "UNSIGNEDINT"
         elif self._data.dtype == np.int8:
-            hdr['NBITS'] = 8
-            hdr['PIXELTYPE'] = 'SIGNEDINT'
+            hdr["NBITS"] = 8
+            hdr["PIXELTYPE"] = "SIGNEDINT"
         elif self._data.dtype == np.uint16:
-            hdr['NBITS'] = 16
-            hdr['PIXELTYPE'] = 'UNSIGNEDINT'
+            hdr["NBITS"] = 16
+            hdr["PIXELTYPE"] = "UNSIGNEDINT"
         elif self._data.dtype == np.int16:
-            hdr['NBITS'] = 16
-            hdr['PIXELTYPE'] = 'SIGNEDINT'
+            hdr["NBITS"] = 16
+            hdr["PIXELTYPE"] = "SIGNEDINT"
         elif self._data.dtype == np.uint32:
-            hdr['NBITS'] = 32
-            hdr['PIXELTYPE'] = 'UNSIGNEDINT'
+            hdr["NBITS"] = 32
+            hdr["PIXELTYPE"] = "UNSIGNEDINT"
         elif self._data.dtype == np.int32:
-            hdr['NBITS'] = 32
-            hdr['PIXELTYPE'] = 'SIGNEDINT'
+            hdr["NBITS"] = 32
+            hdr["PIXELTYPE"] = "SIGNEDINT"
         elif self._data.dtype == np.float32:
-            hdr['NBITS'] = 32
-            hdr['PIXELTYPE'] = 'FLOAT'
+            hdr["NBITS"] = 32
+            hdr["PIXELTYPE"] = "FLOAT"
         elif self._data.dtype == np.float64:
-            hdr['NBITS'] = 32
-            hdr['PIXELTYPE'] = 'FLOAT'
+            hdr["NBITS"] = 32
+            hdr["PIXELTYPE"] = "FLOAT"
         else:
             raise DataSetException(
-                'Data type "%s" not supported.' % str(self._data.dtype))
-        hdr['BANDROWBYTES'] = hdr['NCOLS']*(hdr['NBITS']/8)
-        hdr['TOTALROWBYTES'] = hdr['NCOLS']*(hdr['NBITS']/8)
-        hdr['ULXMAP'] = self._geodict.xmin
-        hdr['ULYMAP'] = self._geodict.ymax
-        hdr['XDIM'] = self._geodict.dx
-        hdr['YDIM'] = self._geodict.dy
+                'Data type "%s" not supported.' % str(self._data.dtype)
+            )
+        hdr["BANDROWBYTES"] = hdr["NCOLS"] * (hdr["NBITS"] / 8)
+        hdr["TOTALROWBYTES"] = hdr["NCOLS"] * (hdr["NBITS"] / 8)
+        hdr["ULXMAP"] = self._geodict.xmin
+        hdr["ULYMAP"] = self._geodict.ymax
+        hdr["XDIM"] = self._geodict.dx
+        hdr["YDIM"] = self._geodict.dy
         # try to have a nice readable NODATA value in the header file
         zmin = np.nanmin(self._data)
         zmax = np.nanmax(self._data)
         if self._data.dtype in [np.int8, np.int16, np.int32]:
-            nodata = np.array([-1*int('9'*i) for i in range(3, 20)])
+            nodata = np.array([-1 * int("9" * i) for i in range(3, 20)])
             if zmin > nodata[-1]:
                 NODATA = nodata[np.where(nodata < zmin)[0][0]]
             else:
@@ -440,42 +462,58 @@ class GDALGrid(Grid2D):
                 # smallest
                 NODATA = zmin - 1
         else:
-            nodata = np.array([int('9'*i) for i in range(3, 20)])
+            nodata = np.array([int("9" * i) for i in range(3, 20)])
             if zmin < nodata[-1]:
                 NODATA = nodata[np.where(nodata > zmin)[0][0]]
             else:
                 # otherwise just pick an arbitrary value smaller than our
                 # smallest
                 NODATA = zmax + 1
-        hdr['NODATA'] = NODATA
-        keys = ['BYTEORDER', 'LAYOUT', 'NROWS', 'NCOLS', 'NBANDS', 'NBITS',
-                'BANDROWBYTES', 'TOTALROWBYTES', 'PIXELTYPE',
-                'ULXMAP', 'ULYMAP', 'XDIM', 'YDIM', 'NODATA']
+        hdr["NODATA"] = NODATA
+        keys = [
+            "BYTEORDER",
+            "LAYOUT",
+            "NROWS",
+            "NCOLS",
+            "NBANDS",
+            "NBITS",
+            "BANDROWBYTES",
+            "TOTALROWBYTES",
+            "PIXELTYPE",
+            "ULXMAP",
+            "ULYMAP",
+            "XDIM",
+            "YDIM",
+            "NODATA",
+        ]
         hdr2 = OrderedDict()
         for key in keys:
             hdr2[key] = hdr[key]
         return hdr2
 
-    def save(self, filename, format='EHdr'):
+    def save(self, filename, format="EHdr"):
         """
         Save the data contained in this grid to a float or integer ESRI
         grid file.  Described here:
         http://webhelp.esri.com/arcgisdesktop/9.3/index.cfm?TopicName=BIL,_BIP,_and_BSQ_raster_files
         http://resources.esri.com/help/9.3/arcgisdesktop/com/gp_toolref/conversion_tools/float_to_raster_conversion_.htm.
 
-        :param filename:
-          String representing file to which data should be saved.
-        :param format:
-          Currently this code only supports the GDAL format 'EHdr' (see
-          formats above.)  As rasterIO write support is expanded, this
-          code should add functionality accordingly.
-        :raises DataSetException:
-          When format is not 'EHdr'.
+        Args:
+            filename (str):
+                String representing file to which data should be saved.
+            format (:obj:`str`:'EHdr', optional):
+                Currently this code only supports the GDAL format 'EHdr' (see
+                formats above.)  As rasterIO write support is expanded, this
+                code should add functionality accordingly.
+        Raises:
+            DataSetException:
+                When format is not 'EHdr'.
         """
-        supported = ['EHdr']
+        supported = ["EHdr"]
         if format not in supported:
             raise DataSetException(
-                'Only "%s" file formats supported for saving' % str(supported))
+                'Only "%s" file formats supported for saving' % str(supported)
+            )
         hdr = self._getHeader()
         # create a reference to the data - this may be overridden by a
         # downcasted version for doubles
@@ -483,19 +521,23 @@ class GDALGrid(Grid2D):
         if self._data.dtype == np.float32:
             # so we can find/reset nan values without screwing up original data
             data = self._data.astype(np.float32)
-            data[np.isnan(data)] = hdr['NODATA']
+            data[np.isnan(data)] = hdr["NODATA"]
         elif self._data.dtype == np.float64:
             data = self._data.astype(np.float32)
-            data[np.isnan(data)] = hdr['NODATA']
-            warnings.warn(DataSetWarning('Down-casting double precision '
-                                         'floating point to single precision'))
+            data[np.isnan(data)] = hdr["NODATA"]
+            warnings.warn(
+                DataSetWarning(
+                    "Down-casting double precision "
+                    "floating point to single precision"
+                )
+            )
 
         data.tofile(filename)
         # write out the header file
         basefile, ext = os.path.splitext(filename)
-        hdrfile = basefile+'.hdr'
-        f = open(hdrfile, 'wt')
+        hdrfile = basefile + ".hdr"
+        f = open(hdrfile, "wt")
         for (key, value) in hdr.items():
             value = hdr[key]
-            f.write('%s  %s\n' % (key, str(value)))
+            f.write("%s  %s\n" % (key, str(value)))
         f.close()

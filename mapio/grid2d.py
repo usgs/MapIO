@@ -41,15 +41,17 @@ class Grid2D(Grid):
         """
         Construct a Grid object.
 
-        :param data:
-            A 2D numpy array (can be None).
-        :param geodict:
-            A GeoDict Object (or None) containing the following fields:
-        :returns:
+        Args:
+            data (:obj:`array`, optional):
+                A 2D numpy array (can be None).
+            geodict (:obj:`GeoDict`, optional):
+                A GeoDict Object (or None) containing the following fields:
+        Returns:
             A Grid2D object.
-        :raises DataSetException:
-           When data is not 2D or the number of rows and columns do not
-           match the geodict.
+        Raises:
+            DataSetException:
+                When data is not 2D or the number of rows and columns do not
+                match the geodict.
         """
         if data is not None and geodict is not None:
             # complain if data is not 2D (squeeze 1d dimensions out)
@@ -75,12 +77,13 @@ class Grid2D(Grid):
         """Check to see if the first column in a file described by geodict
         is duplicated by the last column.
 
-        :param geodict:
-          GeoDict object which may have duplicate column.
-        :returns:
-          Tuple containing:
-           - GeoDict object representing a grid with the last column removed.
-           - Boolean indicating whether the last column was a duplicate.
+        Args:
+            geodict (GeoDict):
+                GeoDict object which may have duplicate column.
+        Returns:
+            Tuple containing:
+                - GeoDict object representing a grid with the last column removed.
+                - Boolean indicating whether the last column was a duplicate.
         """
         first_column_duplicated = False
         cols_per_degree = 1 / geodict.dx
@@ -114,24 +117,25 @@ class Grid2D(Grid):
         """For a given set of input bounds and information about a file,
         determine the rows and columns for bounds.
 
-        :param fgeodict:
-          GeoDict object for a given file.
-        :param sampledict:
-          Sampling GeoDict object.
-        :param first_column_duplicated:
-          Boolean indicating whether the last column in a file is a
-          duplicate of the first column.
-        :returns:
-          Dictionary containing fields:
-            - iulx1 Upper left X of first (perhaps only) segment.
-            - iuly1 Upper left Y of first (perhaps only) segment.
-            - ilrx1 Lower right X of first (perhaps only) segment.
-            - ilry1 Lower right Y of first (perhaps only) segment.
-            (if bounds cross 180 meridian...)
-            - iulx2 Upper left X of second segment.
-            - iuly2 Upper left Y of second segment.
-            - ilrx2 Lower right X of second segment.
-            - ilry2 Lower right Y of second segment.
+        Args:
+            fgeodict (GeoDict):
+                GeoDict object for a given file.
+            sampledict (GeoDict):
+                Sampling GeoDict object.
+            first_column_duplicated (bool):
+                indicating whether the last column in a file is a
+                duplicate of the first column.
+        Returns:
+            Dictionary containing fields:
+                - iulx1 Upper left X of first (perhaps only) segment.
+                - iuly1 Upper left Y of first (perhaps only) segment.
+                - ilrx1 Lower right X of first (perhaps only) segment.
+                - ilry1 Lower right Y of first (perhaps only) segment.
+                (if bounds cross 180 meridian...)
+                - iulx2 Upper left X of second segment.
+                - iuly2 Upper left Y of second segment.
+                - ilrx2 Lower right X of second segment.
+                - ilry2 Lower right Y of second segment.
         """
         data_range = {}
 
@@ -206,15 +210,16 @@ class Grid2D(Grid):
         """Ensure that the two grids represented at least 1) intersect
         and 2) are aligned if resampling is True.
 
-        :param filegeodict:
-          GeoDict object describing file.
-        :param samplegeodict:
-          GeoDict object describing grid to use for sampling.
-        :param resample:
-          Boolean indicating whether we want to resample.
-        :raises:
-          DataSetException when geodicts do not intersect or if the grids
-          are not aligned.
+        Args:
+            filegeodict (GeoDict):
+                object describing file.
+            samplegeodict (GeoDict):
+                object describing grid to use for sampling.
+            resample (bool):
+                indicating whether we want to resample.
+        Raises:
+            DataSetException when geodicts do not intersect or if the grids
+            are not aligned.
         """
         if samplegeodict is not None and not filegeodict.intersects(samplegeodict):
             msg = "Input samplegeodict must at least intersect with the " "file bounds"
@@ -238,15 +243,16 @@ class Grid2D(Grid):
 
         Buffer pixels shoud be at filegeodict resolution.
 
-        :param samplegeodict:
-          GeoDict object describing grid to use for sampling.
-        :param filegeodict:
-          GeoDict object describing file.
-        :param resample:
-          Boolean indicating whether we want to resample.
-        :param buffer_pixels:
-          Number of pixels to buffer bounds in any possible direction.
-        :returns:
+        Args:
+            samplegeodict (GeoDict):
+                object describing grid to use for sampling.
+            filegeodict (GeoDict):
+                object describing file.
+            resample (bool):
+                Boolean indicating whether we want to resample.
+            buffer_pixels (int):
+                Number of pixels to buffer bounds in any possible direction.
+        Returns:
           GeoDict which has been buffered by the appropriate number of pixels.
         """
         if not resample:
@@ -318,19 +324,20 @@ class Grid2D(Grid):
     def padGrid(data, geodict, pad_dict):
         """Pad input data array with pixels specified by pad_dict on each side.
 
-        :param data:
-          2D numpy array of data.
-        :param geodict:
-          GeoDict object describing data.
-        :param pad_dict:
-          A dictionary containing fields:
-            - padleft The number of padding pixels on the left edge.
-            - padright The number of padding pixels on the right edge.
-            - padbottom The number of padding pixels on the bottom edge.
-            - padtop The number of padding pixels on the top edge.
-        :returns:
-          Tuple of (data,geodict) where data has been padded and geodict
-          represents new padded data.
+        Args:
+            data (array):
+                2D numpy array of data.
+            geodict (GeoDict):
+                GeoDict object describing data.
+            pad_dict (dict):
+                containing fields:
+                    - padleft The number of padding pixels on the left edge.
+                    - padright The number of padding pixels on the right edge.
+                    - padbottom The number of padding pixels on the bottom edge.
+                    - padtop The number of padding pixels on the top edge.
+        Returns:
+            Tuple of (data,geodict) where data has been padded and geodict
+            represents new padded data.
         """
         if (
             pad_dict["padleft"] == 0
@@ -389,22 +396,24 @@ class Grid2D(Grid):
         """Determine how many pixels of padding there need to be on each
         side of requested grid.
 
-        :param filegeodict:
-          GeoDict object specifying the spatial information from a source file.
-        :param samplegeodict:
-          GeoDict object specifying the spatial information for a desired
-          sampling regime.
-        :param doPadding:
-          Boolean indicating that user does or does not want to add any padding.
-        :raises DataSetException:
-          When resampling is False and filegeodict and samplegeodict are
-          not pixel aligned.
-        :returns:
-          A dictionary containing fields:
-            - padleft The number of padding pixels on the left edge.
-            - padright The number of padding pixels on the right edge.
-            - padbottom The number of padding pixels on the bottom edge.
-            - padtop The number of padding pixels on the top edge.
+        Args:
+            filegeodict (GeoDict):
+                specifying the spatial information from a source file.
+            samplegeodict (GeoDict):
+                specifying the spatial information for a desired
+                sampling regime.
+            doPadding (bool):
+                Boolean indicating that user does or does not want to add any padding.
+        Raises:
+            DataSetException:
+                When resampling is False and filegeodict and samplegeodict are
+                not pixel aligned.
+        Returns:
+            A dictionary containing fields:
+                - padleft The number of padding pixels on the left edge.
+                - padright The number of padding pixels on the right edge.
+                - padbottom The number of padding pixels on the bottom edge.
+                - padtop The number of padding pixels on the top edge.
         """
         if not doPadding:
             pad_dict = {"padleft": 0, "padright": 0, "padbottom": 0, "padtop": 0}
@@ -471,8 +480,9 @@ class Grid2D(Grid):
     def __repr__(self):
         """
         String representation of a Grid2D object.
-        :returns:
-          String containing description of Grid2D object.
+
+        Returns:
+            String containing description of Grid2D object.
         """
         xmin, xmax, ymin, ymax = (
             self._geodict.xmin,
@@ -516,14 +526,15 @@ class Grid2D(Grid):
         """Used for internal testing - create an NxN grid with lower left
         corner at 0.5,0.5, dx/dy = 1.0.
 
-        :param M:
-           Number of rows in output grid
-        :param N:
-           Number of columns in output grid
-        :returns:
-           GMTGrid object where data values are an NxN array of values
-           from 0 to N-squared minus 1, and geodict
-           lower left corner is at 0.5/0.5 and cell dimensions are 1.0.
+        Args:
+            M (int):
+                Number of rows in output grid
+            N (int):
+                Number of columns in output grid
+        Returns:
+            GMTGrid object where data values are an NxN array of values
+            from 0 to N-squared minus 1, and geodict
+            lower left corner is at 0.5/0.5 and cell dimensions are 1.0.
         """
         data = np.arange(0, M * N).reshape(M, N)
         # arange gives int64 by default, not supported by netcdf3
@@ -556,19 +567,20 @@ class Grid2D(Grid):
         """Read in data from the given file, at the pixels specified in
         data_range.
 
-        :param filename:
-          Name of file to read.
-        :param data_range:
-          Dictionary containing fields:
-            - iulx1 Upper left X of first (perhaps only) segment.
-            - iuly1 Upper left Y of first (perhaps only) segment.
-            - ilrx1 Lower right X of first (perhaps only) segment.
-            - ilry1 Lower right Y of first (perhaps only) segment.
-            (if bounds cross 180 meridian...)
-            - iulx2 Upper left X of second segment.
-            - iuly2 Upper left Y of second segment.
-            - ilrx2 Lower right X of second segment.
-            - ilry2 Lower right Y of second segment.
+        Args:
+            filename (str):
+                Name of file to read.
+            data_range (dict):
+                Dictionary containing fields:
+                    - iulx1 Upper left X of first (perhaps only) segment.
+                    - iuly1 Upper left Y of first (perhaps only) segment.
+                    - ilrx1 Lower right X of first (perhaps only) segment.
+                    - ilry1 Lower right Y of first (perhaps only) segment.
+                    (if bounds cross 180 meridian...)
+                    - iulx2 Upper left X of second segment.
+                    - iuly2 Upper left Y of second segment.
+                    - ilrx2 Lower right X of second segment.
+                    - ilry2 Lower right Y of second segment.
         """
         raise NotImplementedError(
             "readFile is only implemented in Grid2D " "subclasses."
@@ -580,10 +592,11 @@ class Grid2D(Grid):
         Copy constructor - can be used to create an instance of any
         Grid2D subclass from another.
 
-        :param grid:
-          Any Grid2D instance.
-        :returns:
-          A copy of the data in that input Grid2D instance.
+        Args:
+            grid (Grid2D):
+                Any Grid2D instance.
+        Returns:
+            A copy of the data in that input Grid2D instance.
         """
         if not isinstance(grid, Grid2D):
             raise DataSetException(
@@ -604,21 +617,22 @@ class Grid2D(Grid):
         """Given a grid that goes from -180 to 180 degrees, figure out
         the two pixel regions that up both sides of the subset.
 
-        :param bounds:
-           Tuple of (xmin,xmax,ymin,ymax)
-        :param geodict:
-           Geodict dictionary
-        :param firstColumnDuplicated:
-          Boolean indicating whether this is a global data set where the
-          first and last columns are identical.
-        :param isScanLine:
-          Boolean indicating whether this array is in scan line order
-          (pixel[0,0] is the geographic upper left).
-        :returns:
-          Two tuples of 4 elements each - (iulx,iuly,ilrx,ilry). The
-          first tuple defines the pixel offsets for the left
-          side of the subsetted region, and the second tuple
-          defines the pixel offsets for the right side.
+        Args:
+            bounds (tuple):
+                Tuple of (xmin,xmax,ymin,ymax)
+            geodict (Geodict):
+                Geodict dictionary
+            firstColumnDuplicated (bool):
+                Boolean indicating whether this is a global data set where the
+                first and last columns are identical.
+            isScanLine (bool):
+                Boolean indicating whether this array is in scan line order
+                (pixel[0,0] is the geographic upper left).
+            Returns:
+                Two tuples of 4 elements each - (iulx,iuly,ilrx,ilry). The
+                first tuple defines the pixel offsets for the left
+                side of the subsetted region, and the second tuple
+                defines the pixel offsets for the right side.
         """
         (bxmin, bxmax, bymin, bymax) = bounds
         ulx = geodict.xmin
@@ -653,20 +667,22 @@ class Grid2D(Grid):
     def getData(self):
         """Return a reference to the data inside the Grid.
 
-        :returns:
-          A reference to a 2D numpy array.
+        Returns:
+            A reference to a 2D numpy array.
         """
         return self._data  # should we return a copy of the data?
 
     def setData(self, data):
         """Set the data inside the Grid.
 
-        :param data:
-          A 2D numpy array.
-        :raises:
-          DataSetException if the number of rows and columns do not match
-          the the internal GeoDict, or if the input
-          is not a numpy array.
+
+        Args:
+            data (array):
+                A 2D numpy array.
+        Raises:
+            DataSetException if the number of rows and columns do not match
+            the the internal GeoDict, or if the input
+            is not a numpy array.
         """
         if not isinstance(data, np.ndarray):
             raise DataSetException("setData() input is not a numpy array.")
@@ -684,7 +700,8 @@ class Grid2D(Grid):
     def getGeoDict(self):
         """
         Return a reference to the geodict inside the Grid.
-        :returns:
+
+        Returns::
           A reference to a dictionary (see constructor).
         """
         return self._geodict.copy()
@@ -693,7 +710,7 @@ class Grid2D(Grid):
         """
         Return the lon/lat range of the data.
 
-        :returns:
+        Returns:
            Tuple of (lonmin,lonmax,latmin,latmax)
         """
         return (
@@ -721,8 +738,9 @@ class Grid2D(Grid):
         losing precision. Otherwise, this method will raise an OverflowError
         unless the force option is set to True.
 
-        :param force:
-          Boolean indicating whether to override OverflowError (see Usage).
+        Args:
+            force (bool):
+                Boolean indicating whether to override OverflowError (see Usage).
         """
         nodata = self._geodict.nodata
         if nodata is None or np.isnan(nodata) or np.isnan(self._data).any():
@@ -760,21 +778,23 @@ class Grid2D(Grid):
     def subdivide(self, finerdict, cellFill="max"):
         """Subdivide the cells of the host grid into finer-resolution cells.
 
-        :param finerdict:
-          GeoDict object defining a grid with a finer resolution than the
-          host grid.
-        :param cellFill:
-          String defining how to fill cells that span more than one host
-          grid cell.
-          Choices are:
-            'max': Choose maximum value of host grid cells.
-            'min': Choose minimum value of host grid cells.
-            'mean': Choose mean value of host grid cells.
-        :returns:
-          Grid2D instance with host grid values subdivided onto finer grid.
-        :raises DataSetException:
-          When finerdict is not a) finer resolution or b) does not
-          intersect.x or cellFill is not valid.
+        Args:
+            finerdict (GeoDict):
+                GeoDict object defining a grid with a finer resolution than the
+                host grid.
+            cellFill (:obj:`str`, optional):
+                String defining how to fill cells that span more than one host
+                grid cell.
+                Choices are:
+                    'max': Choose maximum value of host grid cells.
+                    'min': Choose minimum value of host grid cells.
+                    'mean': Choose mean value of host grid cells.
+        Returns:
+            Grid2D instance with host grid values subdivided onto finer grid.
+        Raises:
+            DataSetException:
+                When finerdict is not a) finer resolution or b) does not
+                intersect.x or cellFill is not valid.
         """
         fillvals = ["min", "max", "mean"]
         if cellFill not in fillvals:
@@ -921,16 +941,22 @@ class Grid2D(Grid):
     def cut(self, xmin, xmax, ymin, ymax, align=False):
         """Cut out a section of Grid and return it.
 
-        :param xmin: Longitude coordinate of upper left pixel, must be
-            aligned with Grid.
-        :param xmax: Longitude coordinate of lower right pixel, must be
-            aligned with Grid.
-        :param ymin: Latitude coordinate of upper left pixel, must be
-            aligned with Grid.
-        :param ymax: Latitude coordinate of lower right pixel, must be
-            aligned with Grid.
-        :param align: Boolean indicating whether input boundaries
-            should be modified to align with host grid.
+        Args:
+            xmin (float):
+                Longitude coordinate of upper left pixel, must be
+                aligned with Grid.
+            xmax (float):
+                Longitude coordinate of lower right pixel, must be
+                aligned with Grid.
+            ymin (float):
+                Latitude coordinate of upper left pixel, must be
+                aligned with Grid.
+            ymax (float:):
+                Latitude coordinate of lower right pixel, must be
+                aligned with Grid.
+            align (bool):
+                Boolean indicating whether input boundaries
+                should be modified to align with host grid.
         """
         td1 = GeoDict.createDictFromBox(
             xmin, xmax, ymin, ymax, self._geodict.dx, self._geodict.dy, inside=True
@@ -958,18 +984,20 @@ class Grid2D(Grid):
         """Return numpy array at given latitude and longitude (using
         nearest neighbor).
 
-        :param lat:
-           Latitude (in decimal degrees) of desired data value.
-        :param lon:
-           Longitude (in decimal degrees) of desired data value.
-        :param method:
-           Interpolation method, one of ('nearest','linear','cubic','quintic')
-        :param default:
-           Default value to return when lat/lon is outside of grid bounds.
-        :return:
+        Args:
+            lat (float):
+                Latitude (in decimal degrees) of desired data value.
+            lon (float):
+                Longitude (in decimal degrees) of desired data value.
+            method (:obj:`str`, optional):
+                Interpolation method, one of ('nearest','linear','cubic','quintic')
+            default:
+                Default value to return when lat/lon is outside of grid bounds.
+        Returns:
            Value at input latitude,longitude position.
-        :raises DataSetException:
-          When lat/lon is outside of bounds and default is None.
+        Raises:
+            DataSetException:
+                When lat/lon is outside of bounds and default is None.
         """
 
         if method == "nearest":
@@ -1010,12 +1038,13 @@ class Grid2D(Grid):
         """Return geographic coordinates (lat/lon decimal degrees) for
         given data row and column.
 
-        :param row:
-           Row dimension index into internal data array.
-        :param col:
-           Column dimension index into internal data array.
-        :returns:
-           Tuple of latitude and longitude.
+        Args:
+            row (int):
+                Row dimension index into internal data array.
+            col (int):
+                Column dimension index into internal data array.
+        Returns:
+            Tuple of latitude and longitude.
         """
         return self._geodict.getLatLon(row, col)
 
@@ -1023,15 +1052,16 @@ class Grid2D(Grid):
         """Return data row and column from given geographic coordinates
         (lat/lon decimal degrees).
 
-        :param lat:
-           Input latitude.
-        :param lon:
-           Input longitude.
-        :param returnFloat:
-           Boolean indicating whether floating point row/col coordinates
-           should be returned.
-        :returns:
-           Tuple of row and column.
+        Args:
+            lat (float):
+                Input latitude.
+            lon (float):
+                Input longitude.
+            returnFloat (bool):
+                Boolean indicating whether floating point row/col coordinates
+                should be returned.
+        Returns:
+            Tuple of row and column.
         """
         return self._geodict.getRowCol(lat, lon, returnFloat)
 
@@ -1056,7 +1086,6 @@ class Grid2D(Grid):
         # if not, adjust one to the other
         hostxmin = self._geodict.xmin
         hostxmax = self._geodict.xmax
-        hostymin = self._geodict.ymin
         hostymax = self._geodict.ymax
 
         # there are three cases for longitude coordinates we need to
@@ -1123,22 +1152,24 @@ class Grid2D(Grid):
         this method is 5 to 7 times
         faster than interpolateToGrid.
 
-        :param geodict:
-            geodict dictionary from another grid whose extents are
-            inside the extent of this grid.
-        :param method:
-            Optional interpolation method - ['linear', 'cubic','nearest']
-        :raises DataSetException:
-           If the Grid object upon which this function is being called is
-           not completely contained by the grid to which this Grid is being
-           resampled.
-        :raises DataSetException:
-           If the method is not one of ['nearest','linear','cubic']
-           If the resulting interpolated grid shape does not match input
-           geodict.
-        :returns:
-          A new instance of the Grid2D class or subclass with interpolated
-          data.
+        Args:
+            geodict (GeoDict):
+                geodict dictionary from another grid whose extents are
+                inside the extent of this grid.
+            method (:obj:`str`, optional):
+                Optional interpolation method - ['linear', 'cubic','nearest']
+        Raises:
+            DataSetException:
+                If the Grid object upon which this function is being called is
+                not completely contained by the grid to which this Grid is being
+                resampled.
+            DataSetException:
+                If the method is not one of ['nearest','linear','cubic']
+                If the resulting interpolated grid shape does not match input
+                geodict.
+        Returns:
+            A new instance of the Grid2D class or subclass with interpolated
+            data.
         """
         if not self._geodict.contains(geodict):
             msg = "Input geodict not fully contained by host geodict."
@@ -1196,22 +1227,24 @@ class Grid2D(Grid):
         Given a geodict specifying another grid extent and resolution,
         resample current grid to match.
 
-        :param geodict:
-            geodict dictionary from another grid whose extents are inside
-            the extent of this grid.
-        :param method:
-            Optional interpolation method - ['linear', 'cubic','nearest']
-        :raises DataSetException:
-           If the Grid object upon which this function is being called is
-           not completely contained by the grid to which this Grid is being
-           resampled.
-        :raises DataSetException:
-           If the method is not one of ['nearest','linear','cubic']
-           If the resulting interpolated grid shape does not match input
-           geodict.
-        :returns:
-          A new instance of the Grid2D class or subclass with interpolated
-          data.
+        Args:
+            geodict (GeoDict):
+                geodict dictionary from another grid whose extents are inside
+                the extent of this grid.
+            method (:obj:`str`, optional)::
+                Optional interpolation method - ['linear', 'cubic','nearest']
+        Raises:
+            DataSetException:
+                If the Grid object upon which this function is being called is
+                not completely contained by the grid to which this Grid is being
+                resampled.
+            DataSetException:
+                If the method is not one of ['nearest','linear','cubic']
+                If the resulting interpolated grid shape does not match input
+                geodict.
+        Returns:
+            A new instance of the Grid2D class or subclass with interpolated
+            data.
         """
         if method not in ["linear", "cubic", "nearest"]:
             raise DataSetException(
@@ -1317,39 +1350,39 @@ class Grid2D(Grid):
         of a shape
         (point, line, polygon) inside a cell turns that cell "on".
 
-        :param shapes:
-          One of:
-            - One shapely geometry object (Point, Polygon, etc.) or a
-              sequence of such objects
-            - One GeoJSON like object or sequence of such objects.
-              (http://geojson.org/)
-            - A tuple of (geometry,value) or sequence of (geometry,value).
-        :param geodict:
-          GeoDict object which defines the grid onto which the shape values
-          should be "burned".
-        :param burnValue:
-          Optional value which will be used to set the value of the pixels
-          if there is no
-          value in the geometry field.
-        :param fillValue:
-          Optional value which will be used to fill the cells not touched
-          by any geometry.
-        :param mustContainCenter:
-          Optional boolean which indicates whether the geometry must touch
-          the center of the cell or merely be inside the cell in order to
-          set the value.
-        :raises DataSetException:
-          When geometry input is not a subclass of
-          shapely.geometry.base.BaseGeometry.
-        :returns:
-          Grid2D object.
-        This method is a thin wrapper around rasterio->features->rasterize(),
-        documented here:
-        https://github.com/mapbox/rasterio/blob/master/docs/features.rst
-
-        which is itself a Python wrapper around the functionality found
-        in gdal_rasterize, documented here:
-        http://www.gdal.org/gdal_rasterize.html
+        Args:
+            shapes  (geometry obj, GeoJson obj or tuple):
+                One of:
+                    - One shapely geometry object (Point, Polygon, etc.) or a
+                    sequence of such objects
+                    - One GeoJSON like object or sequence of such objects.
+                    (http://geojson.org/)
+                    - A tuple of (geometry,value) or sequence of (geometry,value).
+            geodict (GeoDict):
+                GeoDict object which defines the grid onto which the shape values
+                should be "burned".
+            burnValue  (:obj:`float`, optional):
+                Optional value which will be used to set the value of the pixels
+                if there is no value in the geometry field.
+            fillValue  (:obj:`float`, optional):
+                Optional value which will be used to fill the cells not touched
+                by any geometry.
+            mustContainCenter  (:obj:`bool`, optional)::
+                Optional boolean which indicates whether the geometry must touch
+                the center of the cell or merely be inside the cell in order to
+                set the value.
+        Raises:
+            DataSetException:
+                When geometry input is not a subclass of
+                shapely.geometry.base.BaseGeometry.
+        Returns:
+            Grid2D object.
+                This method is a thin wrapper around rasterio->features->rasterize(),
+                documented here:
+                https://github.com/mapbox/rasterio/blob/master/docs/features.rst
+                which is itself a Python wrapper around the functionality found
+                in gdal_rasterize, documented here:
+                http://www.gdal.org/gdal_rasterize.html
         """
         # check the type of shapes
         # features.rasterize() documentation says this:
@@ -1359,7 +1392,8 @@ class Grid2D(Grid):
 
         # create list of allowable types
         if sys.version_info.major == 2:
-            types = (int, float, long)
+            # long variable was previously here but was removed due to being undefined
+            types = (int, float)
         else:
             types = (int, float)
 
@@ -1457,16 +1491,19 @@ class Grid2D(Grid):
     def project(self, projection, method="bilinear"):
         """Project Grid2D data into desired projection.
 
-        :param projection:
-          Valid proj4 projection string.
-        :param method:
-          One of the sampling methods described here:
-              https://mapbox.github.io/rasterio/topics/resampling.html#resampling-methods
-        :raises DataSetException:
-          If input projection is not a valid Proj4 string.
-          If method is not a valid resampling method found in above URL.
-        :returns:
-          Re-projected Grid2D object.
+        Args:
+            projection:
+                Valid proj4 projection string.
+            method:
+                One of the sampling methods described here:
+                mapbox.github.io
+                https://mapbox.github.io/rasterio/topics/resampling.html#resampling-methods
+        Raises:
+            DataSetException:
+                If input projection is not a valid Proj4 string.
+                If method is not a valid resampling method found in above URL.
+        Returns:
+            Re-projected Grid2D object.
         """
         # hack to handle projections that wrap around the 180 meridian.
         crosses = self._geodict.xmax < self._geodict.xmin
