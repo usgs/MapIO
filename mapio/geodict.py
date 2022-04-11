@@ -29,26 +29,33 @@ class GeoDict(object):
         An object which represents the spatial information for a grid and is guaranteed
         to be self-consistent.
 
-        :param geodict:
-          A dictionary containing at least some of the following fields:
-             - xmin Longitude minimum (decimal degrees) (Center of upper left cell)
-             - xmax Longitude maximum (decimal degrees) (Center of upper right cell)
-             - ymin Longitude minimum (decimal degrees) (Center of lower left cell)
-             - ymax Longitude maximum (decimal degrees) (Center of lower right cell)
-             - dx Cell width (decimal degrees)
-             - dy Cell height (decimal degrees)
-             - ny Number of rows of input data (must match input data dimensions)
-             - nx Number of columns of input data (must match input data dimensions).
-             - projection proj4 string defining projection.  Optional. If not specified,
-               assumed to be
-               "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" (WGS-84 geographic).
-
-        :param adjust:
-            String (one of 'bounds','res')
-              'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct, xmax/ymin
-                  will be recalculated.
-              'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct, dx/dy will
-                  be recalculated.
+        Args:
+            geodict (GeoDict):
+                contains at least some of the following fields:
+                    - xmin Longitude minimum (decimal degrees) (Center of upper left
+                    cell)
+                    - xmax Longitude maximum (decimal degrees) (Center of upper right
+                    cell)
+                    - ymin Longitude minimum (decimal degrees) (Center of lower left
+                    cell)
+                    - ymax Longitude maximum (decimal degrees) (Center of lower right
+                    cell)
+                    - dx Cell width (decimal degrees)
+                    - dy Cell height (decimal degrees)
+                    - ny Number of rows of input data (must match input data dimensions)
+                    - nx Number of columns of input data (must match input data
+                    dimensions).
+                    - projection proj4 string defining projection.  Optional. If not
+                    specified,
+                    assumed to be
+                    "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+                    (WGS-84 geographic).
+            adjust (:obj:`str`, optional):
+                String (one of 'bounds','res')
+                    'bounds': dx/dy, nx/ny, xmin/ymax are assumed to be correct,
+                    xmax/ymin will be recalculated.
+                    'res': nx/ny, xmin/ymax, xmax/ymin and assumed to be correct,
+                    dx/dy will be recalculated.
         """
         for key in self.REQ_KEYS:
             if key not in geodict.keys():
@@ -82,16 +89,23 @@ class GeoDict(object):
     def createDictFromBox(cls, xmin, xmax, ymin, ymax, dx, dy, inside=False):
         """Create GeoDict from two corner points and an x/y resolution.
 
-        :param xmin: X coordinate of center of upper left pixel.
-        :param xmax: X coordinate of center of lower right pixel.
-        :param ymin: Y coordinate of center of lower right pixel.
-        :param ymax: Y coordinate of center of upper left pixel.
-        :param dx: Width of pixels.
-        :param dy: Height of pixels.
-        :param inside:
-          Boolean, indicating whether to ensure that resulting GeoDict
-          falls inside or outside the input bounds.
-        :returns:
+        Args:
+            xmin (float):
+                X coordinate of center of upper left pixel.
+            xmax (float):
+                X coordinate of center of lower right pixel.
+            ymin(float):
+                Y coordinate of center of lower right pixel.
+            ymax (float):
+                Y coordinate of center of upper left pixel.
+            dx (float):
+                Width of pixels.
+            dy (float):
+                Height of pixels.
+            inside (bool):
+                indicating whether to ensure that resulting GeoDict
+                falls inside or outside the input bounds.
+        Returns:
           GeoDict object.
         """
         if xmin > xmax:
@@ -123,14 +137,21 @@ class GeoDict(object):
     def createDictFromCenter(cls, cx, cy, dx, dy, xspan, yspan):
         """Create GeoDict from a center point, dx/dy and a width and height.
 
-        :param cx: X coordinate of center point.
-        :param cy: Y coordinate of center point.
-        :param dx: Width of pixels.
-        :param dy: Height of pixels.
-        :param xspan: Width of desired box.
-        :param yspan: Height of desired box.
-        :returns:
-          GeoDict object.
+        Args:
+            cx (float):
+                X coordinate of center point.
+            cy (float):
+                Y coordinate of center point.
+            dx (float):
+                Width of pixels.
+            dy (float):
+                Height of pixels.
+            xspan (float):
+                Width of desired box.
+            yspan (float):
+                Height of desired box.
+        Returns:
+            GeoDict object.
         """
         xmin = cx - xspan / 2.0
         xmax = cx + xspan / 2.0
@@ -141,30 +162,32 @@ class GeoDict(object):
     def setProjection(self, projection):
         """Set a new projection for the GeoDict.
 
-        :param projection:
-          Valid proj4 string.
-        :raises DataSetException:
-          When input is not valid proj4.
+        Args:
+            projection (str):
+                Valid proj4 string.
+        Raises:
+            DataSetException:
+                When input is not valid proj4.
         """
         try:
             pyproj.Proj(projection)
         except BaseException:
-            raise DataSetException(
-                "%s is not a valid proj4 string." % geodict["projection"]
-            )
+            raise DataSetException("%s is not a valid proj4 string." % projection)
         self._projection = projection
 
     def getAligned(self, geodict, inside=False):
         """Return a geodict that is close to the input geodict bounds but aligned with
         this GeoDict.
 
-        :param geodict:
-          Input GeoDict object, whose bounds will be used, but dx/dy and nx/ny ignored.
-        :param inside:
-          Boolean indicating whether the aligned geodict should be inside or outside
-          input geodict.
-        :returns:
-          GeoDict object which is guaranteed to be grid-aligned with this GeoDict.
+        Args:
+            geodict (GeoDict):
+                Input GeoDict object, whose bounds will be used, but dx/dy and nx/ny
+                ignored.
+            inside (bool):
+                indicating whether the aligned geodict should be inside or
+                outside input geodict.
+        Returns:
+            GeoDict object which is guaranteed to be grid-aligned with this GeoDict.
         """
         dx = self.dx
         dy = self.dy
@@ -225,13 +248,15 @@ class GeoDict(object):
         """Return a geodict defining intersected area, retaining resolution of the input
         geodict.
 
-        :param geodict:
-          Input GeoDict object, which should intersect with this GeoDict.
-        :returns:
-          GeoDict which represents the intersected area, and is aligned with the input
-          geodict.
-        :raises DataSetException:
-          When input geodict does not intersect at all with this GeoDict.
+        Args:
+            geodict (GeoDict):
+                Input GeoDict object, which should intersect with this GeoDict.
+        Returns:
+            GeoDict which represents the intersected area, and is aligned with the input
+            geodict.
+        Raises:
+            DataSetException:
+                When input geodict does not intersect at all with this GeoDict.
         """
 
         # return modified input geodict where bounds have been adjusted to be inside
@@ -293,12 +318,14 @@ class GeoDict(object):
            box aligned with enclosing GeoDict that is guaranteed
            to be inside input GeoDict.
 
-        :param geodict:
-          GeoDict object that output GeoDict will be contained by.
-        :raises DataSetException:
-          When input geodict is not fully contained by this GeoDict, or
-          if the output GeoDict cannot be aligned with this GeoDict (this
-          shouldn't happen).
+        Args:
+            geodict (GeoDict):
+                GeoDict object that output GeoDict will be contained by.
+        Raises:
+            DataSetException:
+                When input geodict is not fully contained by this GeoDict, or
+                if the output GeoDict cannot be aligned with this GeoDict (this
+                shouldn't happen).
         """
         if not self.contains(geodict):
             raise DataSetException(
@@ -425,10 +452,11 @@ class GeoDict(object):
     def isAligned(self, geodict):
         """Determines if input geodict is grid-aligned with this GeoDict.
 
-        :param geodict:
-          Input geodict whose cells must all be grid-aligned with this GeoDict.
-        :returns:
-          True when geodict is grid-aligned, and False if not.
+        Args:
+            geodict (GeoDict):
+                Input geodict whose cells must all be grid-aligned with this GeoDict.
+        Returns:
+            True when geodict is grid-aligned, and False if not.
         """
         dx1 = self._dx
         dx2 = geodict.dx
@@ -461,11 +489,12 @@ class GeoDict(object):
     def doesNotContain(self, geodict):
         """Determine if input geodict is completely outside this GeoDict.
 
-        :param geodict:
-          Input GeoDict object.
-        :returns:
-          True if input geodict is completely outside this GeoDict,
-          False if not.
+        Args:
+            geodict (GeoDict):
+                Input GeoDict object.
+        Returns:
+            True if input geodict is completely outside this GeoDict,
+            False if not.
         """
         a, b = (self.xmin, self.ymax)
         e, f = (geodict.xmin, geodict.ymax)
@@ -482,11 +511,12 @@ class GeoDict(object):
     def intersects(self, geodict):
         """Determine if input geodict intersects this GeoDict.
 
-        :param geodict:
-          Input GeoDict object.
-        :returns:
-          True if input geodict intersects with this GeoDict,
-          False if not.
+        Args:
+            geodict (GeoDict):
+                Input GeoDict object.
+        Returns:
+            True if input geodict intersects with this GeoDict,
+            False if not.
         """
         try:
             xmin = self.xmin
@@ -504,37 +534,16 @@ class GeoDict(object):
         input_inside_self = fymin <= ymin and fymax >= ymin
         if self_inside_input or input_inside_self:
             return True
-        # if self.xmin > self.xmax:
-        #     c, d = (self.xmax + 360, self.ymin)
-        # else:
-        #     c, d = (self.xmax, self.ymin)
-
-        # a, b = (self.xmin, self.ymax)
-        # e, f = (geodict.xmin, geodict.ymax)
-
-        # if geodict.xmin == 180 and geodict.xmax < 0:
-        #     e, f = (-geodict.xmin, geodict.ymax)
-        # else:
-        #     e, f = (geodict.xmin, geodict.ymax)
-
-        # g, h = (geodict.xmax, geodict.ymin)
-
-        # inside_x = (e >= a and e < c) or (a >= e and a < c)
-        # inside_y = (h >= d and h < b) or (d >= h and d < f)
-        # # inside_x = geodict.xmin >= self._xmin and geodict.xmax <= self._xmax
-        # # inside_y = geodict.ymin >= self._ymin and geodict.ymax <= self._ymax
-        # if inside_x and inside_y:
-        #     return True
-        # return False
 
     def contains(self, geodict):
         """Determine if input geodict is completely outside this GeoDict.
 
-        :param geodict:
-          Input GeoDict object.
-        :returns:
-          True if input geodict is completely outside this GeoDict,
-          False if not.
+        Args:
+            geodict (GeoDict):
+                Input GeoDict object.
+        Returns:
+            True if input geodict is completely outside this GeoDict,
+            False if not.
         """
         inside_x = False
         if np.abs((self.xmax + self.dx) - (self.xmin + 360)) < self.dx * 0.01:
@@ -559,8 +568,9 @@ class GeoDict(object):
 
     def asDict(self):
         """Return GeoDict object in dictionary representation.
-        :returns:
-          Dictionary containing the same fields as found in constructor.
+
+        Returns:
+            Dictionary containing the same fields as found in constructor.
         """
         tdict = {}
         tdict["xmin"] = self._xmin
@@ -592,9 +602,9 @@ class GeoDict(object):
     def copy(self):
         """Return an object that is a complete copy of this GeoDict.
 
-        :returns:
-          A GeoDict object whose elements (xmin, xmax, ...) are an exact copy of
-          this object's elements.
+        Returns:
+            A GeoDict object whose elements (xmin, xmax, ...) are an exact copy of
+            this object's elements.
         """
         if not hasattr(self.__class__, "projection"):
             self._projection = self.DEFAULT_PROJ4
@@ -614,11 +624,12 @@ class GeoDict(object):
     def __eq__(self, other):
         """Check for equality between one GeoDict object and another.
 
-        :param other:
-          Another GeoDict object.
-        :returns:
-          True when all GeoDict parameters are no more different than 1e-12, False
-          otherwise.
+        Args:
+            other (GeoDict):
+                Another GeoDict object.
+        Returns:
+            True when all GeoDict parameters are no more different than 1e-12, False
+            otherwise.
         """
         if np.abs(self._xmin - other._xmin) > self.EPS:
             return False
@@ -642,12 +653,13 @@ class GeoDict(object):
         """Return geographic coordinates (lat/lon decimal degrees) for given data row
         and column.
 
-        :param row:
-           Row dimension index into internal data array.
-        :param col:
-           Column dimension index into internal data array.
-        :returns:
-           Tuple of latitude and longitude.
+        Args:
+            row (int):
+                Row dimension index into internal data array.
+            col (int):
+                Column dimension index into internal data array.
+        Returns:
+            Tuple of latitude and longitude.
         """
         scalar_types = (int, float)
         if type(row) != type(col):
@@ -677,19 +689,20 @@ class GeoDict(object):
         """Return data row and column from given geographic coordinates (lat/lon decimal
         degrees).
 
-        :param lat:
-           Input latitude.
-        :param lon:
-           Input longitude.
-        :param returnFloat:
-           Boolean indicating whether floating point row/col coordinates should be
-           returned.
-        :param intMethod:
-           String indicating the desired method by which floating point row/col values
-           should
-           be converted to integers.  Choices are 'round' (default), 'floor', or 'ceil'.
-        :returns:
-           Tuple of row and column.
+        Args:
+            lat (int,float):
+                Input latitude.
+            lon (int,float):
+                Input longitude.
+            returnFloat (bool):
+                indicating whether floating point row/col coordinates should be
+                returned.
+            intMethod (:obj:`str`, optional):
+                String indicating the desired method by which floating point row/col
+                values should be converted to integers.
+                Choices are 'round' (default), 'floor', or 'ceil'.
+        Returns:
+            Tuple of row and column.
         """
         scalar_types = (int, float)
         if type(lat) != type(lon):
@@ -735,90 +748,103 @@ class GeoDict(object):
     @property
     def xmin(self):
         """Get xmin value.
-        :returns:
-          xmin value.
+
+        Returns:
+            xmin value.
         """
         return self._xmin
 
     @property
     def xmax(self):
         """Get xmin value.
-        :returns:
-          xmin value.
+
+        Returns:
+            xmin value.
         """
         return self._xmax
 
     @property
     def ymin(self):
         """Get xmax value.
-        :returns:
-          xmax value.
+
+        Returns:
+            xmax value.
         """
         return self._ymin
 
     @property
     def ymax(self):
         """Get xmax value.
-        :returns:
-          xmax value.
+
+        Returns:
+            xmax value.
         """
         return self._ymax
 
     @property
     def dx(self):
         """Get dx value.
-        :returns:
-          dx value.
+
+        Returns:
+            dx value.
         """
         return self._dx
 
     @property
     def dy(self):
         """Get dy value.
-        :returns:
-          dy value.
+
+        Returns:
+            dy value.
         """
         return self._dy
 
     @property
     def ny(self):
         """Get ny value.
-        :returns:
-          ny value.
+
+        Returns:
+            ny value.
         """
         return self._ny
 
     @property
     def nx(self):
         """Get nx value.
-        :returns:
-          nx value.
+
+        Returns:
+            nx value.
         """
         return self._nx
 
     @property
     def projection(self):
         """Get projection Proj4 string.
-        :returns:
-          Valid Proj4 string.
+
+        Returns:
+            Valid Proj4 string.
         """
         return self._projection
 
     @property
     def nodata(self):
         """Get projection Proj4 string.
-        :returns:
-          Valid nodata value.
+
+        Returns:
+            Valid nodata value.
         """
         return self._nodata
 
     @xmin.setter
     def xmin(self, value):
         """Set xmin value, re-validate object.
-        :param value:
-          Value to set.
-        :raises DataSetException:
-          When validation fails.
+
+        Args:
+            value:
+                Value to set.
+        Raises:
+            DataSetException:
+                When validation fails.
         """
         self._xmin = value
         self.validate()
@@ -826,10 +852,13 @@ class GeoDict(object):
     @xmax.setter
     def xmax(self, value):
         """Set xmax value, re-validate object.
-        :param value:
-          Value to set.
-        :raises DataSetException:
-          When validation fails.
+
+        Args:
+            value:
+                Value to set.
+        Raises:
+            DataSetException:
+                When validation fails.
         """
         self._xmax = value
         self.validate()
@@ -837,10 +866,13 @@ class GeoDict(object):
     @ymin.setter
     def ymin(self, value):
         """Set ymin value, re-validate object.
-        :param value:
-          Value to set.
-        :raises DataSetException:
-          When validation fails.
+
+        Args:
+            value:
+                Value to set.
+        Raises:
+            DataSetException:
+                When validation fails.
         """
         self._ymin = value
         self.validate()
@@ -848,10 +880,13 @@ class GeoDict(object):
     @ymax.setter
     def ymax(self, value):
         """Set ymax value, re-validate object.
-        :param value:
-          Value to set.
-        :raises DataSetException:
-          When validation fails.
+
+        Args:
+            value:
+                Value to set.
+        Raises:
+            DataSetException:
+                When validation fails.
         """
         self._ymax = value
         self.validate()
@@ -859,10 +894,13 @@ class GeoDict(object):
     @dx.setter
     def dx(self, value):
         """Set dx value, re-validate object.
-        :param value:
-          Value to set.
-        :raises DataSetException:
-          When validation fails.
+
+        Args:
+            value:
+                Value to set.
+        Raises:
+            DataSetException:
+                When validation fails.
         """
         self._dx = value
         self.validate()
@@ -870,10 +908,13 @@ class GeoDict(object):
     @dy.setter
     def dy(self, value):
         """Set dy value, re-validate object.
-        :param value:
-          Value to set.
-        :raises DataSetException:
-          When validation fails.
+
+        Args:
+            value:
+                Value to set.
+        Raises:
+            DataSetException:
+                When validation fails.
         """
         self._dy = value
         self.validate()
@@ -881,10 +922,13 @@ class GeoDict(object):
     @ny.setter
     def ny(self, value):
         """Set ny value, re-validate object.
-        :param value:
-          Value to set.
-        :raises DataSetException:
-          When validation fails.
+
+        Args:
+            value:
+                Value to set.
+        Raises:
+            DataSetException:
+                When validation fails.
         """
         self._ny = value
         self.validate()
@@ -892,10 +936,13 @@ class GeoDict(object):
     @nx.setter
     def nx(self, value):
         """Set nx value, re-validate object.
-        :param value:
-          Value to set.
-        :raises DataSetException:
-          When validation fails.
+
+        Args:
+            value:
+                Value to set.
+        Raises:
+            DataSetException:
+                When validation fails.
         """
         self._nx = value
         self.validate()
@@ -903,8 +950,9 @@ class GeoDict(object):
     @nodata.setter
     def nodata(self, value):
         """Set nodata value.
-        :param value:
-          Value to set.
+        Args:
+            value:
+                Value to set.
         """
         self._nodata = value
 
@@ -972,7 +1020,8 @@ def geodict_from_src(src):
     """Return a geodict from a dataset object.
 
     Args:
-        src (DatasetReader): Open rasterio DatasetReader object.
+        src (DatasetReader):
+            Open rasterio DatasetReader object.
     Returns:
         GeoDict: GeoDict describing the DatasetReader object.
     """
@@ -983,6 +1032,19 @@ def geodict_from_src(src):
 
 
 def geodict_from_affine(affine, ny, nx):
+    """**********
+
+    Args:
+        affine ():
+            **********
+        ny():
+            Number of rows.
+        nx():
+            Number of columns.
+    Returns:
+        gd:
+            ************
+    """
     geodict = {}
     geodict["dx"] = affine.a
     geodict["dy"] = -1 * affine.e
@@ -998,6 +1060,12 @@ def geodict_from_affine(affine, ny, nx):
 
 
 def affine_from_geodict(geodict):
+    """**************
+
+    Args:
+        geodict ():
+            *****
+    """
     xoff = geodict.xmin - geodict.dx / 2.0
     yoff = geodict.ymax + geodict.dy / 2.0
     xres = geodict.dx
@@ -1007,6 +1075,18 @@ def affine_from_geodict(geodict):
 
 
 def get_longitude_intersection(xmin, xmax, fxmin, fxmax):
+    """**************
+
+    Args:
+        xmin():
+            *****
+        xmax():
+            *****
+        fxmin():
+            *****
+        fxmax():
+            *****
+    """
     # if we're straddling the 180 meridian, adjust the xmax value so that our
     # new range of longitudes is 0-360. We'll adjust back at the end
     if fxmin > fxmax:
