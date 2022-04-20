@@ -334,10 +334,10 @@ def test_interpolate():
         grid = Grid2D(data, geodict)
         sampledict = GeoDict(
             {
-                "xmin": 3.0,
-                "xmax": 4.0,
-                "ymin": 3.0,
-                "ymax": 4.0,
+                "xmin": 3.1,
+                "xmax": 4.1,
+                "ymin": 3.1,
+                "ymax": 4.1,
                 "dx": 1.0,
                 "dy": 1.0,
                 "ny": 2,
@@ -347,11 +347,11 @@ def test_interpolate():
         grid = grid.interpolateToGrid(sampledict, method=method)
         tgrid = grid.interpolate2(sampledict, method=method)
         if method == "nearest":
-            output = np.array([[30.0, 32.0], [37.0, 39.0]])
+            output = np.array([[31.0, 32.0], [38.0, 39.0]])
         elif method == "linear":
-            output = np.array([[34.0, 35.0], [41.0, 42.0]])
+            output = np.array([[33.4, 34.4], [40.4, 41.4]])
         elif method == "cubic":
-            output = np.array([[34.0, 35.0], [41.0, 42.0]])
+            output = np.array([[33.4, 34.4], [40.4, 41.4]])
         else:
             pass
         np.testing.assert_almost_equal(grid.getData(), output)

@@ -114,9 +114,12 @@ def _getHeader(grid):
 
 def write(grid, filename, format_type, do_compression=False):
     """Save a GMTGrid object to a file.
+
     Args:
-        filename (str): Name of desired output file.
-        format_type (str): One of 'hdf', 'esri', 'tiff'.
+        filename (str):
+            Name of desired output file.
+        format_type (str):
+            One of 'hdf', 'esri', 'tiff'.
     Raises:
         KeyError -- When format_type not one of ('netcdf', 'hdf', 'esri', 'tiff')
     """
@@ -134,9 +137,9 @@ def write(grid, filename, format_type, do_compression=False):
         dx = f.createDimension("x", n)  # noqa
         dy = f.createDimension("y", m)  # noqa
         x = f.createVariable("x", np.float64, ("x"))
-        x.axis = 'X'
+        x.axis = "X"
         y = f.createVariable("y", np.float64, ("y"))
-        y.axis = 'Y'
+        y.axis = "Y"
         if grid._geodict.xmin < grid._geodict.xmax:
             x[:] = np.linspace(grid._geodict.xmin, grid._geodict.xmax, grid._geodict.nx)
         else:
