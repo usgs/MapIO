@@ -1,25 +1,25 @@
 #!/usr/bin/env python
 
-from mapio.geodict import (
-    GeoDict,
-    geodict_from_affine,
-    affine_from_geodict,
-    geodict_from_src,
-    get_longitude_intersection,
-)
-from mapio.dataset import DataSetException
-
 # stdlib imports
 import os.path
-import sys
 import pathlib
+import sys
+
+import cartopy.crs as ccrs
+import matplotlib.pyplot as plt
 
 # third party imports
 import numpy as np
 import pandas as pd
 import rasterio
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
+from mapio.dataset import DataSetException
+from mapio.geodict import (
+    GeoDict,
+    affine_from_geodict,
+    geodict_from_affine,
+    geodict_from_src,
+    get_longitude_intersection,
+)
 
 # hack the path so that I can debug these functions if I need to
 homedir = os.path.dirname(os.path.abspath(__file__))  # where is this script?
@@ -776,6 +776,40 @@ def test_contains():
     )
     assert host.contains(sample)
 
+    fxmin, fxmax = (179.9874, -174.5126)
+    fymin, fymax = (-25.4997, -20.4413)
+    fdx, fdy = (0.0083, 0.0083)
+    fny, fnx = (608, 661)
+    host = GeoDict(
+        {
+            "xmin": fxmin,
+            "xmax": fxmax,
+            "ymin": fymin,
+            "ymax": fymax,
+            "dx": fdx,
+            "dy": fdy,
+            "nx": fnx,
+            "ny": fny,
+        }
+    )
+    xmin, xmax = (-179.9667, -174.5667)
+    ymin, ymax = (-25.4500, -20.4833)
+    dx, dy = (0.0083, 0.0083)
+    ny, nx = (597, 649)
+    sample = GeoDict(
+        {
+            "xmin": xmin,
+            "xmax": xmax,
+            "ymin": ymin,
+            "ymax": ymax,
+            "dx": dx,
+            "dy": dy,
+            "nx": nx,
+            "ny": ny,
+        }
+    )
+    assert host.contains(sample)
+
 
 def test_shapes():
     gd = GeoDict.createDictFromBox(100.0, 102.0, 32.0, 34.0, 0.08, 0.08)
@@ -830,6 +864,40 @@ def test_bounds_meridian2():
     within = host_geodict.getBoundsWithin(sample_geodict)
     assert within.xmin == 178.437359677361
     assert within.xmax == -174.770973683139
+
+    fxmin, fxmax = (179.9874, -174.5126)
+    fymin, fymax = (-25.4997, -20.4413)
+    fdx, fdy = (0.0083, 0.0083)
+    fny, fnx = (608, 661)
+    host = GeoDict(
+        {
+            "xmin": fxmin,
+            "xmax": fxmax,
+            "ymin": fymin,
+            "ymax": fymax,
+            "dx": fdx,
+            "dy": fdy,
+            "nx": fnx,
+            "ny": fny,
+        }
+    )
+    xmin, xmax = (-179.9667, -174.5667)
+    ymin, ymax = (-25.4500, -20.4833)
+    dx, dy = (0.0083, 0.0083)
+    ny, nx = (597, 649)
+    sample = GeoDict(
+        {
+            "xmin": xmin,
+            "xmax": xmax,
+            "ymin": ymin,
+            "ymax": ymax,
+            "dx": dx,
+            "dy": dy,
+            "nx": nx,
+            "ny": ny,
+        }
+    )
+    assert host.getBoundsWithin(sample)
 
 
 def test_lat_lon_array():

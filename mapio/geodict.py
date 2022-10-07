@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
 # third party imports
+from curses.ascii import alt
+
 import numpy as np
-from .dataset import DataSetException
 import pyproj
-from rasterio.transform import Affine
 import rasterio
+from rasterio.transform import Affine
+
+from .dataset import DataSetException
 
 GLOBE_SPAN = 359.0
 
@@ -313,6 +316,14 @@ class GeoDict(object):
         # fxmin etc. are the host bounds
         fxmin, fymax = (self.xmin, self.ymax)
 
+        # address case where host left edge is positive
+        if (
+            self.xmin > geodict.xmin
+            and self.xmax > geodict.xmin
+            and self.xmax < self.xmin
+        ):
+            fxmin -= 360
+
         # xmin etc. are the geodict bounds
         xmin, xmax, ymin, ymax = (
             geodict.xmin,
@@ -408,7 +419,7 @@ class GeoDict(object):
                 "nx": nx,
             }
         )
-        isaligned = self.isAligned(outgeodict)
+        isaligned = self.isAligned(outgeodict, altxmin=fxmin)
         if not isaligned:
             raise DataSetException(
                 "getBoundsWithin() cannot create an aligned geodict."
@@ -422,7 +433,7 @@ class GeoDict(object):
 
         return outgeodict
 
-    def isAligned(self, geodict):
+    def isAligned(self, geodict, altxmin=None):
         """Determines if input geodict is grid-aligned with this GeoDict.
 
         :param geodict:
@@ -442,6 +453,8 @@ class GeoDict(object):
             return False
 
         xmin1 = self._xmin
+        if altxmin is not None:
+            xmin1 = altxmin
         xmin2 = geodict.xmin
         ymin1 = self._ymin
         ymin2 = geodict.ymin
@@ -527,19 +540,19 @@ class GeoDict(object):
         #     return True
         # return False
 
-    def contains(self, geodict):
-        """Determine if input geodict is completely outside this GeoDict.
-
-        :param geodict:
-          Input GeoDict object.
-        :returns:
-          True if input geodict is completely outside this GeoDict,
-          False if not.
-        """
+    def _inside_x(self, geodict):
         inside_x = False
         if np.abs((self.xmax + self.dx) - (self.xmin + 360)) < self.dx * 0.01:
-            inside_x = True
+            return True
         if not inside_x:
+            if (
+                self.xmin > geodict.xmin
+                and self.xmax > geodict.xmin
+                and self.xmax < self.xmin
+            ):
+                inside_x = (self.xmin - 360) < geodict.xmin and self.xmax > geodict.xmax
+                if inside_x:
+                    return True
             if geodict.xmin < self.xmin and (geodict.xmin + 360) < self.xmax:
                 inside_x = True
             else:
@@ -550,6 +563,18 @@ class GeoDict(object):
                     xmin_inside = (geodict.xmin + self.EPS) >= self._xmin
                     xmax_inside = (geodict.xmax - self.EPS) <= self._xmax + 360
                 inside_x = xmin_inside and xmax_inside
+        return inside_x
+
+    def contains(self, geodict):
+        """Determine if input geodict is completely outside this GeoDict.
+
+        :param geodict:
+          Input GeoDict object.
+        :returns:
+          True if input geodict is completely outside this GeoDict,
+          False if not.
+        """
+        inside_x = self._inside_x(geodict)
         ymin_inside = (geodict.ymin + self.EPS) >= self._ymin
         ymax_inside = (geodict.ymax - self.EPS) <= self._ymax
         inside_y = ymin_inside and ymax_inside
